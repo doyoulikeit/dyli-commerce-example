@@ -45,8 +45,10 @@ per-box pricing. Env overrides use `per_unit: true`. Zero never removes the box
 price, Stripe processing, gas or shipping. Do not expose the Commerce key or
 allow a shopper to submit fee settings.
 
-DYLI allocates 10% of settled base box profit (sales minus cash buybacks/refunds)
-to the key owner, plus collected added fees. Claiming uses DYLI's existing
+DYLI allocates 10% of settled box profit (base sales minus cash buybacks and
+kept-item costs) to the key owner, plus collected added fees.
+A bought-back item incurs the cash buyback only, not an additional item cost.
+Claiming uses DYLI's existing
 verified earnings and withdrawal reservations, not a separate starter balance.
 `GET /analytics` is a private, server-to-server app report; never proxy it to
 ordinary customers. The profile report aggregates the owner's apps and retains

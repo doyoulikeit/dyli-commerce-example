@@ -71,10 +71,11 @@ It never grants access to a box excluded by DYLI's app-level allowlist.
 ### Earnings and your fee
 
 Every Commerce app earns **10% of its settled box profit** automatically. Profit
-means base box sales minus cash buybacks and refunds, not sales volume or item
-market value. Losses offset gains; unfinished or test purchases earn nothing.
+means base box sales minus cash buybacks and the cost of items customers keep.
+A bought-back item is not also charged as an item cost.
+Losses offset gains; unfinished or test purchases earn nothing.
 Your DYLI profile → Storefront → **Commerce** shows orders, quantities, buybacks,
-profit and earnings. Use the normal **Claim** tab to withdraw available earnings.
+item costs, profit and earnings. Use the normal **Claim** tab to withdraw available earnings.
 Key rotation preserves the history.
 
 Optionally charge customers an additional fee. Choose one server env setting:
