@@ -12,6 +12,8 @@ import { abstract, abstractTestnet } from "viem/chains";
 import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import { suggestedShippingAddress } from "@/lib/shipping-address";
+import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
+import { isShippingQuoteError, parseShipmentRecovery, redemptionDraft, redemptionNeedsRefresh, shipmentMayHaveBeenSent, shippingOptionReference } from "@/lib/redemption-recovery";
 import { CommerceProgress } from "@/components/commerce-progress";
 import type {
   ApiRecord,
@@ -25,7 +27,7 @@ type Props = {
   holdings: ApiRecord[];
   session: SessionResponse;
   api: <T>(path: string, body?: ApiRecord) => Promise<T>;
-  send: (tx: TransactionInstruction) => Promise<`0x${string}`>;
+  send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
   onComplete: () => Promise<void>;
   onClose: () => void;
 };
@@ -62,6 +64,11 @@ export function LiveRedemption({
   const [hash, setHash] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
+  const [restoring, setRestoring] = useState(true);
+  const [restoreFailed, setRestoreFailed] = useState(false);
+  const [refreshRequired, setRefreshRequired] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [now, setNow] = useState(Date.now);
   const key = useRef("");
   const busyRef = useRef(false);
   const storageKey = `dyli-live-shipment-v1:${session.identity.walletAddress.toLowerCase()}`;
@@ -73,12 +80,21 @@ export function LiveRedemption({
     ([, options]) => asRows(options).length,
   );
   const prepared = redemption?.status === "prepared";
+  const refreshNeeded = !!redemption && !hash && !attempted &&
+    !shipmentMayHaveBeenSent(redemption, null) && (refreshRequired || redemptionNeedsRefresh(redemption, now) ||
+      (redemption.status === "quoted" && !groups.length));
+
+  useEffect(() => {
+    if (!redemption || hash || attempted) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(timer);
+  }, [redemption, hash, attempted]);
 
   useEffect(() => {
     let active = true;
     const restore = async () => {
       try {
-        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
         if (!saved?.id) return;
         const payload = await api<{ redemption: Redemption }>(
           "/api/redemptions",
@@ -89,13 +105,24 @@ export function LiveRedemption({
           !["completed", "confirmed"].includes(payload.redemption.status)
         ) {
           setRedemption(payload.redemption);
+          const draft = redemptionDraft(payload.redemption);
+          setAddress(draft.address);
+          setQuantities(draft.quantities);
+          setShowItems(false);
           setHash(
             String(payload.redemption.redemption_tx_hash || saved.hash || ""),
           );
           setAttempted(saved.attempted === true);
+        } else if (active) {
+          localStorage.removeItem(storageKey);
         }
-      } catch {
-        /* A stale local identifier never becomes an authoritative shipment. */
+      } catch (failure) {
+        if (active) {
+          setRestoreFailed(true);
+          setError(failure instanceof Error ? failure.message : "Your saved shipment could not be loaded. Close and reopen shipping to try again.");
+        }
+      } finally {
+        if (active) setRestoring(false);
       }
     };
     void restore();
@@ -105,7 +132,7 @@ export function LiveRedemption({
   }, [api, storageKey]);
 
   const work = async (label: string, task: () => Promise<void>) => {
-    if (busyRef.current) return;
+    if (busyRef.current || restoring || restoreFailed) return;
     busyRef.current = true;
     setBusy(label);
     setError("");
@@ -127,6 +154,11 @@ export function LiveRedemption({
         setCorrection(suggestion);
         return;
       }
+      if (redemption && !hash && !attempted && isShippingQuoteError(asRecord(failure).code)) {
+        setRefreshRequired(true);
+        setError("Delivery options changed. Refresh them to continue—your items and address are saved.");
+        return;
+      }
       setError(
         failure instanceof Error
           ? failure.message
@@ -144,6 +176,8 @@ export function LiveRedemption({
       return;
     }
     void work("Finding delivery options…", async () => {
+      if (parseShipmentRecovery(localStorage.getItem(storageKey)))
+        throw new Error("Another shipment is open. Close and reopen shipping to continue it.");
       key.current ||= crypto.randomUUID();
       const payload = await api<{ redemption: Redemption }>(
         "/api/redemptions",
@@ -160,12 +194,58 @@ export function LiveRedemption({
         storageKey,
         JSON.stringify({ id: payload.redemption.id }),
       );
+      key.current = "";
       setRedemption(payload.redemption);
+      setSelection({});
+      setRefreshRequired(false);
+      setNow(Date.now());
     });
   };
   const quote = (event: FormEvent) => { event.preventDefault(); requestQuote(); };
+
+  const refreshQuote = async () => {
+    if (!redemption) return;
+    const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
+    if ((saved && saved.id !== redemption.id) || hash || attempted || shipmentMayHaveBeenSent(redemption, saved))
+      throw new Error("Check your existing shipment before starting another. Do not send another payment.");
+    const current = await api<{ redemption: Redemption }>("/api/redemptions", { action: "get", redemptionId: redemption.id });
+    setRedemption(current.redemption);
+    if (shipmentMayHaveBeenSent(current.redemption, saved)) {
+      setHash(String(current.redemption.redemption_tx_hash || saved?.hash || ""));
+      if (current.redemption.status === "completed") {
+        setComplete(true);
+        localStorage.removeItem(storageKey);
+        return;
+      }
+      throw new Error("Your shipment is already being processed. Do not send another payment.");
+    }
+    if (!["quoted", "expired", "prepared", "cancelled"].includes(current.redemption.status))
+      throw new Error("This shipment needs a review before you can try again.");
+    const draft = redemptionDraft(current.redemption);
+    setAddress(draft.address);
+    setQuantities(draft.quantities);
+    // New quotes need a new key; retrying this same refresh reuses its key.
+    key.current ||= crypto.randomUUID();
+    const payload = await api<{ redemption: Redemption }>("/api/redemptions", {
+      action: "quote", idempotencyKey: key.current, address: draft.address,
+      items: Object.entries(draft.quantities).map(([tokenId, quantity]) => ({ tokenId, quantity })),
+      includeDdp: current.redemption.include_ddp === true, insurance: current.redemption.insurance === true,
+    });
+    localStorage.setItem(storageKey, JSON.stringify({ id: payload.redemption.id }));
+    key.current = "";
+    setRedemption(payload.redemption);
+    setSelection({});
+    setResponses({});
+    setRefreshRequired(false);
+    setNow(Date.now());
+    setNotice("Delivery options updated. Choose a service to continue.");
+  };
   const prepare = () =>
     void work("Confirming your delivery price…", async () => {
+      if (redemption && redemptionNeedsRefresh(redemption)) {
+        await refreshQuote();
+        return;
+      }
       const result = await api<{ redemption: Redemption }>("/api/redemptions", {
         action: "prepare",
         redemptionId: redemption?.id,
@@ -175,13 +255,16 @@ export function LiveRedemption({
         ),
       });
       setRedemption(result.redemption);
+      key.current = "";
+      setNotice("");
+      setNow(Date.now());
     });
   const ship = () =>
     void work(
       hash ? "Confirming shipment…" : "Preparing your shipment…",
       async () => {
         if (!redemption) return;
-        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
         if (saved?.id && saved.id !== redemption.id)
           throw new Error(
             "Another shipment is open in this wallet. Close and reopen shipping to continue it.",
@@ -212,6 +295,14 @@ export function LiveRedemption({
             throw new Error(
               "A shipment was submitted. Enter its transaction hash from your wallet history to confirm it.",
             );
+          if (shipmentMayHaveBeenSent(fresh.redemption, saved)) {
+            setRedemption(fresh.redemption);
+            throw new Error("Your shipment is already being processed. Do not send another payment.");
+          }
+          if (redemptionNeedsRefresh(fresh.redemption)) {
+            await refreshQuote();
+            return;
+          }
           if (
             !fresh.redemption.transaction ||
             fresh.redemption.status !== "prepared"
@@ -232,7 +323,10 @@ export function LiveRedemption({
           const client = createPublicClient({
             chain:
               session.balance.chain_id === 2741 ? abstract : abstractTestnet,
-            transport: http(),
+            transport: http(abstractRpcUrl(session.balance.chain_id, {
+              url: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL,
+              alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+            }), { timeout: 15000 }),
           });
           const owner = session.identity.walletAddress as `0x${string}`;
           const allowance = await client.readContract({
@@ -261,21 +355,28 @@ export function LiveRedemption({
             if (receipt.status !== "success")
               throw new Error("Shipping approval failed");
           }
+          // Approval can take a while. Never send an expired shipment after it.
+          if (redemptionNeedsRefresh(fresh.redemption)) {
+            await refreshQuote();
+            return;
+          }
           setAttempted(true);
           localStorage.setItem(
             storageKey,
             JSON.stringify({ id: redemption.id, attempted: true }),
           );
           try {
-            submitted = await send(fresh.redemption.transaction);
+            submitted = await send(fresh.redemption.transaction, fresh.redemption.expires_at);
           } catch (failure) {
             const code = asRecord(failure).code;
-            if (asRecord(failure).broadcastAttempted === false || code === 4001 || code === "ACTION_REJECTED") {
+            if (asRecord(failure).broadcastAttempted === false ||
+                (asRecord(failure).broadcastAttempted !== true && (code === 4001 || code === "ACTION_REJECTED"))) {
               setAttempted(false);
               localStorage.setItem(
                 storageKey,
                 JSON.stringify({ id: redemption.id }),
               );
+              if (redemptionNeedsRefresh(fresh.redemption)) setRefreshRequired(true);
             }
             throw failure;
           }
@@ -299,10 +400,18 @@ export function LiveRedemption({
       },
     );
   const back = () => {
-    if (hash || attempted) return;
+    try {
+      const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
+      if (hash || attempted || shipmentMayHaveBeenSent(redemption, saved) || (saved && saved.id !== redemption?.id)) return;
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Check your saved shipment first.");
+      return;
+    }
     key.current = "";
     setRedemption(null);
     setSelection({});
+    setRefreshRequired(false);
+    setNotice("");
     localStorage.removeItem(storageKey);
   };
 
@@ -323,7 +432,10 @@ export function LiveRedemption({
             {error}
           </p>
         )}
-        {complete ? (
+        {notice && <p className="lc-muted" role="status">{notice}</p>}
+        {restoring ? <p className="lc-muted" role="status">Loading your shipment…</p> : restoreFailed ? (
+          <button className="lc-secondary" onClick={onClose}>Close</button>
+        ) : complete ? (
           <>
             <div className="lc-shipment-images">
               {asRows(redemption?.items).map((item) => (
@@ -351,6 +463,18 @@ export function LiveRedemption({
             <button className="lc-primary" onClick={onClose}>
               Close
             </button>
+          </>
+        ) : refreshNeeded ? (
+          <>
+            <div className="lc-shipment-images">
+              {asRows(redemption?.items).map(item => <Art key={String(item.token_id)} src={assetImage(item)} name={String(item.name)} />)}
+            </div>
+            <h3>Let’s update your delivery options.</h3>
+            <p className="lc-muted">Your items and address are saved. Review the latest price before paying.</p>
+            <button className="lc-primary" disabled={!!busy} onClick={() => void work("Refreshing delivery options…", refreshQuote)}>
+              Refresh delivery options
+            </button>
+            <button className="lc-secondary" disabled={!!busy} onClick={back}>Change details</button>
           </>
         ) : !redemption ? (
           <form onSubmit={quote}>
@@ -502,7 +626,7 @@ export function LiveRedemption({
               <fieldset key={group}>
                 <legend>Delivery options</legend>
                 {asRows(options).map((option, index) => {
-                  const id = String(option.id || option.courier_id || "");
+                  const id = shippingOptionReference(option);
                   return (
                     <label className="lc-rate" key={id || index}>
                       <input

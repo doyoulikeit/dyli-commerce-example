@@ -139,6 +139,7 @@ export type Redemption = ApiRecord & {
   transaction?: TransactionInstruction | null;
   redemption_tx_hash?: string | null;
   status: string;
+  expires_at?: string;
   result?: ApiRecord | null;
 };
 
