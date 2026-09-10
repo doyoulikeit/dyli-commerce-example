@@ -1,0 +1,48 @@
+.lc-balance-modal { max-width: 480px; }
+.lc-balance-body { padding: 26px; }
+.lc-balance-body .lc-primary, .lc-balance-body .lc-secondary { width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 50px; }
+.lc-balance-body button { cursor: pointer; }
+.lc-balance-body button:disabled { cursor: not-allowed; opacity: .5; }
+.lc-balance-back { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #777d88; border: 0; background: none; padding: 0 0 20px; }
+.lc-balance-amount { display: grid; gap: 8px; margin: 10px 0 30px; }
+.lc-balance-amount small, .lc-balance-amount > span { color: #737985; font-size: 12px; }
+.lc-balance-amount > strong { font-size: clamp(32px, 7vw, 48px); line-height: 1.2; font-weight: 600; letter-spacing: -.055em; overflow-wrap: anywhere; }
+.lc-balance-amount strong span { font-size: 18px; font-weight: 500; color: #777d88; letter-spacing: -.02em; }
+.lc-balance-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lc-balance-foot, .lc-deposit-status { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 28px; font-size: 12px; color: #737985; }
+.lc-balance-foot button, .lc-deposit-status button { background: none; border: 0; color: inherit; padding: 5px 0; }
+.lc-transfer-link { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 18px 0 0; margin-top: 20px; border: 0; border-top: 1px solid #eceef1; background: none; font-size: 13px; text-align: left; color: #262932; }
+.lc-transfer-link small { display: block; margin-top: 5px; color: #777d88; font-size: 12px; }
+.lc-deposit-qr { width: 204px; height: 204px; padding: 16px; margin: 2px auto 24px; border: 1px solid #eceef1; border-radius: 18px; background: white; }
+.lc-deposit-qr svg { display: block; width: 100%; height: 100%; }
+.lc-network-notice { color: #737985; font-size: 12px; line-height: 1.65; margin: 20px 0; }
+.lc-network-notice strong { color: #353943; font-weight: 550; }
+.lc-deposit-address { padding: 16px; background: #f5f6f8; border-radius: 12px; margin-bottom: 16px; }
+.lc-deposit-address small { display: block; color: #777d88; font-size: 11px; margin-bottom: 8px; }
+.lc-balance-body code { display: block; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; color: #30343d; }
+.lc-balance-explorer { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; font-size: 12px; color: #737985; text-decoration: none; }
+.lc-balance-explorer:hover { color: #17181d; }
+.lc-withdraw-form { display: grid; gap: 20px; }
+.lc-withdraw-form label { display: grid; gap: 9px; color: #4c515c; font-size: 12px; }
+.lc-withdraw-form input, .lc-transfer-result input { min-width: 0; width: 100%; border: 1px solid #e2e5ea; border-radius: 12px; padding: 15px; background: white; color: #191b22; font: inherit; font-size: 16px; }
+.lc-withdraw-form input:focus { outline: 2px solid #a4afd3; outline-offset: 2px; }
+.lc-withdraw-amount { display: flex; align-items: center; gap: 10px; padding-right: 14px; border: 1px solid #e2e5ea; border-radius: 12px; }
+.lc-withdraw-amount input { border: 0; background: none; }
+.lc-withdraw-amount span { color: #777d88; font-size: 12px; }
+.lc-withdraw-amount button { border: 0; padding: 5px 8px; border-radius: 5px; color: #393d47; background: #f0f2f5; font-size: 11px; }
+.lc-withdraw-form > small { margin-top: -10px; font-size: 11px; color: #777d88; }
+.lc-withdraw-form .lc-network-notice { margin: 0; }
+.lc-transfer-details { margin: 0 0 24px; }
+.lc-transfer-details > div { display: grid; grid-template-columns: 58px 1fr; gap: 20px; padding: 15px 0; border-bottom: 1px solid #eceef1; align-items: start; }
+.lc-transfer-details dt { font-size: 12px; color: #777d88; }
+.lc-transfer-details dd { margin: 0; color: #282c35; font-size: 13px; text-align: right; }
+.lc-transfer-result { display: grid; justify-items: center; gap: 14px; padding: 16px 0 0; text-align: center; }
+.lc-transfer-result > svg { color: #28856b; }
+.lc-transfer-result h2 { font-size: 28px; letter-spacing: -.035em; margin: 8px 0 0; }
+.lc-transfer-result > strong { font-size: 25px; letter-spacing: -.025em; }
+.lc-transfer-result > span, .lc-transfer-result p { font-size: 12px; color: #777d88; line-height: 1.6; }
+.lc-transfer-result .lc-primary { margin-top: 15px; }
+.lc-transfer-result details { width: 100%; font-size: 12px; color: #777d88; }
+.lc-transfer-result summary { cursor: pointer; margin-bottom: 10px; }
+.lc-transfer-result input { margin-bottom: 10px; }
+@media (max-width: 600px) { .lc-balance-body { padding: 22px 22px max(24px, env(safe-area-inset-bottom)); } }

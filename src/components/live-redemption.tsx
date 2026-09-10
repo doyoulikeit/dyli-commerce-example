@@ -1,0 +1,569 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  createPublicClient,
+  encodeFunctionData,
+  erc20Abi,
+  http,
+  isAddress,
+} from "viem";
+import { abstract, abstractTestnet } from "viem/chains";
+import { Art, LiveModal } from "@/components/live-catalog";
+import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
+import { suggestedShippingAddress } from "@/lib/shipping-address";
+import { CommerceProgress } from "@/components/commerce-progress";
+import type {
+  ApiRecord,
+  Redemption,
+  SessionResponse,
+  TransactionInstruction,
+} from "@/lib/types";
+
+type Props = {
+  initialTokenId?: string;
+  holdings: ApiRecord[];
+  session: SessionResponse;
+  api: <T>(path: string, body?: ApiRecord) => Promise<T>;
+  send: (tx: TransactionInstruction) => Promise<`0x${string}`>;
+  onComplete: () => Promise<void>;
+  onClose: () => void;
+};
+
+export function LiveRedemption({
+  initialTokenId,
+  holdings,
+  session,
+  api,
+  send,
+  onComplete,
+  onClose,
+}: Props) {
+  const initialItem = holdings.find(item => String(item.token_id) === initialTokenId) || (holdings.length === 1 ? holdings[0] : null);
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => initialItem ? { [String(initialItem.token_id)]: 1 } : {});
+  const [showItems, setShowItems] = useState(!initialItem);
+  const [correction, setCorrection] = useState<Record<string, string> | null>(null);
+  const [address, setAddress] = useState<Record<string, string>>({
+    name: session.identity.name || "",
+    address1: "",
+    address2: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "US",
+    phone: "",
+  });
+  const [redemption, setRedemption] = useState<Redemption | null>(null);
+  const [selection, setSelection] = useState<Record<string, string>>({});
+  const [responses, setResponses] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [complete, setComplete] = useState(false);
+  const [hash, setHash] = useState("");
+  const [attempted, setAttempted] = useState(false);
+  const [recoveryHash, setRecoveryHash] = useState("");
+  const key = useRef("");
+  const busyRef = useRef(false);
+  const storageKey = `dyli-live-shipment-v1:${session.identity.walletAddress.toLowerCase()}`;
+  const count = Object.values(quantities).reduce(
+    (sum, quantity) => sum + quantity,
+    0,
+  );
+  const groups = Object.entries(asRecord(redemption?.shipping_options)).filter(
+    ([, options]) => asRows(options).length,
+  );
+  const prepared = redemption?.status === "prepared";
+
+  useEffect(() => {
+    let active = true;
+    const restore = async () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        if (!saved?.id) return;
+        const payload = await api<{ redemption: Redemption }>(
+          "/api/redemptions",
+          { action: "get", redemptionId: saved.id },
+        );
+        if (
+          active &&
+          !["completed", "confirmed"].includes(payload.redemption.status)
+        ) {
+          setRedemption(payload.redemption);
+          setHash(
+            String(payload.redemption.redemption_tx_hash || saved.hash || ""),
+          );
+          setAttempted(saved.attempted === true);
+        }
+      } catch {
+        /* A stale local identifier never becomes an authoritative shipment. */
+      }
+    };
+    void restore();
+    return () => {
+      active = false;
+    };
+  }, [api, storageKey]);
+
+  const work = async (label: string, task: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(label);
+    setError("");
+    try {
+      if (navigator.locks)
+        await navigator.locks.request(
+          `dyli-live:${session.identity.walletAddress.toLowerCase()}`,
+          { ifAvailable: true },
+          async (lock) => {
+            if (!lock) throw new Error("Your wallet is busy in another tab");
+            await task();
+          },
+        );
+      else await task();
+    } catch (failure) {
+      const details = asRecord(asRecord(failure).details);
+      const suggestion = suggestedShippingAddress(details.recommended_address);
+      if (asRecord(failure).code === "address_correction_required" && suggestion) {
+        setCorrection(suggestion);
+        return;
+      }
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Shipment could not be completed",
+      );
+    } finally {
+      busyRef.current = false;
+      setBusy("");
+    }
+  };
+
+  const requestQuote = (shippingAddress = address) => {
+    if (count < 1 || count > 20) {
+      setError("Choose up to 20 collectibles");
+      return;
+    }
+    void work("Finding delivery options…", async () => {
+      key.current ||= crypto.randomUUID();
+      const payload = await api<{ redemption: Redemption }>(
+        "/api/redemptions",
+        {
+          action: "quote",
+          idempotencyKey: key.current,
+          address: shippingAddress,
+          items: Object.entries(quantities)
+            .filter(([, quantity]) => quantity > 0)
+            .map(([tokenId, quantity]) => ({ tokenId, quantity })),
+        },
+      );
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ id: payload.redemption.id }),
+      );
+      setRedemption(payload.redemption);
+    });
+  };
+  const quote = (event: FormEvent) => { event.preventDefault(); requestQuote(); };
+  const prepare = () =>
+    void work("Confirming your delivery price…", async () => {
+      const result = await api<{ redemption: Redemption }>("/api/redemptions", {
+        action: "prepare",
+        redemptionId: redemption?.id,
+        shippingSelection: selection,
+        collectionResponses: Object.entries(responses).map(
+          ([productId, value]) => ({ productId: Number(productId), value }),
+        ),
+      });
+      setRedemption(result.redemption);
+    });
+  const ship = () =>
+    void work(
+      hash ? "Confirming shipment…" : "Preparing your shipment…",
+      async () => {
+        if (!redemption) return;
+        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        if (saved?.id && saved.id !== redemption.id)
+          throw new Error(
+            "Another shipment is open in this wallet. Close and reopen shipping to continue it.",
+          );
+        const fresh = await api<{ redemption: Redemption }>(
+          "/api/redemptions",
+          { action: "get", redemptionId: redemption.id },
+        );
+        if (fresh.redemption.status === "completed") {
+          setRedemption(fresh.redemption);
+          setComplete(true);
+          localStorage.removeItem(storageKey);
+          return;
+        }
+        let submitted = String(
+          fresh.redemption.redemption_tx_hash ||
+            hash ||
+            saved?.hash ||
+            recoveryHash ||
+            "",
+        );
+        if (!submitted) {
+          if (!navigator.locks)
+            throw new Error(
+              "Use an updated browser with Web Locks support to ship securely",
+            );
+          if (saved?.attempted || attempted)
+            throw new Error(
+              "A shipment was submitted. Enter its transaction hash from your wallet history to confirm it.",
+            );
+          if (
+            !fresh.redemption.transaction ||
+            fresh.redemption.status !== "prepared"
+          )
+            throw new Error("Prepare your shipment first");
+          const payment = asRecord(fresh.redemption.payment);
+          const token = String(payment.token_address);
+          const spender = String(payment.spender);
+          const amountCents = Number(payment.amount_cents);
+          if (
+            !isAddress(token) ||
+            !isAddress(spender) ||
+            !Number.isSafeInteger(amountCents) ||
+            amountCents < 0
+          )
+            throw new Error("Invalid shipping payment instructions");
+          const amount = BigInt(amountCents) * BigInt(10000);
+          const client = createPublicClient({
+            chain:
+              session.balance.chain_id === 2741 ? abstract : abstractTestnet,
+            transport: http(),
+          });
+          const owner = session.identity.walletAddress as `0x${string}`;
+          const allowance = await client.readContract({
+            address: token,
+            abi: erc20Abi,
+            functionName: "allowance",
+            args: [owner, spender],
+          });
+          if (allowance < amount) {
+            const approval = await send({
+              chain: "abstract",
+              chain_id: session.balance.chain_id,
+              from: owner,
+              to: token,
+              value: "0",
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [spender, amount],
+              }),
+            });
+            const receipt = await client.waitForTransactionReceipt({
+              hash: approval,
+              timeout: 60000,
+            });
+            if (receipt.status !== "success")
+              throw new Error("Shipping approval failed");
+          }
+          setAttempted(true);
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ id: redemption.id, attempted: true }),
+          );
+          try {
+            submitted = await send(fresh.redemption.transaction);
+          } catch (failure) {
+            const code = asRecord(failure).code;
+            if (asRecord(failure).broadcastAttempted === false || code === 4001 || code === "ACTION_REJECTED") {
+              setAttempted(false);
+              localStorage.setItem(
+                storageKey,
+                JSON.stringify({ id: redemption.id }),
+              );
+            }
+            throw failure;
+          }
+          setHash(submitted);
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ id: redemption.id, hash: submitted }),
+          );
+        }
+        const result = await api<{ redemption: Redemption }>(
+          "/api/redemptions",
+          { action: "confirm", redemptionId: redemption.id, txHash: submitted },
+        );
+        setRedemption(result.redemption);
+        if (result.redemption.status !== "completed")
+          throw new Error(
+            "Your shipment is still processing. Continue to confirm its status.",
+          );
+        setComplete(true);
+        localStorage.removeItem(storageKey);
+      },
+    );
+  const back = () => {
+    if (hash || attempted) return;
+    key.current = "";
+    setRedemption(null);
+    setSelection({});
+    localStorage.removeItem(storageKey);
+  };
+
+  return (
+    <>
+    <LiveModal
+      title={complete ? "Shipment requested" : "Ship from your vault"}
+      onClose={() => {
+        if (!busy) {
+          if (complete) void onComplete();
+          else onClose();
+        }
+      }}
+    >
+      <div className="lc-checkout lc-shipping">
+        {error && (
+          <p className="lc-error" role="alert">
+            {error}
+          </p>
+        )}
+        {complete ? (
+          <>
+            <div className="lc-shipment-images">
+              {asRows(redemption?.items).map((item) => (
+                <Art
+                  key={String(item.token_id)}
+                  src={assetImage(item)}
+                  name={String(item.name)}
+                />
+              ))}
+            </div>
+            <h2>Your shipment is being prepared.</h2>
+            <p>{String(asRecord(redemption?.address).city || "")}</p>
+            <button className="lc-primary" onClick={() => void onComplete()}>
+              View shipments
+            </button>
+          </>
+        ) : redemption?.status === "requires_action" ? (
+          <>
+            <h2>Your shipment needs a review.</h2>
+            <p>
+              DYLI support needs to finish processing this shipment. Do not send
+              another payment.
+            </p>
+            <p className="lc-muted">Reference: {redemption.id}</p>
+            <button className="lc-primary" onClick={onClose}>
+              Close
+            </button>
+          </>
+        ) : !redemption ? (
+          <form onSubmit={quote}>
+            <div className="lc-shipping-heading"><span>1 · Address</span><span>2 · Delivery</span><span>3 · Review</span></div>
+            {!showItems && <div className="lc-shipping-items-summary">
+              {holdings.filter(item => quantities[String(item.token_id)] > 0).map(item => <div key={String(item.token_id)}>
+                <Art src={assetImage(item)} name={String(item.name)} /><span><strong>{String(item.name)}</strong><small>Quantity {quantities[String(item.token_id)]}</small></span>
+              </div>)}
+              {(holdings.length > 1 || Number(initialItem?.balance) > 1) && <button type="button" className="lc-secondary" disabled={!!busy} onClick={() => setShowItems(true)}>Change items</button>}
+            </div>}
+            {showItems && <div className="lc-shipment-picker">
+              {holdings.map((item) => (
+                <label key={String(item.token_id)}>
+                  <Art src={assetImage(item)} name={String(item.name)} />
+                  <span>{String(item.name)}</span>
+                  <select
+                    disabled={!!busy}
+                    aria-label={`Quantity to ship: ${item.name}`}
+                    value={quantities[String(item.token_id)] || 0}
+                    onChange={(event) => {
+                      key.current = "";
+                      setQuantities({
+                        ...quantities,
+                        [String(item.token_id)]: Number(event.target.value),
+                      });
+                    }}
+                  >
+                    {Array.from(
+                      { length: Math.min(20, Number(item.balance)) + 1 },
+                      (_, value) => (
+                        <option key={value}>{value}</option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              ))}
+              <button type="button" className="lc-secondary" disabled={!!busy || count < 1 || count > 20} onClick={() => setShowItems(false)}>Done · {count} selected</button>
+            </div>}
+            {correction ? <section className="lc-address-correction" aria-label="Confirm shipping address">
+              <h3>Confirm your address</h3>
+              <p>The carrier suggested an update. Check the street and postal code before continuing.</p>
+              <div className="lc-address-comparison">
+                {[{ label: "You entered", value: address }, { label: "Suggested address", value: correction }].map(({ label, value }) => <div key={label}>
+                  <small>{label}</small><address>{value.name}<br />{value.address1}{value.address2 && <><br />{value.address2}</>}<br />{value.city}, {value.state} {value.postal_code}<br />{value.country}</address>
+                </div>)}
+              </div>
+              <button type="button" className="lc-primary" disabled={!!busy} onClick={() => {
+                key.current = "";
+                setAddress(correction);
+                setCorrection(null);
+                requestQuote(correction);
+              }}>{busy || "Use suggested address"}</button>
+              <button type="button" className="lc-secondary" disabled={!!busy} onClick={() => setCorrection(null)}>Edit my address</button>
+            </section> : <>
+            <h3>Delivery address</h3>
+            <div className="lc-address">
+              {[
+                { key: "name", label: "Full name", auto: "name" },
+                {
+                  key: "address1",
+                  label: "Street address",
+                  auto: "address-line1",
+                },
+                {
+                  key: "address2",
+                  label: "Apartment, suite (optional)",
+                  auto: "address-line2",
+                },
+                { key: "city", label: "City", auto: "address-level2" },
+                {
+                  key: "state",
+                  label: "State / province",
+                  auto: "address-level1",
+                },
+                {
+                  key: "postal_code",
+                  label: "Postal code",
+                  auto: "postal-code",
+                },
+                { key: "country", label: "Country code", auto: "country" },
+                { key: "phone", label: "Phone", auto: "tel" },
+              ].map((field) => (
+                <label key={field.key}>
+                  {field.label}
+                  <input
+                    disabled={!!busy}
+                    required={field.key !== "address2"}
+                    maxLength={field.key === "country" ? 2 : 160}
+                    type={field.key === "phone" ? "tel" : "text"}
+                    autoComplete={field.auto}
+                    value={address[field.key]}
+                    onChange={(event) => {
+                      key.current = "";
+                      setError("");
+                      setAddress({
+                        ...address,
+                        [field.key]: event.target.value,
+                      });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              className="lc-primary"
+              disabled={!!busy || count < 1 || count > 20}
+              type="submit"
+            >
+              {busy || "Find delivery options"}
+            </button>
+            </>}
+          </form>
+        ) : prepared || hash || attempted ? (
+          <>
+            <div className="lc-shipment-images">
+              {asRows(redemption.items).map((item) => (
+                <Art
+                  key={String(item.token_id)}
+                  src={assetImage(item)}
+                  name={String(item.name)}
+                />
+              ))}
+            </div>
+            <p className="lc-stat lc-total">
+              Delivery total
+              <strong>{usd(asRecord(redemption.pricing).amount)}</strong>
+            </p>
+            <p className="lc-muted">Pay with your USDC balance.</p>
+            {attempted && !hash && (
+              <input
+                aria-label="Shipment transaction hash"
+                placeholder="Transaction hash from your wallet history"
+                value={recoveryHash}
+                onChange={(event) => setRecoveryHash(event.target.value)}
+              />
+            )}
+            <button className="lc-primary" disabled={!!busy} onClick={ship}>
+              {busy || (hash ? "Confirm shipment" : "Confirm and ship")}
+            </button>
+            {!hash && !attempted && (
+              <button className="lc-secondary" disabled={!!busy} onClick={back}>
+                Change details
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {groups.map(([group, options]) => (
+              <fieldset key={group}>
+                <legend>Delivery options</legend>
+                {asRows(options).map((option, index) => {
+                  const id = String(option.id || option.courier_id || "");
+                  return (
+                    <label className="lc-rate" key={id || index}>
+                      <input
+                        disabled={!!busy}
+                        type="radio"
+                        name={group}
+                        checked={selection[group] === id}
+                        onChange={() =>
+                          setSelection({ ...selection, [group]: id })
+                        }
+                      />
+                      <span>
+                        <strong>{String(option.carrier || "Delivery")}</strong>
+                        {option.estimated_days != null && (
+                          <small>
+                            {String(option.estimated_days)} business days
+                          </small>
+                        )}
+                      </span>
+                      {option.amount != null && (
+                        <strong>{usd(option.amount)}</strong>
+                      )}
+                    </label>
+                  );
+                })}
+              </fieldset>
+            ))}
+            {asRows(redemption.collection_requirements).map((rule) => (
+              <label key={String(rule.productId)}>
+                {String(rule.label)}
+                <input
+                  required={rule.required !== false}
+                  value={responses[String(rule.productId)] || ""}
+                  onChange={(event) =>
+                    setResponses({
+                      ...responses,
+                      [String(rule.productId)]: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            ))}
+            <button
+              className="lc-primary"
+              disabled={
+                !!busy ||
+                !groups.length ||
+                groups.some(([group]) => !selection[group])
+              }
+              onClick={prepare}
+            >
+              {busy || "Review shipment"}
+            </button>
+            <button className="lc-secondary" disabled={!!busy} onClick={back}>
+              Change details
+            </button>
+          </>
+        )}
+      </div>
+    </LiveModal>
+    {busy && <CommerceProgress message={busy} />}
+    </>
+  );
+}

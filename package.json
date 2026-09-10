@@ -1,0 +1,49 @@
+{
+  "name": "dyli-commerce-example",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --test tests/*.test.mjs",
+    "doctor": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/doctor.mjs",
+    "protection:check": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/check-protection.mjs",
+    "source:check": "node scripts/check-public-source.mjs",
+    "pilot:configure": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/configure-box-pilot.mjs"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "3.37.4",
+    "@privy-io/server-auth": "^1.32.5",
+    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/stripe-js": "^9.13.0",
+    "geist": "^1.7.2",
+    "lucide-react": "^1.33.0",
+    "motion": "^13.1.1",
+    "next": "16.3.4",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "viem": "^2.55.19"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "axios": "1.19.0",
+    "ws": "8.21.3"
+  }
+}
