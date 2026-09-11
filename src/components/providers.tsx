@@ -19,13 +19,15 @@ function PrivyAdapter({ children }: { children: React.ReactNode }) {
   const { signMessage } = useSignMessage();
   const { isOpen: walletPrompt } = useModalStatus();
   const wallet = wallets.find(wallet => wallet.walletClientType === "privy");
-  return <WalletPromptContext.Provider value={walletPrompt}><CommerceAuthContext.Provider value={{ ready: auth.ready, authenticated: auth.authenticated,
+  return <WalletPromptContext.Provider value={walletPrompt}><CommerceAuthContext.Provider value={{
+    ready: auth.ready, authenticated: auth.authenticated,
     login: auth.login, logout: auth.logout, getAccessToken: auth.getAccessToken,
     wallet,
     sendTransaction: (transaction, options) => sendSponsoredAbstractTransaction(wallet, transaction, options),
     // Keep the signed authorization after the customer's Pay/Confirm action.
     // Only the redundant confirmation popup is hidden; MFA/recovery remains.
-    signMessage: (message, options) => signMessage(message, { ...options, uiOptions: { showWalletUIs: false } }) }}>
+    signMessage: (message, options) => signMessage(message, { ...options, uiOptions: { showWalletUIs: false } })
+  }}>
     {children}
   </CommerceAuthContext.Provider></WalletPromptContext.Provider>;
 }
@@ -38,30 +40,30 @@ export function Providers({ runtime, children }: { runtime: CommerceRuntime; chi
   if (runtime.authMode === "existing") return <RuntimeContext.Provider value={runtime}><PartnerAdapter>{children}</PartnerAdapter></RuntimeContext.Provider>;
   return (
     <RuntimeContext.Provider value={runtime}>
-    <PrivyProvider
-      appId={runtime.appId}
-      config={{
-        loginMethods: ["email"],
-        appearance: {
-          theme: "light",
-          accentColor: "#15151a",
-          landingHeader: "Your collection, all in one place",
-          loginMessage: "Sign in to continue.",
-          walletChainType: "ethereum-only",
-        },
-        embeddedWallets: {
-          ethereum: { createOnLogin: "all-users" },
-          showWalletUIs: false,
-        },
-        externalWallets: {
-          disableAllExternalWallets: true,
-        },
-        supportedChains: [abstract, abstractTestnet],
-        defaultChain: runtime.chainId === 11124 ? abstractTestnet : abstract,
-      }}
-    >
-      <PrivyAdapter>{children}</PrivyAdapter>
-    </PrivyProvider>
+      <PrivyProvider
+        appId={runtime.appId}
+        config={{
+          loginMethods: ["email", "sms"],
+          appearance: {
+            theme: "light",
+            accentColor: "#15151a",
+            landingHeader: "Your collection, all in one place",
+            loginMessage: "Sign in to continue.",
+            walletChainType: "ethereum-only",
+          },
+          embeddedWallets: {
+            ethereum: { createOnLogin: "all-users" },
+            showWalletUIs: false,
+          },
+          externalWallets: {
+            disableAllExternalWallets: true,
+          },
+          supportedChains: [abstract, abstractTestnet],
+          defaultChain: runtime.chainId === 11124 ? abstractTestnet : abstract,
+        }}
+      >
+        <PrivyAdapter>{children}</PrivyAdapter>
+      </PrivyProvider>
     </RuntimeContext.Provider>
   );
 }
