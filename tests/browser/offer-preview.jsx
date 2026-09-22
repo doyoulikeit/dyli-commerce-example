@@ -20,9 +20,11 @@ const currentOffer = () => !params.has("rollover") || Date.now() < expires * 100
   expires_at: new Date(Date.now() + 86400000).toISOString(), expiration: Math.floor(Date.now() / 1000) + 86400,
 };
 let approvalDone = !params.has("approval");
-let sale = null;
+let sale = params.has("resume") ? JSON.parse(sessionStorage.getItem("fixture-sale") || "null") : null;
+let confirmations = 0;
 window.fixtureAudit = [];
 window.fixtureOffersAvailable = !params.has("unavailable");
+window.fixtureRecordingAvailable = !params.has("recording");
 window.fetch = async (_url, options) => {
   const request = JSON.parse(options.body);
   const rpc = value => Response.json({ jsonrpc: "2.0", id: request.id, result: value });
@@ -52,10 +54,14 @@ function Preview() {
         status: params.has("expired") ? "expired" : "prepared", expires_at: quoted.expires_at,
         transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: market, data: "0x1234", value: "0" },
         approval_transaction: params.has("approval") ? { chain: "abstract", chain_id: 2741, from: wallet, to: collection, data: "0xabcd", value: "0" } : null };
+      sessionStorage.setItem("fixture-sale", JSON.stringify(sale));
     }
     if (body.action === "confirm") {
-      if (params.has("recording")) throw Error("Sale recording needs another confirmation attempt.");
+      confirmations++;
+      if (!window.fixtureRecordingAvailable || (params.has("transient") && confirmations === 1))
+        throw Object.assign(Error("Sale recording needs another confirmation attempt."), { status: 503 });
       sale = { ...sale, status: "completed", tx_hash: body.txHash };
+      sessionStorage.setItem("fixture-sale", JSON.stringify(sale));
     }
     return { acceptance: structuredClone(sale) };
   }, []);

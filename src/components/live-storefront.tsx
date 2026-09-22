@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Archive,
@@ -33,6 +33,7 @@ import { LiveVaultSale } from "@/components/live-vault-sale";
 import { LiveVaultCard } from "@/components/live-vault-card";
 import { useLiveCommerce } from "@/components/use-live-commerce";
 import { useCommerceRuntime } from "@/components/providers";
+import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import {
   asRecord,
   asRows,
@@ -71,7 +72,7 @@ export function LiveStorefront({
   const brandName = runtime?.name || storefrontConfig.brand.name;
   const navigation = allNavigation.filter(entry => !boxesOnly || entry.id !== "shop");
   const commerce = useLiveCommerce();
-  const { session, flow, play, busy, error } = commerce;
+  const { session, flow, play, busy, error, refresh: refreshAccount, setError: setCommerceError } = commerce;
   const [tab, setTab] = useState<Tab>("home");
   const [storefront, setStorefront] = useState(initialStorefront);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
@@ -91,6 +92,10 @@ export function LiveStorefront({
   const [checkoutReturn, setCheckoutReturn] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const refreshConfirmedAccount = useCallback(async () => {
+    try { await retryConfirmation(() => refreshAccount(true)); }
+    catch { setCommerceError("Your transaction is confirmed. Reload to refresh your vault, balance and activity."); }
+  }, [refreshAccount, setCommerceError]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,7 +118,7 @@ export function LiveStorefront({
   };
   const finishVaultSale = async () => {
     setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection");
-    try { await commerce.refresh(true); } catch { commerce.setError("Your sale is confirmed. Reload to refresh your vault and balance."); }
+    await refreshConfirmedAccount();
   };
   const boxes = storefront?.boxes || [];
   const products = boxesOnly
@@ -574,6 +579,15 @@ export function LiveStorefront({
         {tab === "activity" && (
           <>
             <h1>Activity</h1>
+            {!!session?.redemptions.length && <section aria-label="Shipments" className="lc-order-history">
+              <h2>Shipments</h2>
+              {session.redemptions.map(shipment => <article className="lc-order-entry" key={String(shipment.id)}>
+                <div className="lc-order-heading"><div className="lc-order-copy">
+                  <h2>{asRows(shipment.items).map(item => String(item.name || "Collectible")).join(", ")}</h2>
+                  <p>{shipment.status === "completed" ? "Shipment requested" : shipment.status === "requires_action" ? "Needs review" : "Shipment in progress"}</p>
+                </div><button className="lc-secondary" onClick={() => { navigate("collection"); setShipped(true); }}>View shipments</button></div>
+              </article>)}
+            </section>}
             {!!session?.offerAcceptances?.length && <section aria-label="Vault sales" className="lc-order-history">
               <h2>Vault sales</h2>
               {session.offerAcceptances.map(sale => <article className="lc-order-entry" key={sale.id}>
@@ -590,7 +604,7 @@ export function LiveStorefront({
             </section>}
             {session?.orders.length ? (
               <LiveActivity orders={session.orders} plays={session.boxPlays || []} busy={busy} onOpen={(item, orderId) => void showResume(item, orderId)} />
-            ) : !session?.offerAcceptances?.length ? (
+            ) : !session?.offerAcceptances?.length && !session?.redemptions.length ? (
               empty("No activity yet", "Your purchases will appear here.")
             ) : null}
           </>
@@ -798,7 +812,7 @@ export function LiveStorefront({
       {holding && session ? (
         <LiveVaultSale key={`${commerce.address}:${holding.token_id}`} item={holding} session={session}
           sellingAvailable={vaultSellingReady}
-          api={commerce.api} send={commerce.send} onComplete={finishVaultSale} onClose={() => setHolding(null)}
+          api={commerce.api} send={commerce.send} onSettled={refreshConfirmedAccount} onComplete={finishVaultSale} onClose={() => setHolding(null)}
           onShip={() => { setShippingToken(String(holding.token_id)); setHolding(null); setShipping(true); }} />
       ) : holding && (
         <LiveModal title="In your vault" onClose={() => setHolding(null)}>
@@ -831,11 +845,12 @@ export function LiveStorefront({
           session={session}
           api={commerce.api}
           send={commerce.send}
+          onSettled={refreshConfirmedAccount}
           onComplete={async () => {
             setShipping(false);
             setShipped(true);
             navigate("collection");
-            await commerce.refresh(true);
+            await refreshConfirmedAccount();
           }}
           onClose={() => setShipping(false)}
         />
@@ -843,7 +858,7 @@ export function LiveStorefront({
       {selling && session && <LiveVaultSale key={`${commerce.address}:${selling.token_id}`} item={selling}
         initialAcceptanceId={selling.acceptance_id ? String(selling.acceptance_id) : undefined}
         session={session} api={commerce.api} send={commerce.send} onClose={() => setSelling(null)}
-        onComplete={finishVaultSale} />}
+        onSettled={refreshConfirmedAccount} onComplete={finishVaultSale} />}
       {busy && !profile && !checkoutItem && !(showOpening && play && flow) && <CommerceProgress message={busy} />}
     </div>
   );

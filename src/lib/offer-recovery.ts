@@ -1,8 +1,10 @@
 import type { OfferAcceptance, TransactionInstruction } from "./types";
+import { retryConfirmation } from "./confirmation-retry.mjs";
 
 export type OfferRecovery = {
   wallet: string; tokenId: string; key: string; offerId: string; expectedAmount: string;
   id?: string; hash?: string; attempted?: boolean; approvalHash?: string; approvalAttempted?: boolean;
+  receiptConfirmed?: boolean;
 };
 export const offerStorageKey = (wallet: string, tokenId: string) => `dyli-vault-sale-v1:${wallet.toLowerCase()}:${tokenId}`;
 
@@ -20,7 +22,8 @@ export function parseOfferRecovery(raw: string | null, wallet: string, tokenId: 
     return { wallet: value.wallet, tokenId, key: value.key, offerId: value.offerId, expectedAmount: value.expectedAmount,
       ...(value.id ? { id: value.id } : {}), ...(value.hash ? { hash: value.hash } : {}),
       ...(value.approvalHash ? { approvalHash: value.approvalHash } : {}),
-      attempted: value.attempted === true, approvalAttempted: value.approvalAttempted === true };
+      attempted: value.attempted === true, approvalAttempted: value.approvalAttempted === true,
+      ...(value.receiptConfirmed === true && value.hash ? { receiptConfirmed: true } : {}) };
   } catch { return null; }
 }
 
@@ -93,10 +96,12 @@ export async function settleVaultOffer({ sale, recovery, save, send, wait, appro
     persist({ hash });
   }
   progress("Confirming your sale…");
-  const receipt = await wait(hash as `0x${string}`);
+  const receipt = await retryConfirmation(() => wait(hash as `0x${string}`));
   if (receipt.status !== "success") {
-    persist({ hash: undefined, attempted: false });
+    persist({ hash: undefined, attempted: false, receiptConfirmed: false });
     throw new Error("The sale transaction failed. Your item was not sold. Refresh offers to try again.");
   }
-  return confirm(hash);
+  persist({ receiptConfirmed: true });
+  progress("Updating your vault and balance…");
+  return retryConfirmation(() => confirm(hash!));
 }

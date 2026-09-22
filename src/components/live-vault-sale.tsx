@@ -7,6 +7,7 @@ import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, assetImage, usd } from "@/lib/live-commerce";
 import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
 import { loadVaultOffers } from "@/lib/vault-offers";
+import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { offerStorageKey, parseOfferRecovery, saleMayHaveBeenSent, settleVaultOffer, type OfferRecovery } from "@/lib/offer-recovery";
 import type { ApiRecord, OfferAcceptance, SessionResponse, TransactionInstruction, VaultOffer } from "@/lib/types";
 
@@ -15,6 +16,7 @@ type Props = {
   api: <T>(path: string, body?: ApiRecord) => Promise<T>;
   send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
   onComplete: () => Promise<void>; onClose: () => void; onShip?: () => void;
+  onSettled?: () => Promise<void>;
 };
 
 const offerExpiry = (value: string) => new Date(value).toLocaleString(undefined, {
@@ -30,7 +32,7 @@ async function prepareAcceptance(api: Props["api"], body: ApiRecord) {
   }
 }
 
-export function LiveVaultSale({ item, session, api, send, onComplete, onClose, onShip, initialAcceptanceId, sellingAvailable = true }: Props) {
+export function LiveVaultSale({ item, session, api, send, onComplete, onSettled, onClose, onShip, initialAcceptanceId, sellingAvailable = true }: Props) {
   const wallet = session.identity.walletAddress.toLowerCase(), tokenId = String(item.token_id);
   const storageKey = offerStorageKey(wallet, tokenId);
   const [offers, setOffers] = useState<VaultOffer[]>([]);
@@ -57,6 +59,12 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
     return recovery;
   };
   const complete = sale?.status === "completed";
+  const notified = useRef(false);
+  useEffect(() => {
+    if (!complete || notified.current || !onSettled) return;
+    notified.current = true;
+    void onSettled().catch(() => setError("Your sale is confirmed. Your account will update when you refresh."));
+  }, [complete, onSettled]);
   const pending = saleMayHaveBeenSent(sale, saved);
   const expired = !!sale && Date.parse(sale.expires_at) - now < 30000;
 
@@ -99,6 +107,17 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
           setSale(current); setSaved(recovery);
           if (current.status === "completed") localStorage.removeItem(storageKey);
           else localStorage.setItem(storageKey, JSON.stringify(recovery));
+          const knownHash = current.tx_hash || recovery.hash;
+          if (knownHash && current.status !== "completed") {
+            // Resume only receipt confirmation; opening this sheet must never
+            // trigger another wallet prompt or submit another sale.
+            const result = await retryConfirmation(() => api<{ acceptance: OfferAcceptance }>("/api/offers", {
+              action: "confirm", acceptanceId: current!.id, txHash: knownHash,
+            }));
+            if (!active) return;
+            setSale(result.acceptance);
+            if (result.acceptance.status === "completed") { localStorage.removeItem(storageKey); setSaved(null); }
+          }
         } else {
           // Catalog readiness is only a cached hint. The authenticated offer
           // endpoint checks current availability when this item is opened.
@@ -109,8 +128,10 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         }
       } catch (failure) {
         if (active) {
-          setError(failure instanceof Error ? failure.message : "Could not load offers");
-          setRestoreFailed(!checkingOffers); setOffersUnavailable(checkingOffers);
+          const recovery = parseOfferRecovery(localStorage.getItem(storageKey), wallet, tokenId);
+          setError(recovery?.hash ? "Your transaction reference is saved. We couldn’t finish updating your sale yet. Retry confirmation."
+            : failure instanceof Error ? failure.message : "Could not load offers");
+          setRestoreFailed(!checkingOffers && !recovery?.hash); setOffersUnavailable(checkingOffers);
           if (checkingOffers) setOffers([]);
         }
       } finally { if (active) setRestoring(false); }
@@ -136,7 +157,11 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         await action();
       });
       else throw new Error("Please update your browser before selling from your vault.");
-    } catch (failure) { setError(failure instanceof Error ? failure.message : "Please try again"); }
+    } catch (failure) {
+      const recovery = parseOfferRecovery(localStorage.getItem(storageKey), wallet, tokenId);
+      setError(recovery?.hash ? "Your transaction reference is saved. We couldn’t finish updating your sale yet. Retry confirmation."
+        : failure instanceof Error ? failure.message : "Please try again");
+    }
     finally { busyRef.current = false; setBusy(""); }
   };
 
@@ -192,6 +217,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
     setOffers(offers); setSelected(offers[0]?.id || "");
   });
   const checkNeeded = pending || !!saved?.approvalAttempted;
+  const knownHash = sale?.tx_hash || saved?.hash || saved?.approvalHash;
   const chosen = offers.find(value => value.id === selected);
   return <LiveModal title={complete ? "Sale complete" : "In your vault"} className="lc-vault-sale" dismissible={!busy}
     onClose={complete ? () => { void onComplete(); } : onClose}>
@@ -206,11 +232,13 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         <p className="lc-stat"><span>{sale.offer.type === "claim_buyback" ? "48-hour claim offer" : "Standing offer"}</span><strong>{usd(sale.offer.price)}</strong></p>
         <p className="lc-vault-expiry">Expires {offerExpiry(sale.expires_at)}</p>
         {checkNeeded ? <>
-          <p>A transaction may already be on its way. Check its confirmation to continue.</p>
-          <label>Transaction hash from your wallet history
+          <p>{saved?.receiptConfirmed ? "Your transaction is confirmed. We’re finishing the sale record."
+            : knownHash ? "Your transaction reference is saved. Continue confirmation without sending it again."
+              : "A transaction was started, but its reference wasn’t saved. Enter it from your wallet history to continue."}</p>
+          {knownHash ? <a href={`${(session.balance.chain_id === 2741 ? abstract : abstractTestnet).blockExplorers.default.url}/tx/${knownHash}`} target="_blank" rel="noreferrer">View transaction</a> : <label>Transaction hash from your wallet history
             <input aria-label="Transaction hash" value={recoveryHash} onChange={event => setRecoveryHash(event.target.value)} placeholder={saved?.hash || sale.tx_hash || saved?.approvalHash || "0x…"} />
-          </label>
-          <button className="lc-primary" onClick={sell}>Check confirmation</button>
+          </label>}
+          <button className="lc-primary" onClick={sell}>Retry confirmation</button>
         </> : expired ? <>
           <p>This offer has expired.</p>
           <button className="lc-primary" onClick={refreshOffers}>Check for new offers</button>

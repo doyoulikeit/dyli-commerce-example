@@ -11,9 +11,11 @@ if (!output || !process.env.ESBUILD_PACKAGE_PATH)
 const { build } = await import(process.env.ESBUILD_PACKAGE_PATH);
 const revealOnly = process.env.VERIFY_VIEW === "reveal";
 const offersOnly = process.env.VERIFY_VIEW === "offers";
-const isolated = revealOnly || offersOnly;
+const shippingOnly = process.env.VERIFY_VIEW === "shipping";
+const previewPort = shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
+const isolated = revealOnly || offersOnly || shippingOnly;
 await build({
-  entryPoints: { harness: path.join(root, `tests/browser/${offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
+  entryPoints: { harness: path.join(root, `tests/browser/${shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
   bundle: true,
   outdir: output,
   format: "esm",
@@ -102,8 +104,8 @@ if (process.env.VERIFY_BUILD_ONLY !== "true") http
       res.end(error.message);
     }
   })
-  .listen(offersOnly ? 3110 : revealOnly ? 3109 : 3108, "127.0.0.1", () =>
+  .listen(previewPort, "127.0.0.1", () =>
     console.log(
-      `Isolated fixture server http://localhost:${offersOnly ? 3110 : revealOnly ? 3109 : 3108}; wallet sends and API writes are simulated, catalog reads only.`,
+      `Isolated fixture server http://localhost:${previewPort}; wallet sends and API writes are simulated, catalog reads only.`,
     ),
   );

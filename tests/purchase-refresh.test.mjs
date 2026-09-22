@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as live from '../src/lib/live-commerce.ts';
 import * as preferences from '../src/lib/opening-preferences.ts';
+import * as confirmation from '../src/lib/confirmation-retry.mjs';
 import * as viem from 'viem';
 
 const wallet = `0x${'a'.repeat(40)}`;
@@ -50,6 +51,7 @@ function fixture({ failRefresh = false, failOpening = false, recovery = saved, b
       if (name === '@/components/providers') return { useCommerceRuntime: () => ({}) };
       if (name === '@/lib/live-commerce') return live;
       if (name === '@/lib/opening-preferences') return preferences;
+      if (name === '@/lib/confirmation-retry.mjs') return confirmation;
       if (name === 'viem') return viem;
       return {};
     },

@@ -63,8 +63,8 @@ export async function POST(request: Request) {
     }
 
     const redemptionId = String(body.redemptionId || "");
-    await ownedRedemption(redemptionId, identity.externalCustomerId);
-    if (action === "get") return Response.json(await ownedRedemption(redemptionId, identity.externalCustomerId));
+    const current = await ownedRedemption(redemptionId, identity.externalCustomerId);
+    if (action === "get") return Response.json(current);
     if (action === "prepare") {
       return Response.json(await commerce(`/redemptions/${encodeURIComponent(redemptionId)}/prepare`, {
         method: "POST",

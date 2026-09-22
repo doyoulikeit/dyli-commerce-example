@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseShipmentRecovery, shipmentMayHaveBeenSent, redemptionNeedsRefresh, shippingOptionReference, redemptionDraft, isShippingQuoteError } from '../src/lib/redemption-recovery.ts';
+import { parseShipmentRecovery, shipmentMayHaveBeenSent, redemptionNeedsRefresh, shippingOptionReference, redemptionDraft, isShippingQuoteError, sendShipmentTransaction } from '../src/lib/redemption-recovery.ts';
 
 const now = Date.parse('2026-09-10T12:00:00Z');
 const quote = { id: 'shipment', status: 'quoted', expires_at: new Date(now + 600000).toISOString() };
@@ -56,4 +56,31 @@ test('courier identity is preferred over a positional quote ID', () => {
     assert.equal(isShippingQuoteError(code), true);
   for (const code of ['redemption_processing', 'redemption_requires_action', 'transaction_pending'])
     assert.equal(isShippingQuoteError(code), false);
+});
+
+for (const approval of [false, true]) test(`${approval ? 'shipping approval' : 'shipment'} saves uncertain signed hashes and resumes without another send`, async () => {
+  const hash = `0x${'b'.repeat(64)}`;
+  let recovery = { id: 'shipment' }, sends = 0;
+  const options = { approval, transaction: {}, save: value => { recovery = value; }, send: async () => {
+    sends++;
+    assert.equal(approval ? recovery.approvalAttempted : recovery.attempted, true);
+    throw Object.assign(Error('Connection lost'), { transactionHash: hash, broadcastAttempted: true });
+  } };
+  await assert.rejects(sendShipmentTransaction({ ...options, recovery }));
+  assert.equal(approval ? recovery.approvalHash : recovery.hash, hash);
+  assert.equal(await sendShipmentTransaction({ ...options, recovery }), hash);
+  assert.equal(sends, 1);
+});
+
+test('shipping wallet rejection permits retry while an unknown broadcast stays protected', async () => {
+  for (const approval of [false, true]) {
+    let recovery = { id: 'shipment' };
+    const options = { approval, transaction: {}, save: value => { recovery = value; } };
+    await assert.rejects(sendShipmentTransaction({ ...options, recovery,
+      send: async () => { throw Object.assign(Error('Cancelled'), { broadcastAttempted: false }); } }));
+    assert.equal(approval ? recovery.approvalAttempted : recovery.attempted, false);
+    await assert.rejects(sendShipmentTransaction({ ...options, recovery,
+      send: async () => { throw Object.assign(Error('Unknown'), { broadcastAttempted: true }); } }));
+    await assert.rejects(sendShipmentTransaction({ ...options, recovery, send: async () => assert.fail('No duplicate send') }), /reference/);
+  }
 });

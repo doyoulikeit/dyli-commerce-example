@@ -1,6 +1,6 @@
-import type { ApiRecord, Redemption } from "./types";
+import type { ApiRecord, Redemption, TransactionInstruction } from "./types";
 
-export type ShipmentRecovery = { id: string; hash?: string; attempted?: boolean };
+export type ShipmentRecovery = { id: string; hash?: string; attempted?: boolean; approvalHash?: string; approvalAttempted?: boolean };
 
 export function parseShipmentRecovery(raw: string | null): ShipmentRecovery | null {
   if (!raw) return null;
@@ -8,10 +8,36 @@ export function parseShipmentRecovery(raw: string | null): ShipmentRecovery | nu
     const value = JSON.parse(raw);
     if (!value || typeof value.id !== "string" || !value.id ||
         (value.hash != null && (typeof value.hash !== "string" || !/^0x[a-f\d]{64}$/i.test(value.hash))) ||
-        (value.attempted != null && typeof value.attempted !== "boolean")) throw new Error();
+        (value.attempted != null && typeof value.attempted !== "boolean") ||
+        (value.approvalHash != null && !/^0x[a-f\d]{64}$/i.test(value.approvalHash)) ||
+        (value.approvalAttempted != null && typeof value.approvalAttempted !== "boolean")) throw new Error();
     return value;
   } catch {
     throw new Error("Your saved shipment could not be read. Check your wallet activity before starting another shipment.");
+  }
+}
+
+export async function sendShipmentTransaction({ recovery, approval = false, transaction, expiresAt, send, save }: {
+  recovery: ShipmentRecovery; approval?: boolean; transaction: TransactionInstruction; expiresAt?: string;
+  send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
+  save: (value: ShipmentRecovery) => void;
+}) {
+  const hashField = approval ? "approvalHash" : "hash", attemptField = approval ? "approvalAttempted" : "attempted";
+  if (recovery[hashField]) return recovery[hashField] as `0x${string}`;
+  if (recovery[attemptField]) throw new Error("A transaction was started. Enter its reference from your wallet history to continue.");
+  const pending = { ...recovery, [attemptField]: true };
+  save(pending);
+  try {
+    const hash = await send(transaction, expiresAt);
+    save({ ...pending, [hashField]: hash });
+    return hash;
+  } catch (failure) {
+    const error = failure as { broadcastAttempted?: boolean; code?: number | string; transactionHash?: string };
+    if (error.broadcastAttempted === false || (error.broadcastAttempted !== true && [4001, "ACTION_REJECTED"].includes(error.code!)))
+      save({ ...recovery, [attemptField]: false });
+    else if (error.transactionHash && /^0x[a-f\d]{64}$/i.test(error.transactionHash))
+      save({ ...pending, [hashField]: error.transactionHash });
+    throw failure;
   }
 }
 

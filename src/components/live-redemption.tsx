@@ -13,7 +13,8 @@ import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import { suggestedShippingAddress } from "@/lib/shipping-address";
 import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
-import { isShippingQuoteError, parseShipmentRecovery, redemptionDraft, redemptionNeedsRefresh, shipmentMayHaveBeenSent, shippingOptionReference } from "@/lib/redemption-recovery";
+import { isShippingQuoteError, parseShipmentRecovery, redemptionDraft, redemptionNeedsRefresh, shipmentMayHaveBeenSent, shippingOptionReference, sendShipmentTransaction, type ShipmentRecovery } from "@/lib/redemption-recovery";
+import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { CommerceProgress } from "@/components/commerce-progress";
 import type {
   ApiRecord,
@@ -29,6 +30,7 @@ type Props = {
   api: <T>(path: string, body?: ApiRecord) => Promise<T>;
   send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
   onComplete: () => Promise<void>;
+  onSettled?: () => Promise<void>;
   onClose: () => void;
 };
 
@@ -39,6 +41,7 @@ export function LiveRedemption({
   api,
   send,
   onComplete,
+  onSettled,
   onClose,
 }: Props) {
   const initialItem = holdings.find(item => String(item.token_id) === initialTokenId) || (holdings.length === 1 ? holdings[0] : null);
@@ -61,8 +64,15 @@ export function LiveRedemption({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [complete, setComplete] = useState(false);
+  const notified = useRef(false);
+  useEffect(() => {
+    if (!complete || notified.current || !onSettled) return;
+    notified.current = true;
+    void onSettled().catch(() => setError("Your shipment is confirmed. Your account will update when you refresh."));
+  }, [complete, onSettled]);
   const [hash, setHash] = useState("");
   const [attempted, setAttempted] = useState(false);
+  const [approvalPending, setApprovalPending] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [restoring, setRestoring] = useState(true);
   const [restoreFailed, setRestoreFailed] = useState(false);
@@ -93,9 +103,11 @@ export function LiveRedemption({
   useEffect(() => {
     let active = true;
     const restore = async () => {
+      let knownReference = false;
       try {
         const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
         if (!saved?.id) return;
+        knownReference = !!saved.hash;
         const payload = await api<{ redemption: Redemption }>(
           "/api/redemptions",
           { action: "get", redemptionId: saved.id },
@@ -113,12 +125,26 @@ export function LiveRedemption({
             String(payload.redemption.redemption_tx_hash || saved.hash || ""),
           );
           setAttempted(saved.attempted === true);
+          setApprovalPending(saved.approvalAttempted === true && !saved.approvalHash);
+          const submitted = payload.redemption.redemption_tx_hash || saved.hash;
+          if (submitted && payload.redemption.status !== "requires_action") {
+            const result = await retryConfirmation(() => api<{ redemption: Redemption }>("/api/redemptions", {
+              action: "confirm", redemptionId: saved.id, txHash: submitted,
+            }));
+            if (active) {
+              setRedemption(result.redemption);
+              if (["completed", "confirmed"].includes(result.redemption.status)) {
+                setComplete(true); localStorage.removeItem(storageKey);
+              }
+            }
+          }
         } else if (active) {
+          setRedemption(payload.redemption); setComplete(true);
           localStorage.removeItem(storageKey);
         }
       } catch (failure) {
         if (active) {
-          setRestoreFailed(true);
+          setRestoreFailed(!knownReference);
           setError(failure instanceof Error ? failure.message : "Your saved shipment could not be loaded. Close and reopen shipping to try again.");
         }
       } finally {
@@ -264,11 +290,22 @@ export function LiveRedemption({
       hash ? "Confirming shipment…" : "Preparing your shipment…",
       async () => {
         if (!redemption) return;
-        const saved = parseShipmentRecovery(localStorage.getItem(storageKey));
+        let saved = parseShipmentRecovery(localStorage.getItem(storageKey));
         if (saved?.id && saved.id !== redemption.id)
           throw new Error(
             "Another shipment is open in this wallet. Close and reopen shipping to continue it.",
           );
+        const persist = (value: ShipmentRecovery) => {
+          localStorage.setItem(storageKey, JSON.stringify(value)); saved = value;
+          setHash(value.hash || ""); setAttempted(value.attempted === true);
+          setApprovalPending(value.approvalAttempted === true && !value.approvalHash);
+        };
+        if (recoveryHash.trim()) {
+          if (!/^0x[a-f\d]{64}$/i.test(recoveryHash.trim())) throw new Error("Enter a valid transaction reference.");
+          persist({ ...(saved || { id: redemption.id }),
+            ...(saved?.approvalAttempted && !saved.attempted && !saved.hash
+              ? { approvalHash: recoveryHash.trim() } : { hash: recoveryHash.trim(), attempted: true }) });
+        }
         const fresh = await api<{ redemption: Redemption }>(
           "/api/redemptions",
           { action: "get", redemptionId: redemption.id },
@@ -283,7 +320,6 @@ export function LiveRedemption({
           fresh.redemption.redemption_tx_hash ||
             hash ||
             saved?.hash ||
-            recoveryHash ||
             "",
         );
         if (!submitted) {
@@ -336,7 +372,8 @@ export function LiveRedemption({
             args: [owner, spender],
           });
           if (allowance < amount) {
-            const approval = await send({
+            const approval = await sendShipmentTransaction({ recovery: saved || { id: redemption.id }, approval: true, send, save: persist,
+              expiresAt: fresh.redemption.expires_at, transaction: {
               chain: "abstract",
               chain_id: session.balance.chain_id,
               from: owner,
@@ -347,49 +384,30 @@ export function LiveRedemption({
                 functionName: "approve",
                 args: [spender, amount],
               }),
-            });
-            const receipt = await client.waitForTransactionReceipt({
+            } });
+            const receipt = await retryConfirmation(() => client.waitForTransactionReceipt({
               hash: approval,
               timeout: 60000,
-            });
-            if (receipt.status !== "success")
+            }));
+            if (receipt.status !== "success") {
+              persist({ id: redemption.id });
               throw new Error("Shipping approval failed");
+            }
           }
+          persist({ id: redemption.id });
           // Approval can take a while. Never send an expired shipment after it.
           if (redemptionNeedsRefresh(fresh.redemption)) {
             await refreshQuote();
             return;
           }
-          setAttempted(true);
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({ id: redemption.id, attempted: true }),
-          );
-          try {
-            submitted = await send(fresh.redemption.transaction, fresh.redemption.expires_at);
-          } catch (failure) {
-            const code = asRecord(failure).code;
-            if (asRecord(failure).broadcastAttempted === false ||
-                (asRecord(failure).broadcastAttempted !== true && (code === 4001 || code === "ACTION_REJECTED"))) {
-              setAttempted(false);
-              localStorage.setItem(
-                storageKey,
-                JSON.stringify({ id: redemption.id }),
-              );
-              if (redemptionNeedsRefresh(fresh.redemption)) setRefreshRequired(true);
-            }
-            throw failure;
-          }
-          setHash(submitted);
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({ id: redemption.id, hash: submitted }),
-          );
+          submitted = await sendShipmentTransaction({ recovery: saved || { id: redemption.id }, send, save: persist,
+            transaction: fresh.redemption.transaction, expiresAt: fresh.redemption.expires_at });
         }
-        const result = await api<{ redemption: Redemption }>(
+        setBusy("Confirming your shipment…");
+        const result = await retryConfirmation(() => api<{ redemption: Redemption }>(
           "/api/redemptions",
           { action: "confirm", redemptionId: redemption.id, txHash: submitted },
-        );
+        ));
         setRedemption(result.redemption);
         if (result.redemption.status !== "completed")
           throw new Error(
@@ -602,8 +620,8 @@ export function LiveRedemption({
               Delivery total
               <strong>{usd(asRecord(redemption.pricing).amount)}</strong>
             </p>
-            <p className="lc-muted">Pay with your USDC balance.</p>
-            {attempted && !hash && (
+            <p className="lc-muted">{hash ? "Your transaction reference is saved. We’ll check your existing shipment." : "Pay with your USDC balance."}</p>
+            {(attempted || approvalPending) && !hash && (
               <input
                 aria-label="Shipment transaction hash"
                 placeholder="Transaction hash from your wallet history"
@@ -612,7 +630,7 @@ export function LiveRedemption({
               />
             )}
             <button className="lc-primary" disabled={!!busy} onClick={ship}>
-              {busy || (hash ? "Confirm shipment" : "Confirm and ship")}
+              {busy || (hash ? "Retry confirmation" : "Confirm and ship")}
             </button>
             {!hash && !attempted && (
               <button className="lc-secondary" disabled={!!busy} onClick={back}>

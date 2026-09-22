@@ -83,6 +83,20 @@ test('pending receipt and recording failure retain the hash for recovery', async
     assert.equal(f.latest().hash, hash); assert.equal(f.latest().attempted, true);
   }
 });
+
+test('temporary sale recording failures retry confirmation with one wallet send', async () => {
+  const f = fixture(); let confirmations = 0;
+  const confirm = f.options.confirm;
+  f.options.confirm = async hash => {
+    confirmations++;
+    if (confirmations === 1) throw Object.assign(Error('Receipt not indexed'), { status: 409, code: 'transaction_not_confirmed' });
+    return confirm(hash);
+  };
+  assert.equal((await f.run()).status, 'completed');
+  assert.equal(confirmations, 2);
+  assert.equal(f.calls.filter(call => call === 'sale').length, 1);
+  assert.equal(f.latest().receiptConfirmed, true);
+});
 test('expired unsubmitted offers never open wallet prompts; reverted receipt allows retry', async () => {
   const expired = fixture({ expired: true }); await assert.rejects(expired.run(), /expired/); assert.equal(expired.calls.length, 0);
   const reverted = fixture({ failure: 'reverted' }); await assert.rejects(reverted.run(), /failed/);

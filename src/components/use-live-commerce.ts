@@ -7,6 +7,7 @@ import { useCommerceRuntime } from "@/components/providers";
 import { parseCardCheckout, unpaidCardError, type CardCheckout } from "@/lib/card-checkout";
 import { normalizeOpeningPreferences, type OpeningPreferences } from "@/lib/opening-preferences";
 import type { WalletSnapshot } from "@/lib/wallet-transfer";
+import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import {
   asRecord,
   asRows,
@@ -337,10 +338,10 @@ export function useLiveCommerce() {
       txHash: candidateHash || next.paymentHash,
     };
     setBusy("Confirming your payment…");
-    const payload = await api<ApiRecord>("/api/checkout", {
+    const payload = await retryConfirmation(() => api<ApiRecord>("/api/checkout", {
       ...base,
       action: "authorize",
-    });
+    }));
     if (payload.order) {
       await acceptOrder(asRecord(payload.order));
       return;
@@ -353,11 +354,11 @@ export function useLiveCommerce() {
     setBusy("Confirming your purchase…");
     const { signature } = await signMessage({ message }, { address });
     setBusy("Confirming your order…");
-    const result = await api<ApiRecord>("/api/checkout", {
+    const result = await retryConfirmation(() => api<ApiRecord>("/api/checkout", {
       ...base,
       action: "confirm_balance",
       signature,
-    });
+    }));
     await acceptOrder(asRecord(result.order));
   };
 
@@ -469,9 +470,9 @@ export function useLiveCommerce() {
     run("Preparing secure checkout…", () => loadCard());
 
   const confirmCard = async (stripeSessionId: string) => {
-    const result = await api<ApiRecord>("/api/checkout/confirm", {
+    const result = await retryConfirmation(() => api<ApiRecord>("/api/checkout/confirm", {
       stripeSessionId,
-    });
+    }));
     await acceptOrder(asRecord(result.order));
     setCardCheckout(null);
     const url = new URL(window.location.href);
@@ -660,11 +661,11 @@ export function useLiveCommerce() {
         if (!hash) throw new Error("Settlement is not ready yet");
         save({ ...next, finalizeHash: hash });
       }
-      await api("/api/box-plays", {
+      await retryConfirmation(() => api("/api/box-plays", {
         action: "finalize",
         playId: next.playId,
         txHash: hash,
-      });
+      }));
       save(null);
       setBusy("Updating your vault and balance…");
       await refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
