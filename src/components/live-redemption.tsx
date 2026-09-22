@@ -193,6 +193,7 @@ export function LiveRedemption({
     } finally {
       busyRef.current = false;
       setBusy("");
+      setNow(Date.now());
     }
   };
 

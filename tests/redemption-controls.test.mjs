@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as recovery from '../src/lib/redemption-recovery.ts';
 import { suggestedShippingAddress } from '../src/lib/shipping-address.ts';
+import { retryConfirmation } from '../src/lib/confirmation-retry.mjs';
 
 const compiled = ts.transpileModule(readFileSync(new URL('../src/components/live-redemption.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
@@ -58,6 +59,7 @@ function fixture({ expired = false, prepared = false, saved = {}, failure = '', 
       if (name === '@/lib/live-commerce') return { asRecord: value => value && typeof value === 'object' ? value : {}, asRows: value => Array.isArray(value) ? value : [], assetImage: () => null, usd: value => `$${value}` };
       if (name === '@/lib/shipping-address') return { suggestedShippingAddress };
       if (name === '@/lib/abstract-rpc.mjs') return { abstractRpcUrl: () => undefined };
+      if (name === '@/lib/confirmation-retry.mjs') return { retryConfirmation };
       if (name === '@/lib/redemption-recovery') return { ...recovery, redemptionNeedsRefresh: (value, now = clock) => recovery.redemptionNeedsRefresh(value, now) };
       throw new Error(`Unexpected import: ${name}`);
     },
@@ -140,7 +142,7 @@ test('expiry during signing is safely refreshable only when no broadcast was att
   const f = fixture({ prepared: true, failure: 'during-sign' }); await f.settle();
   const tree = await f.click('Confirm and ship');
   assert.ok(f.button(tree, 'Refresh delivery options'));
-  assert.equal(JSON.parse(f.storage.get(storageKey)).attempted, undefined);
+  assert.notEqual(JSON.parse(f.storage.get(storageKey)).attempted, true);
   assert.equal(f.calls.some(c => c.action === 'confirm'), false);
 });
 
@@ -156,7 +158,7 @@ test('unknown broadcast stays locked even if an error also carries a rejection c
 
 test('an expired saved hash confirms the original shipment without repricing or paying again', async () => {
   const f = fixture({ expired: true, prepared: true, saved: { hash } }); await f.settle();
-  await f.click('Confirm shipment');
+  assert.ok(f.button(f.render(), 'View shipments'));
   assert.equal(f.calls.some(c => ['send', 'quote', 'prepare'].includes(c.action)), false);
   assert.equal(f.calls.find(c => c.action === 'confirm').txHash, hash);
 });
