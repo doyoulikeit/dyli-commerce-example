@@ -65,6 +65,41 @@ Claims and sell-back USDC settle to the registered customer wallet, not automati
 
 ## Recovery and remaining launch gates
 
+### Selling a vaulted item
+
+In Vault, open an item to see its current DYLI offer and expiry, then choose
+**Sell for …**. There is no separate marketplace or offer-review screen. The
+customer may need to approve the DYLI marketplace to transfer ERC-1155 items,
+then confirm the sale in their wallet. Ship remains alongside Sell. Completion
+refreshes the actual vault and USDC balance.
+
+The authenticated `/api/offers` backend binds the signed-in customer and wallet
+to Commerce `/offers/query`, `/offer-acceptances` and confirmation/history routes.
+Browser-supplied customer IDs, recipient overrides and fees are not forwarded.
+The Commerce key stays on the server. General peer offers remain unsupported.
+
+Production requires the platform's `202609220001_commerce_offer_acceptances.sql`
+migration and new API deployment before this example is deployed. The Sell
+control stays unavailable while `capabilities.post_vault_offers.ready` is absent
+or false. No new example environment variables are required.
+
+For a production test, claim a paid pull into the vault, open it, check the
+original offer price and expiration, and sell one item. Check the resulting USDC
+balance, removal of that item, sale in Activity, and normal DYLI restock/adjustment
+records. After 48 hours, only available standing offers should remain. Closing
+and reopening a pending sale must recover it without another wallet send.
+An existing 48-hour offer is not repriced or extended by loading the vault.
+
+The client saves before each wallet prompt and immediately after receiving a
+hash. An uncertain broadcast requires confirmation or a hash from wallet history.
+Activity → Continue sale also works after the item leaves holdings. Confirmation
+can finish after expiry if the transaction was mined in time. No sale is marked
+complete based only on a wallet callback, and a recording error must not trigger
+a second sale. Browser fixtures simulate transactions; they do not certify live
+liquidity, paymaster permissions or production settlement.
+
+### Purchase recovery
+
 Payment and opening IDs/hashes are saved before the next request. A wallet-wide Web Lock prevents parallel tab submissions. A restored quote is re-read from the authenticated server before transferring. An uncertain broadcast is stopped for receipt recovery rather than resent. A refreshed/restarted gacha authorization is identified by `opening_reference`; clearing old opening hashes does not create a new payment.
 
 Do not enable paid checkout until the DYLI environment reports the required product/payment capability. Non-Box fulfillment still requires DYLI's configured executor (or explicitly managed queue); this starter does not fabricate completed holdings. Listing/offer creation is not a live capability of Commerce 1.2 and is intentionally not simulated in live mode. Refunds and unexpected paid-but-unfulfilled orders require operator reconciliation. Existing POC listing/offer interactions remain POC-only.

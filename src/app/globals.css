@@ -1867,15 +1867,16 @@ img.asset-boost {
   cursor: not-allowed;
   opacity: 0.35;
 }
-.processing,
-.success {
+/* Keep checkout states separate from third-party status classes (e.g. Privy). */
+.store-checkout-processing,
+.store-checkout-success {
   display: flex;
   min-height: 390px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
-.processing svg {
+.store-checkout-processing svg {
   width: 26px;
   color: var(--blue);
   animation: spin 0.8s linear infinite;
@@ -1885,11 +1886,11 @@ img.asset-boost {
     transform: rotate(360deg);
   }
 }
-.processing strong {
+.store-checkout-processing strong {
   margin-top: 13px;
   font-size: 11px;
 }
-.success > span {
+.store-checkout-success > span {
   display: grid;
   width: 46px;
   height: 46px;
@@ -1898,14 +1899,14 @@ img.asset-boost {
   background: var(--green);
   color: #fff;
 }
-.success > span svg {
+.store-checkout-success > span svg {
   width: 21px;
 }
-.success > strong {
+.store-checkout-success > strong {
   margin-top: 14px;
   font-size: 16px;
 }
-.success button {
+.store-checkout-success button {
   height: 38px;
   margin-top: 17px;
   padding: 0 15px;

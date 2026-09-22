@@ -2774,14 +2774,14 @@ function Checkout({
           <span>Checkout</span>
         </header>
         {stage === "processing" ? (
-          <div className="processing">
+          <div className="store-checkout-processing">
             <LoaderCircle />
             <strong>
               {isBox(item) ? "Opening next…" : "Adding to Collection…"}
             </strong>
           </div>
         ) : stage === "success" ? (
-          <div className="success">
+          <div className="store-checkout-success">
             <span>
               <Check />
             </span>

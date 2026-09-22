@@ -8,6 +8,13 @@ Run your own Box storefront with DYLI's live inventory and checkout.
 
 Commerce v1 is **boxes-only**, with vaulting, sell-backs and physical redemptions: sign in → choose 1–10 of one box → pay → open → Vault or Sell. Eligible vaulted items can be shipped through a separate checkout.
 
+When the connected API reports `capabilities.post_vault_offers.ready`, opening an
+item in **Vault** also shows its available DYLI buyback amount, expiration and
+**Sell for …** button alongside Ship. The customer signs in their existing wallet.
+Initial eligible buybacks keep the original price and 48-hour deadline; later
+offers keep DYLI's normal rules. Sale IDs/hashes are saved for recovery, and
+Activity can resume confirmation even after an item leaves the vault.
+
 Card and Abstract USDC balance payments are built in. A custom checkout can accept
 other crypto through a swap or bridge, then settle the exact quote in Abstract USDC
 with payer authorization. See [custom payments](docs/PAYMENT-OWNERSHIP.md).
@@ -19,7 +26,7 @@ paymaster configuration—no additional environment variables. This is a transfe
 on Abstract, not a bank cash-out or cross-chain bridge. Pending withdrawals are
 saved per wallet and checked against on-chain receipts before another send.
 
-Coming soon: secondary marketplace listings and offers, P2P trading and eBay integration. These are not live Commerce v1 features; optional demo screens don't enable them.
+Coming soon: secondary marketplace listings and peer offers, P2P trading and eBay integration. These are not live Commerce v1 features; optional demo screens don't enable them.
 
 ## Quick setup
 

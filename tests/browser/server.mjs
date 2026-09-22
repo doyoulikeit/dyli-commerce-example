@@ -10,8 +10,10 @@ if (!output || !process.env.ESBUILD_PACKAGE_PATH)
   );
 const { build } = await import(process.env.ESBUILD_PACKAGE_PATH);
 const revealOnly = process.env.VERIFY_VIEW === "reveal";
+const offersOnly = process.env.VERIFY_VIEW === "offers";
+const isolated = revealOnly || offersOnly;
 await build({
-  entryPoints: { harness: path.join(root, `tests/browser/${revealOnly ? "reveal-preview" : "harness"}.jsx`) },
+  entryPoints: { harness: path.join(root, `tests/browser/${offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
   bundle: true,
   outdir: output,
   format: "esm",
@@ -43,7 +45,7 @@ await build({
     },
   ],
 });
-http
+if (process.env.VERIFY_BUILD_ONLY !== "true") http
   .createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
@@ -54,7 +56,7 @@ http
         res.end(JSON.stringify(await response.json()));
         return;
       }
-      if (revealOnly && (url.pathname.startsWith("/api/") || req.method !== "GET")) {
+      if (isolated && (url.pathname.startsWith("/api/") || req.method !== "GET")) {
         res.writeHead(405);
         res.end("This preview cannot submit transactions.");
         return;
@@ -100,8 +102,8 @@ http
       res.end(error.message);
     }
   })
-  .listen(revealOnly ? 3109 : 3108, "127.0.0.1", () =>
+  .listen(offersOnly ? 3110 : revealOnly ? 3109 : 3108, "127.0.0.1", () =>
     console.log(
-      `Isolated fixture server http://localhost:${revealOnly ? 3109 : 3108}; wallet sends and API writes are simulated, catalog reads only.`,
+      `Isolated fixture server http://localhost:${offersOnly ? 3110 : revealOnly ? 3109 : 3108}; wallet sends and API writes are simulated, catalog reads only.`,
     ),
   );

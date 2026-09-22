@@ -58,6 +58,19 @@ both single and multiple pulls, all-auto-sell and mixed choices, Back/Skip, and
 confirmation failure. Loading disables the current sheet and its background,
 without stacking a second progress modal over checkout or reveal.
 
+## Vault offers preview
+
+With the temporary esbuild settings above, run `VERIFY_VIEW=offers node tests/browser/server.mjs`
+and open `http://127.0.0.1:3110`. No local starter or credentials are needed; all RPC,
+offers, approvals and wallet sends are simulated. The actual Vault item sheet shows
+a dollar offer, expiry, Sell, and a small Ship link.
+
+Check `?approval`, `?empty`, `?expired`, `?rejected`, `?uncertain`, and `?recording`.
+Clear this fixture origin's local storage between independent cases. For recovery,
+close and reopen the item in the same page: an uncertain sale must never send again.
+A successful sale updates the fixture balance from $100 to $175 and removes the item.
+Check desktop and phone widths and inspect `window.fixtureAudit` for duplicate sends.
+
 ## Balance preview
 
 `?balance` uses the actual balance sheet with a fixture wallet (never a real send).

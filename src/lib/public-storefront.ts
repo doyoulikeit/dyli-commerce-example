@@ -15,6 +15,7 @@ export function publicStorefrontReadiness(payload: ApiRecord): ApiRecord {
       payments: Array.isArray(capabilities.payments)
         ? capabilities.payments.filter(value => value === "usdc" || value === "stripe_card") : [],
       box_play: { contract_version: box.contract_version === "gacha" ? "gacha" : null },
+      post_vault_offers: { ready: record(capabilities.post_vault_offers).ready === true },
     },
     partner: {
       display_name: typeof partner.display_name === "string" ? partner.display_name : null,

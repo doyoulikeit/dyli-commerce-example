@@ -9,11 +9,14 @@ test('browser readiness preserves capabilities without exposing account configur
     payment: { internal: 'do-not-serialize' },
     partner: { display_name: 'Example', webhook: { url: 'https://example.test/?token=private', secret: 'private' },
       catalog_rules: { show_explore: true, show_primary: false, show_secondary: false, internal: 'private' } },
-    capabilities: { payments: ['usdc', 'stripe_card', 'internal'], box_play: { contract_version: 'gacha', secret: 'private' } },
+    capabilities: { payments: ['usdc', 'stripe_card', 'internal'], box_play: { contract_version: 'gacha', secret: 'private' },
+      post_vault_offers: { ready: true, secret: 'private' } },
   });
   assert.equal(shopEnabled(result), false);
   assert.equal(result.capabilities.box_play.contract_version, 'gacha');
   assert.deepEqual(result.capabilities.payments, ['usdc', 'stripe_card']);
+  assert.deepEqual(result.capabilities.post_vault_offers, { ready: true });
   assert.doesNotMatch(JSON.stringify(result), /private|internal|secret|webhook|token/);
   assert.equal(publicStorefrontReadiness({}).capabilities.box_play.contract_version, null);
+  assert.deepEqual(publicStorefrontReadiness({}).capabilities.post_vault_offers, { ready: false });
 });

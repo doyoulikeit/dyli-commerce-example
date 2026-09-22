@@ -590,6 +590,15 @@
   font-weight: 550;
   text-align: right;
 }
+
+.lc-vault-offer input[type="radio"] { width: auto; margin-right: 8px; }
+.lc-vault-sale .lc-checkout > .lc-art { width: 120px; margin: 0 auto; }
+.lc-vault-sale .lc-checkout > p { margin: 0; }
+.lc-vault-sale .lc-vault-expiry { color: var(--muted); font-size: 13px; }
+.lc-vault-ship { padding: 6px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.lc-vault-ship:hover { color: var(--ink); }
+.lc-vault-recovery { color: var(--muted); font-size: 13px; }
+.lc-vault-recovery summary { cursor: pointer; }
 .lc-modal > footer {
   position: sticky;
   bottom: 0;

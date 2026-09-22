@@ -69,6 +69,7 @@ export type SessionResponse = {
   orders: ApiRecord[];
   redemptions: ApiRecord[];
   boxPlays: BoxPlay[];
+  offerAcceptances?: OfferAcceptance[];
 };
 
 export type CheckoutResponse = {
@@ -152,4 +153,19 @@ export type ShippingAddress = {
   postal_code: string;
   country: string;
   phone: string;
+};
+
+export type VaultOffer = {
+  id: string; token_id: string; price: number; amount: string; currency: string;
+  expires_at: string; expiration: number; type: "claim_buyback" | "standing_buyback";
+  eligibility: "requires_preparation" | "eligible"; maker_wallet: string; quantity: 1;
+};
+
+export type OfferAcceptance = {
+  id: string; external_customer_id: string; token_id: string; offer_id: string;
+  offer: VaultOffer; wallet_address: string; expires_at: string;
+  status: "prepared" | "expired" | "processing" | "requires_action" | "completed";
+  transaction: TransactionInstruction | null;
+  approval_transaction: TransactionInstruction | null;
+  tx_hash: string | null;
 };

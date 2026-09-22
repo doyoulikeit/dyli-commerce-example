@@ -31,5 +31,9 @@ export function publicApiError(payload: ApiRecord, status: number): ApiRecord {
       recommended_address: address(details.recommended_address),
     };
   }
+  if (code === "acceptance_exists" && status === 409) {
+    const id = record(payload.details).acceptance_id;
+    if (typeof id === "string" && /^[\da-f-]{36}$/i.test(id)) output.details = { acceptance_id: id };
+  }
   return output;
 }
