@@ -12,7 +12,7 @@ const hash = `0x${'b'.repeat(64)}`;
 const item = { id: '12997', surface: 'boxes', purchase: { quoteItem: { type: 'box', box_id: 12997 } } };
 const saved = { version: 1, wallet, key: 'fixture-key', item, quote: { id: 'quote' }, paymentHash: hash, paymentAttempted: true };
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function fixture({ failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction } = {}) {
+function fixture({ failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction, sessionResponse } = {}) {
   const state = [], refs = [], callbacks = [];
   let index = 0, refIndex = 0, callbackIndex = 0, effect;
   const calls = [];
@@ -24,13 +24,13 @@ function fixture({ failRefresh = false, failOpening = false, recovery = saved, b
   const source = ts.transpileModule(readFileSync(new URL('../src/components/use-live-commerce.ts', import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  vm.runInNewContext(source, { exports, URLSearchParams, setTimeout, clearTimeout, window: { location: { search: '' } },
+  vm.runInNewContext(source, { exports, URLSearchParams, setTimeout: callback => queueMicrotask(callback), clearTimeout, window: { location: { search: '' } },
     navigator: { locks: { request: async (_key, _options, callback) => callback({}) } },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     fetch: async (path, init) => {
       const body = init.body ? JSON.parse(init.body) : null;
       calls.push({ path, body });
-      if (path.startsWith('/api/session')) return failRefresh ? Response.json({ error: 'temporary limit failure' }, { status: 503 })
+      if (path.startsWith('/api/session')) return sessionResponse ? sessionResponse(path) : failRefresh ? Response.json({ error: 'temporary limit failure' }, { status: 503 })
         : Response.json({ identity: { walletAddress: wallet }, balance: { amount: '65', chain_id: 2741 }, orders: [] });
       if (path === '/api/checkout') return Response.json({ order: { id: 'paid-order', items: [] } });
       if (path === '/api/box-plays') return failOpening ? Response.json({ error: 'Opening unavailable; purchase saved' }, { status: 503 })
@@ -139,4 +139,69 @@ test('overlapping refreshes share the request without persisting account data', 
   assert.equal(f.calls.length, 1);
   assert.equal(f.storage.size, 1);
   assert.equal(JSON.parse([...f.storage.values()][0]).paymentHash, hash);
+});
+
+const accountSnapshot = (amount = '65', items = []) => ({
+  identity: { walletAddress: wallet }, balance: { amount, chain_id: 2741 }, holdings: { items }, orders: [],
+});
+const settledPlay = body => ({ box_play: {
+  id: 'saved-play', status: body.action === 'finalize' ? 'completed' : 'revealed',
+  opening_reference: 'old-opening', rewards: [reward],
+} });
+
+test('settlement waits for a new balance and vault snapshot even with an older read in flight', async () => {
+  let reads = 0, finishOldRead, finishFreshRead;
+  const f = fixture({ recovery: { ...paidRecovery, finalizeHash: hash }, boxResponse: settledPlay,
+    sessionResponse: path => {
+      reads++;
+      if (reads === 1) return Response.json(accountSnapshot());
+      if (reads === 2) return new Promise(resolve => { finishOldRead = () => resolve(Response.json(accountSnapshot())); });
+      assert.match(path, /fresh=1/);
+      return new Promise(resolve => { finishFreshRead = () => resolve(Response.json(accountSnapshot('68.45', [{ token_id: '19569', name: 'Togekiss' }]))); });
+    },
+  });
+  f.render(); f.mount(); await flush(); await f.render().resume();
+  const oldRead = f.render().refresh(); await flush();
+  let done = false;
+  const settlement = f.render().settle().then(result => { done = true; return result; }); await flush();
+  assert.equal(done, false);
+  finishOldRead(); await oldRead; await flush();
+  assert.equal(reads, 3, 'The pre-settlement read must not satisfy the refresh');
+  assert.equal(done, false, 'Success must wait for the post-settlement snapshot');
+  finishFreshRead();
+  assert.equal(await settlement, true);
+  assert.equal(f.render().session.balance.amount, '68.45');
+  assert.equal(f.render().session.holdings.items[0].token_id, '19569');
+  assert.equal(f.render().flow, null);
+  assert.equal(f.calls.filter(call => call.body?.action === 'finalize').length, 1);
+});
+
+test('a temporary post-settlement refresh failure retries only the account read', async () => {
+  let refreshes = 0;
+  const f = fixture({ recovery: { ...paidRecovery, finalizeHash: hash }, boxResponse: settledPlay,
+    sessionResponse: path => {
+      if (!path.includes('fresh=1')) return Response.json(accountSnapshot());
+      return ++refreshes === 1 ? Response.json({ error: 'Unavailable' }, { status: 503 })
+        : Response.json(accountSnapshot('68.45', [{ token_id: '19569' }]));
+    },
+  });
+  f.render(); f.mount(); await flush(); await f.render().resume();
+  assert.equal(await f.render().settle(), true);
+  assert.equal(refreshes, 2);
+  assert.equal(f.render().session.balance.amount, '68.45');
+  assert.equal(f.render().session.holdings.items.length, 1);
+  assert.equal(f.render().error, '');
+  assert.equal(f.calls.filter(call => call.body?.action === 'finalize').length, 1);
+});
+
+test('an unavailable account refresh preserves confirmed settlement and never retries a payment', async () => {
+  const f = fixture({ recovery: { ...paidRecovery, finalizeHash: hash }, boxResponse: settledPlay,
+    sessionResponse: path => path.includes('fresh=1') ? Response.json({ error: 'Unavailable' }, { status: 503 }) : Response.json(accountSnapshot()),
+  });
+  f.render(); f.mount(); await flush(); await f.render().resume();
+  assert.equal(await f.render().settle(), true);
+  assert.equal(f.calls.filter(call => call.path.includes('fresh=1')).length, 3);
+  assert.equal(f.calls.filter(call => call.body?.action === 'finalize').length, 1);
+  assert.equal(f.render().flow, null);
+  assert.match(f.render().error, /choices are confirmed/);
 });

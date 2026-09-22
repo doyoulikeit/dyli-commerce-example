@@ -29,7 +29,7 @@ test('key-only budgets use the shared DYLI endpoint and send no raw identity', a
   assert.equal(calls, 2, 'No implicit retry');
 });
 
-test('missing production keys and unavailable or malformed protection fail closed', async () => {
+test('missing production keys block requests but unavailable counters let requests continue', async () => {
   const silent = { report() {} };
   await takeBudget('upstream-read', 'local', { ...silent, env: { NODE_ENV: 'development' } });
   await assert.rejects(takeBudget('upstream-read', 'local', { ...silent, env: { NODE_ENV: 'production' } }), error => error.status === 503);
@@ -38,31 +38,38 @@ test('missing production keys and unavailable or malformed protection fail close
     async () => { throw new Error('private-provider-message'); },
     async () => new Response('private', { status: 503 }),
     async () => Response.json({ error: 'unknown_endpoint' }, { status: 404 }),
-    async () => Response.json({ allowed: false }),
     async () => Response.json({ allowed: 'true' }),
   ]) {
     const events = [];
-    await assert.rejects(takeBudget('upstream-read', 'private-customer', { env, fetch, report: event => events.push(event) }), error => error.status === 503 && !error.message.includes('private'));
+    await takeBudget('upstream-read', 'private-customer', { env, fetch, report: event => events.push(event) });
     assert.equal(events.length, 1);
     assert.equal(events[0].event, 'storefront_rate_limit_unavailable');
     assert.equal(events[0].budget, 'upstream-read');
+    assert.equal(events[0].action, 'continue');
     assert.ok(Number.isFinite(events[0].duration_ms));
     assert.ok(['upstream_response', 'network', 'invalid_configuration_or_response'].includes(events[0].reason));
     assert.doesNotMatch(JSON.stringify(events), /private|fixture-key/);
   }
 });
 
-test('protection timeouts are distinguishable without retrying or allowing upstream work', async () => {
+test('protection timeouts allow the operation once without retrying the check', async () => {
   const events = []; let calls = 0;
-  await assert.rejects(takeBudget('upstream-read', 'private-customer', {
+  await takeBudget('upstream-read', 'private-customer', {
     env, report: event => events.push(event), fetch: async () => {
       calls++;
       throw new DOMException('private-provider-message', 'TimeoutError');
     },
-  }), error => error.status === 503);
+  });
   assert.equal(calls, 1);
   assert.equal(events[0].reason, 'timeout');
   assert.doesNotMatch(JSON.stringify(events), /private|fixture-key/);
+});
+
+test('an explicit counter denial remains enforced even in a successful HTTP response', async () => {
+  await assert.rejects(takeBudget('upstream-write', 'private-customer', {
+    env, fetch: async () => Response.json({ allowed: false }),
+    report() { assert.fail('An explicit denial must not continue'); },
+  }), error => error.status === 429);
 });
 
 test('only the configured trusted proxy can supply client addresses', () => {

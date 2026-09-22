@@ -32,35 +32,41 @@ export async function takeBudget(budget: Budget, subject = "storefront", options
   const env = options.env || process.env;
   const report = options.report || ((event) => console.warn(JSON.stringify(event)));
   const apiKey = env.DYLI_API_KEY?.trim();
-  if (!apiKey && env.NODE_ENV !== "production" && env.VERCEL !== "1") return;
+  if (!apiKey) {
+    if (env.NODE_ENV !== "production" && env.VERCEL !== "1") return;
+    throw new StorefrontLimitError(503);
+  }
   const started = Date.now();
   try {
-    if (!apiKey) throw new StorefrontLimitError(503);
     // Bypass commerce() to avoid recursion. DYLI keeps counters in its Supabase;
     // this app never receives database credentials or stores raw identities.
     const client = createCommerceClient({
-      apiKey, baseUrl: env.DYLI_COMMERCE_BASE_URL, fetch: options.fetch, timeoutMs: 8000,
+      apiKey, baseUrl: env.DYLI_COMMERCE_BASE_URL, fetch: options.fetch, timeoutMs: 2000,
     });
     const subjectHash = createHmac("sha256", apiKey).update(subject).digest("hex");
     const result = await client.request<{ allowed: boolean }>("/storefront/limits", {
       method: "POST", body: { budget, subject_hash: subjectHash },
     });
+    if (result.allowed === false) throw new StorefrontLimitError(429);
     if (result.allowed !== true) throw new StorefrontLimitError(503);
   } catch (error) {
+    if (error instanceof StorefrontLimitError && error.status === 429) throw error;
     if (error instanceof CommerceError && error.status === 429) {
       const retry = Number(error.payload.retry_after_seconds);
       throw new StorefrontLimitError(429, Number.isInteger(retry) && retry > 0 && retry <= 60 ? retry : 60);
     }
     // Keep credentials, identities and upstream response bodies out of logs.
     report({
-      event: "storefront_rate_limit_unavailable", budget,
+      event: "storefront_rate_limit_unavailable", budget, action: "continue",
       reason: error instanceof CommerceError ? "upstream_response"
         : error instanceof Error && error.name === "TimeoutError" ? "timeout"
         : error instanceof StorefrontLimitError ? "invalid_configuration_or_response" : "network",
       duration_ms: Date.now() - started,
       ...(error instanceof CommerceError ? { upstream_status: error.status, request_id: error.requestId } : {}),
     });
-    throw new StorefrontLimitError(503);
+    // This extra storefront guard is best-effort. Authentication, ownership,
+    // payment verification and DYLI's own API quotas still run on the request.
+    // Never retry the protected operation here: it may submit a transaction.
   }
 }
 

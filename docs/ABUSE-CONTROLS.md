@@ -12,8 +12,11 @@ protection lane, not part of your normal Commerce read/write quota. It increment
 a request counter; it doesn't create a quote, order or payment. The starter never
 exposes this endpoint as an arbitrary browser proxy.
 
-Missing API keys, unavailable counters or an older API return `503` and stop the
-protected operation. Run `npm run protection:check` before deploying. Unlike
+Missing production API keys still stop the operation. Counter outages, malformed
+responses and timeouts are logged and let the request continue after a maximum
+two-second check. Explicit denials still return `429`. Authentication, ownership,
+payment verification and DYLI's regular API quotas remain enforced; only this
+additional storefront counter is best-effort. Run `npm run protection:check` before deploying. Unlike
 `doctor`, this increments one non-financial counter. No payment is retried.
 
 ## Default budgets
@@ -23,9 +26,14 @@ protected operation. Run `npm run protection:check` before deploying. Unlike
 | API reads per client IP | 90 |
 | API mutations per client IP | 40 |
 | Live requests per verified customer | 90 |
-| Actual upstream reads across the storefront | 220 |
-| Actual upstream writes across the storefront | 80 |
-| Protection checks per Commerce key | 1,800 |
+| Actual upstream reads across the storefront | 1,100 |
+| Actual upstream writes across the storefront | 400 |
+| Protection checks per Commerce key | 9,000 |
+
+Commerce keys separately default to 1,500 reads and 600 writes per minute.
+Server environment overrides still take precedence. The higher storefront
+budgets require DYLI's `202609220002_storefront_rate_limit_capacity.sql` migration;
+deploying the storefront or platform code alone does not update database counters.
 
 Upstream budgets count server-rendered requests and fan-out calls too, so rotating
 IPs or requesting many uncached catalog pages can't bypass the store-wide cap.
@@ -47,7 +55,8 @@ endpoint. Expired subject counters are pruned as protection traffic continues.
 ## Monitoring and edge protection
 
 DYLI logs `storefront_rate_limited` at the first over-limit hit per bucket/window.
-The example logs `storefront_rate_limit_unavailable` when protection cannot run.
+The example logs `storefront_rate_limit_unavailable` with `action: "continue"`
+when protection cannot run. It does not retry the protected operation.
 Connect hosting log alerts to counter failures and sustained `429`/`503` rates.
 Also monitor auth failures, DYLI quota and payment recovery failures. Do not put
 tokens, addresses or provider response bodies in logs.

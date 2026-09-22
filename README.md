@@ -59,7 +59,8 @@ A lab needs a separately provisioned URL and key. Copying this repo does not cre
 
 Before deployment, run `npm run protection:check`. The example uses DYLI's
 Supabase-backed request limits with the same API key—no extra database credentials.
-If protection is unavailable, requests fail closed. Configure host-level limits
+If the counter service is unavailable, requests continue; explicit limits still
+return 429, and authentication and DYLI's API quotas still apply. Configure host-level limits
 and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 
 ## When you need more

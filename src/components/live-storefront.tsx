@@ -113,7 +113,7 @@ export function LiveStorefront({
   };
   const finishVaultSale = async () => {
     setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection");
-    try { await commerce.refresh(); } catch { commerce.setError("Your sale is confirmed. Reload to refresh your vault and balance."); }
+    try { await commerce.refresh(true); } catch { commerce.setError("Your sale is confirmed. Reload to refresh your vault and balance."); }
   };
   const boxes = storefront?.boxes || [];
   const products = boxesOnly
@@ -835,7 +835,7 @@ export function LiveStorefront({
             setShipping(false);
             setShipped(true);
             navigate("collection");
-            await commerce.refresh();
+            await commerce.refresh(true);
           }}
           onClose={() => setShipping(false)}
         />

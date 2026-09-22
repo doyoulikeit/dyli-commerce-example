@@ -77,24 +77,39 @@ export function useLiveCommerce() {
     [getAccessToken, address],
   );
 
-  const loadSession = useCallback(() => {
-    if (sessionRequest.current?.api === api) return sessionRequest.current.promise;
-    const promise = api<SessionResponse>(`/api/session?wallet=${encodeURIComponent(address)}`)
+  const loadSession = useCallback(async (fresh = false) => {
+    const previous = sessionRequest.current;
+    if (previous?.api === api) {
+      if (!fresh) return previous.promise;
+      // A read started before settlement cannot confirm the new balance/vault.
+      // Drain it first so it cannot overwrite the post-settlement snapshot.
+      await previous.promise.catch(() => {});
+      if (sessionRequest.current?.api === api) return sessionRequest.current.promise;
+    }
+    const promise = api<SessionResponse>(`/api/session?wallet=${encodeURIComponent(address)}${fresh ? "&fresh=1" : ""}`)
       .finally(() => { if (sessionRequest.current?.promise === promise) sessionRequest.current = null; });
     sessionRequest.current = { api, promise };
     return promise;
   }, [api, address]);
 
-  const refresh = useCallback(async () => {
-    const next = await loadSession();
+  const refresh = useCallback(async (fresh = false) => {
+    const next = await loadSession(fresh);
     setSession(next);
     return next;
   }, [loadSession]);
 
-  const refreshAfterPurchase = (message: string) => {
+  const refreshAfterPurchase = async (message: string) => {
     // The confirmed purchase and its saved receipts remain authoritative even
     // when account-history refresh is unavailable. Never retry the payment.
-    void refresh().catch(() => setError(message));
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { await refresh(true); return; }
+      catch (failure) {
+        const status = Number(asRecord(failure).status);
+        if (status >= 400 && status < 500) break;
+        if (attempt < 2) await delay(500 * (attempt + 1));
+      }
+    }
+    setError(message);
   };
 
   const readWallet = useCallback(async (hash?: string) => {
@@ -311,7 +326,7 @@ export function useLiveCommerce() {
     } else {
       save(null);
     }
-    refreshAfterPurchase("Your payment is confirmed and your purchase is saved. Your balance and activity could not refresh. Continue your opening or reload to refresh your account.");
+    void refreshAfterPurchase("Your payment is confirmed and your purchase is saved. Your balance and activity could not refresh. Continue your opening or reload to refresh your account.");
   };
 
   const confirmBalance = async (candidateHash?: string) => {
@@ -545,7 +560,7 @@ export function useLiveCommerce() {
       if (!next?.orderId) throw new Error("A paid order is required");
       const fresh = { box_play: await beginBox(next.orderId) };
       if (fresh.box_play.status === "completed") {
-        refreshAfterPurchase("Your opening is complete. Reload to refresh your vault and balance.");
+        await refreshAfterPurchase("Your opening is complete. Reload to refresh your vault and balance.");
         return;
       }
       let hash = flowRef.current?.buyHash || fresh.box_play.buy_tx_hash;
@@ -651,8 +666,9 @@ export function useLiveCommerce() {
         txHash: hash,
       });
       save(null);
+      setBusy("Updating your vault and balance…");
+      await refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
       setPlay(null);
-      refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
     });
 
   const signOut = () =>

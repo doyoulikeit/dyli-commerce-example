@@ -14,7 +14,8 @@ export async function GET(request: Request) {
     const [customer, balance, holdings, ordersPayload, redemptionsPayload, boxPlaysPayload, offersPayload] = await Promise.all([
       commerce(`/customers/${external}`, { method: "PUT", body: JSON.stringify(customerFor(identity)) }),
       readWalletBalance(walletReadContext(readiness), identity.walletAddress as `0x${string}`),
-      readApi(`/holdings/${identity.walletAddress}?pageSize=100&includeTotals=true&includeValue=true`),
+      readApi(`/holdings/${identity.walletAddress}?pageSize=100&includeTotals=true&includeValue=true`,
+        url.searchParams.get("fresh") === "1" ? { headers: { "Cache-Control": "no-cache" } } : {}),
       commerce(`/orders?external_customer_id=${external}&limit=100&offset=0`),
       commerce(`/redemptions?external_customer_id=${external}&limit=100&offset=0`),
       commerce(`/box-plays?external_customer_id=${external}&limit=100&offset=0`),
