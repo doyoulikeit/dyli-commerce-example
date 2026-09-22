@@ -22,6 +22,7 @@ const currentOffer = () => !params.has("rollover") || Date.now() < expires * 100
 let approvalDone = !params.has("approval");
 let sale = null;
 window.fixtureAudit = [];
+window.fixtureOffersAvailable = !params.has("unavailable");
 window.fetch = async (_url, options) => {
   const request = JSON.parse(options.body);
   const rpc = value => Response.json({ jsonrpc: "2.0", id: request.id, result: value });
@@ -40,7 +41,10 @@ function Preview() {
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "list") return { acceptances: sale ? [sale] : [] };
-    if (body.action === "query") return { offers: params.has("empty") ? [] : [currentOffer()] };
+    if (body.action === "query") {
+      if (!window.fixtureOffersAvailable) throw Object.assign(Error("Vault selling is not available yet. Please try again later."), { status: 503 });
+      return { offers: params.has("empty") ? [] : [currentOffer()] };
+    }
     if (body.action === "prepare") {
       const quoted = currentOffer();
       if (body.offerId !== quoted.id || body.expectedAmount !== quoted.amount) throw Error("Offer changed");
@@ -58,8 +62,8 @@ function Preview() {
   return <main className="lc-app" style={{ padding: 24 }}><h1>Vault sale preview</h1><p>Local fixture. No real funds or inventory move.</p>
     <p>Balance: ${balance} · In vault: {owned ? "1" : "0"}</p><button onClick={() => setOpen(true)}>Open vault item</button>
     {shipping && <p role="status">Shipping selected</p>}
-    {owned && <div style={{ maxWidth: 280 }}><LiveVaultCard item={item} api={api} sellingAvailable={!params.has("unavailable")} onOpen={() => setOpen(true)} onShip={() => setShipping(true)} /></div>}
-    {open && <LiveVaultSale item={item} session={session} api={api} sellingAvailable={!params.has("unavailable")}
+    {owned && <div style={{ maxWidth: 280 }}><LiveVaultCard item={item} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")} onOpen={() => setOpen(true)} onShip={() => setShipping(true)} /></div>}
+    {open && <LiveVaultSale item={item} session={session} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")}
       onClose={() => setOpen(false)} onShip={() => { setOpen(false); setShipping(true); }} onComplete={async () => { setOpen(false); setBalance(value => value + sale.offer.price); setOwned(false); }}
       send={async tx => {
         const approval = tx.data === "0xabcd";

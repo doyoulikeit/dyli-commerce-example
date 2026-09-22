@@ -15,10 +15,9 @@ export function LiveVaultCard({ item, api, sellingAvailable, onOpen, onShip }: {
   const element = useRef<HTMLElement>(null);
   const [offers, setOffers] = useState<VaultOffer[]>([]);
   useEffect(() => {
-    if (!sellingAvailable) return;
     let disposed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const load = async (fresh = false) => {
+    const load = async (fresh = !sellingAvailable) => {
       try {
         const next = await loadVaultOffers(api, tokenId, fresh);
         if (disposed) return;

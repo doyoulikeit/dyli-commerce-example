@@ -41,6 +41,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
   const [error, setError] = useState("");
   const [restoring, setRestoring] = useState(true);
   const [restoreFailed, setRestoreFailed] = useState(false);
+  const [offersUnavailable, setOffersUnavailable] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [now, setNow] = useState(Date.now);
   const [reload, setReload] = useState(0);
@@ -66,7 +67,8 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
   useEffect(() => {
     let active = true;
     const load = async () => {
-      setRestoring(true); setRestoreFailed(false); setError("");
+      setRestoring(true); setRestoreFailed(false); setOffersUnavailable(false); setError("");
+      let checkingOffers = false;
       try {
         const raw = localStorage.getItem(storageKey);
         let recovery = parseOfferRecovery(raw, wallet, tokenId);
@@ -97,13 +99,20 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
           setSale(current); setSaved(recovery);
           if (current.status === "completed") localStorage.removeItem(storageKey);
           else localStorage.setItem(storageKey, JSON.stringify(recovery));
-        } else if (sellingAvailable) {
-          const offers = await loadVaultOffers(api, tokenId, reload > 0);
+        } else {
+          // Catalog readiness is only a cached hint. The authenticated offer
+          // endpoint checks current availability when this item is opened.
+          checkingOffers = true;
+          const offers = await loadVaultOffers(api, tokenId, reload > 0 || !sellingAvailable);
           if (!active) return;
           setOffers(offers); setSelected(offers[0]?.id || ""); setSale(null); setSaved(null);
         }
       } catch (failure) {
-        if (active) { setError(failure instanceof Error ? failure.message : "Could not load offers"); setRestoreFailed(true); }
+        if (active) {
+          setError(failure instanceof Error ? failure.message : "Could not load offers");
+          setRestoreFailed(!checkingOffers); setOffersUnavailable(checkingOffers);
+          if (checkingOffers) setOffers([]);
+        }
       } finally { if (active) setRestoring(false); }
     };
     void load();
@@ -111,12 +120,12 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
   }, [api, storageKey, tokenId, wallet, reload, initialAcceptanceId, sellingAvailable]);
 
   useEffect(() => {
-    if (sale || restoring || restoreFailed || busy || !sellingAvailable || !offers.length) return;
+    if (sale || restoring || restoreFailed || busy || !offers.length) return;
     const expiry = Math.min(...offers.map(offer => Date.parse(offer.expires_at)));
     const timer = window.setTimeout(() => setReload(value => value + 1),
       Math.max(1000, Math.min(2147483647, expiry - Date.now() + 100)));
     return () => window.clearTimeout(timer);
-  }, [sale, restoring, restoreFailed, busy, sellingAvailable, offers]);
+  }, [sale, restoring, restoreFailed, busy, offers]);
 
   const run = async (label: string, action: () => Promise<void>) => {
     if (busyRef.current || restoring) return;
@@ -224,7 +233,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         {chosen && Date.parse(chosen.expires_at) - now >= 30000
           ? <button className="lc-primary" onClick={prepare}>Accept offer · {usd(chosen.price)}</button>
           : <><p>This offer has expired.</p><button className="lc-primary" onClick={refreshOffers}>Check for new offers</button></>}
-      </> : !sellingAvailable ? <div className="lc-vault-unavailable"><button className="lc-primary" disabled>Sell</button><p>Selling is temporarily unavailable. Your item is safe in your vault.</p></div>
+      </> : offersUnavailable ? <div className="lc-vault-unavailable"><p>Your item is safe in your vault.</p><button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading offers</button></div>
         : <><p>No offer available right now.</p><button className="lc-secondary" onClick={refreshOffers}>Check for offers</button></>}
       {onShip && !complete && !restoring && !restoreFailed && !busy && !checkNeeded && <button className="lc-vault-ship" onClick={onShip}>Ship item</button>}
     </div>
