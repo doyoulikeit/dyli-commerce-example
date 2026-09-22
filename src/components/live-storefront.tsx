@@ -24,7 +24,8 @@ import { LiveReveal } from "@/components/live-reveal";
 import { RevealModeSelector } from "@/components/reveal-mode";
 import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences } from "@/lib/opening-preferences";
-import { LiveActivity } from "@/components/live-activity";
+import { LiveActivity, LiveSaleActivity, LiveShipmentActivity } from "@/components/live-activity";
+import { shipmentActivity } from "@/lib/activity";
 import { EmbeddedCardCheckout } from "@/components/embedded-card-checkout";
 import { CommerceProgress } from "@/components/commerce-progress";
 import { LiveBalance } from "@/components/live-balance";
@@ -93,9 +94,8 @@ export function LiveStorefront({
   const [recoveryHash, setRecoveryHash] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const refreshConfirmedAccount = useCallback(async () => {
-    try { await retryConfirmation(() => refreshAccount(true)); }
-    catch { setCommerceError("Your transaction is confirmed. Reload to refresh your vault, balance and activity."); }
-  }, [refreshAccount, setCommerceError]);
+    await retryConfirmation(() => refreshAccount(true));
+  }, [refreshAccount]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,13 +112,15 @@ export function LiveStorefront({
     return () => controller.abort();
   }, []);
 
-  const navigate = (next: Tab) => {
+  const navigate = (next: Tab, refresh = true) => {
     setTab(next);
+    if (refresh && session && (next === "activity" || next === "collection")) {
+      void refreshAccount(true).catch(() => setCommerceError("Your account could not refresh. Please try again."));
+    }
     window.scrollTo({ top: 0, behavior: "instant" });
   };
   const finishVaultSale = async () => {
-    setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection");
-    await refreshConfirmedAccount();
+    setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection", false);
   };
   const boxes = storefront?.boxes || [];
   const products = boxesOnly
@@ -186,14 +188,15 @@ export function LiveStorefront({
     setCheckoutReturn(false);
     navigate("collection");
   };
-  const cards = (items: CatalogItem[], count?: number) => (
+  const cards = (items: CatalogItem[], count?: number, aboveFold = false) => (
     <div
       className={`lc-grid ${items[0] && boxItem(items[0]) ? "lc-box-grid" : ""}`}
     >
-      {items.slice(0, count).map((item) => (
+      {items.slice(0, count).map((item, index) => (
         <LiveProductCard
           key={item.key}
           item={item}
+          priority={aboveFold && index < 3}
           onClick={() => setSelected(item)}
         />
       ))}
@@ -394,7 +397,7 @@ export function LiveStorefront({
                   View all <ArrowUpRight />
                 </button>
               </div>
-              {cards(boxes, 3)}
+              {cards(boxes, 3, true)}
             </section>
             {products.length > 0 && (
               <section>
@@ -447,7 +450,7 @@ export function LiveStorefront({
           <>
             <h1>Boxes</h1>
             {boxes.length
-              ? cards(boxes)
+              ? cards(boxes, undefined, true)
               : empty("No live boxes", "Check back for the next opening.")}
           </>
         )}
@@ -474,7 +477,7 @@ export function LiveStorefront({
               />
             </div>
             {filtered.length
-              ? cards(filtered)
+              ? cards(filtered, undefined, true)
               : empty("Nothing here yet", "Try another search.")}
           </>
         )}
@@ -523,17 +526,7 @@ export function LiveStorefront({
                         </div>
                         <div>
                           <strong>
-                            {(
-                              {
-                                completed: "Shipment requested",
-                                prepared: "Ready to ship",
-                                processing: "Processing",
-                                requires_action: "Needs review",
-                                quoted: "Delivery options ready",
-                                expired: "Quote expired",
-                              } as Record<string, string>
-                            )[String(shipment.status)] ||
-                              String(shipment.status).replaceAll("_", " ")}
+                            {shipmentActivity(shipment)}
                           </strong>
                           <p>
                             {asRows(shipment.items).reduce(
@@ -579,29 +572,8 @@ export function LiveStorefront({
         {tab === "activity" && (
           <>
             <h1>Activity</h1>
-            {!!session?.redemptions.length && <section aria-label="Shipments" className="lc-order-history">
-              <h2>Shipments</h2>
-              {session.redemptions.map(shipment => <article className="lc-order-entry" key={String(shipment.id)}>
-                <div className="lc-order-heading"><div className="lc-order-copy">
-                  <h2>{asRows(shipment.items).map(item => String(item.name || "Collectible")).join(", ")}</h2>
-                  <p>{shipment.status === "completed" ? "Shipment requested" : shipment.status === "requires_action" ? "Needs review" : "Shipment in progress"}</p>
-                </div><button className="lc-secondary" onClick={() => { navigate("collection"); setShipped(true); }}>View shipments</button></div>
-              </article>)}
-            </section>}
-            {!!session?.offerAcceptances?.length && <section aria-label="Vault sales" className="lc-order-history">
-              <h2>Vault sales</h2>
-              {session.offerAcceptances.map(sale => <article className="lc-order-entry" key={sale.id}>
-                <div className="lc-order-heading"><div className="lc-order-copy">
-                  <h2>{String(holdings.find(item => String(item.token_id) === sale.token_id)?.name || `Vault item #${sale.token_id}`)}</h2>
-                  <p>{sale.status === "completed" ? "Sold" : sale.status === "expired" ? "Offer expired" : "Sale in progress"}</p>
-                </div><strong>{usd(sale.offer.price)}</strong>
-                  {sale.status !== "completed" && <button className="lc-secondary" disabled={!!busy} onClick={() => setSelling({
-                    ...(holdings.find(item => String(item.token_id) === sale.token_id) || { token_id: sale.token_id, name: `Vault item #${sale.token_id}` }),
-                    acceptance_id: sale.id,
-                  })}>Continue sale</button>}
-                </div>
-              </article>)}
-            </section>}
+            {!!session?.redemptions.length && <LiveShipmentActivity shipments={session.redemptions} onView={() => { navigate("collection"); setShipped(true); }} />}
+            {!!session?.offerAcceptances?.length && <LiveSaleActivity sales={session.offerAcceptances} busy={busy} onContinue={setSelling} />}
             {session?.orders.length ? (
               <LiveActivity orders={session.orders} plays={session.boxPlays || []} busy={busy} onOpen={(item, orderId) => void showResume(item, orderId)} />
             ) : !session?.offerAcceptances?.length && !session?.redemptions.length ? (
@@ -849,8 +821,7 @@ export function LiveStorefront({
           onComplete={async () => {
             setShipping(false);
             setShipped(true);
-            navigate("collection");
-            await refreshConfirmedAccount();
+            navigate("collection", false);
           }}
           onClose={() => setShipping(false)}
         />

@@ -1,7 +1,25 @@
-import type { ApiRecord, BoxPlay } from "./types.ts";
+import type { ApiRecord, BoxPlay, OfferAcceptance } from "./types.ts";
 
 const asRecord = (value: unknown): ApiRecord => value && typeof value === "object" && !Array.isArray(value) ? value as ApiRecord : {};
 const asRows = (value: unknown) => Array.isArray(value) ? value.map(asRecord) : [];
+
+export function saleActivity(sale: OfferAcceptance, now = Date.now()) {
+  if (sale.status === "completed") return { label: "Sold", action: null };
+  if (sale.tx_hash || ["processing", "requires_action"].includes(sale.status))
+    return { label: "Confirming sale", action: "Check confirmation" };
+  if (sale.status === "expired" || Date.parse(sale.expires_at) <= now)
+    return { label: "Offer expired", action: "View sale" };
+  return { label: "Sale started", action: "Continue sale" };
+}
+
+export function shipmentActivity(shipment: ApiRecord) {
+  const orders = asRows(asRecord(shipment.result).orders);
+  if (orders.length && orders.every(order => order.delivered === true || order.shipment_status === "delivered")) return "Delivered";
+  if (orders.some(order => order.tracking_number)) return "Tracking available";
+  return ({ completed: "Shipment requested", confirmed: "Shipment requested", prepared: "Ready to ship",
+    processing: "Confirming shipment", requires_action: "Needs review", quoted: "Delivery options ready",
+    expired: "Quote expired", cancelled: "Cancelled" } as Record<string, string>)[String(shipment.status)] || "Shipment in progress";
+}
 
 export function orderActivity(order: ApiRecord, plays: BoxPlay[]) {
   const items = asRows(order.items);

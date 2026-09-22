@@ -8,6 +8,7 @@ import { asRecord, assetImage, usd } from "@/lib/live-commerce";
 import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
 import { loadVaultOffers } from "@/lib/vault-offers";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
+import { useSettlementRefresh } from "@/components/use-settlement-refresh";
 import { offerStorageKey, parseOfferRecovery, saleMayHaveBeenSent, settleVaultOffer, type OfferRecovery } from "@/lib/offer-recovery";
 import type { ApiRecord, OfferAcceptance, SessionResponse, TransactionInstruction, VaultOffer } from "@/lib/types";
 
@@ -59,12 +60,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
     return recovery;
   };
   const complete = sale?.status === "completed";
-  const notified = useRef(false);
-  useEffect(() => {
-    if (!complete || notified.current || !onSettled) return;
-    notified.current = true;
-    void onSettled().catch(() => setError("Your sale is confirmed. Your account will update when you refresh."));
-  }, [complete, onSettled]);
+  const { status: accountRefresh, retry: retryAccountRefresh } = useSettlementRefresh(complete, onSettled);
   const pending = saleMayHaveBeenSent(sale, saved);
   const expired = !!sale && Date.parse(sale.expires_at) - now < 30000;
 
@@ -219,15 +215,20 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
   const checkNeeded = pending || !!saved?.approvalAttempted;
   const knownHash = sale?.tx_hash || saved?.hash || saved?.approvalHash;
   const chosen = offers.find(value => value.id === selected);
-  return <LiveModal title={complete ? "Sale complete" : "In your vault"} className="lc-vault-sale" dismissible={!busy}
-    onClose={complete ? () => { void onComplete(); } : onClose}>
+  return <LiveModal title={complete ? "Sale complete" : "In your vault"} className="lc-vault-sale" dismissible={!busy && !(complete && accountRefresh === "pending")}
+    onClose={complete && accountRefresh === "ready" ? () => { void onComplete(); } : onClose}>
     <div className="lc-checkout">
       <Art src={assetImage(item)} name={String(item.name || "Collectible")} />
       <h2>{String(item.name || "Your collectible")}</h2>
       {error && <p className="lc-notice" role="alert">{error}</p>}
       {restoring || busy ? <p role="status" aria-live="polite">{busy || "Loading your offers…"}</p> : complete ? <>
         <p className="lc-stat"><span>Sold for</span><strong>{usd(sale.offer.price)}</strong></p>
-        <button className="lc-primary" onClick={() => { void onComplete(); }}>Back to vault</button>
+        {accountRefresh === "failed" ? <>
+          <p role="alert">Your sale is confirmed. We couldn’t refresh your account yet.</p>
+          <button className="lc-primary" onClick={retryAccountRefresh}>Retry account update</button>
+        </> : <button className="lc-primary" disabled={accountRefresh !== "ready"} onClick={() => { void onComplete(); }}>
+          {accountRefresh === "pending" ? "Updating your vault and balance…" : "Back to vault"}
+        </button>}
       </> : restoreFailed ? <button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading</button> : sale ? <>
         <p className="lc-stat"><span>{sale.offer.type === "claim_buyback" ? "48-hour claim offer" : "Standing offer"}</span><strong>{usd(sale.offer.price)}</strong></p>
         <p className="lc-vault-expiry">Expires {offerExpiry(sale.expires_at)}</p>

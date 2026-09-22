@@ -163,6 +163,9 @@ export type VaultOffer = {
 };
 
 export type OfferAcceptance = {
+  item?: ApiRecord;
+  created_at?: string;
+  completed_at?: string | null;
   id: string; external_customer_id: string; token_id: string; offer_id: string;
   offer: VaultOffer; wallet_address: string; expires_at: string;
   status: "prepared" | "expired" | "processing" | "requires_action" | "completed";

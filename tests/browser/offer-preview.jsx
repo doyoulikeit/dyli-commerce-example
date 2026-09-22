@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LiveVaultSale } from "../../src/components/live-vault-sale";
 import { LiveVaultCard } from "../../src/components/live-vault-card";
+import { LiveSaleActivity } from "../../src/components/live-activity";
 import "../../src/app/globals.css";
 import "../../src/components/live-storefront.css";
 
@@ -10,7 +11,7 @@ const wallet = `0x${"1".repeat(40)}`, market = `0x${"2".repeat(40)}`, collection
 const hash = `0x${"a".repeat(64)}`, approvalHash = `0x${"b".repeat(64)}`;
 const params = new URLSearchParams(location.search);
 const id = "11111111-1111-4111-8111-111111111111";
-const item = { token_id: "123", name: "Togekiss AR - M2a: High Class Pack: MEGA Dream ex", balance: 1, estimated_unit_value_usd: 1.77 };
+const item = { token_id: "123", name: "Togekiss AR - M2a: High Class Pack: MEGA Dream ex", image_url: "https://tcgplayer-cdn.tcgplayer.com/product/665874_400w.jpg", balance: 1, estimated_unit_value_usd: 1.77 };
 const session = { identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 2741 } };
 const expires = Math.floor(Date.now() / 1000) + (params.has("expired") ? -100 : params.has("rollover") ? 12 : 48 * 3600);
 const offer = { id: "77", token_id: "123", price: 1.5, amount: "1500000", currency: "USDC", standing_offer_price: 1.18,
@@ -25,6 +26,7 @@ let confirmations = 0;
 window.fixtureAudit = [];
 window.fixtureOffersAvailable = !params.has("unavailable");
 window.fixtureRecordingAvailable = !params.has("recording");
+window.fixtureRefreshAvailable = !params.has("accountfail");
 window.fetch = async (_url, options) => {
   const request = JSON.parse(options.body);
   const rpc = value => Response.json({ jsonrpc: "2.0", id: request.id, result: value });
@@ -40,6 +42,12 @@ window.fetch = async (_url, options) => {
 function Preview() {
   const [open, setOpen] = useState(!params.has("vault")), [balance, setBalance] = useState(100), [owned, setOwned] = useState(true);
   const [shipping, setShipping] = useState(false);
+  const onSettled = useCallback(async () => {
+    window.fixtureAudit.push({ type: "account-read" });
+    if (params.has("slowaccount")) await new Promise(resolve => { window.fixtureReleaseAccountRefresh = resolve; });
+    if (!window.fixtureRefreshAvailable) throw Error("Account unavailable");
+    setBalance(101.425); setOwned(false);
+  }, []);
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "list") return { acceptances: sale ? [sale] : [] };
@@ -69,8 +77,9 @@ function Preview() {
     <p>Balance: ${balance} · In vault: {owned ? "1" : "0"}</p><button onClick={() => setOpen(true)}>Open vault item</button>
     {shipping && <p role="status">Shipping selected</p>}
     {owned && <div style={{ maxWidth: 280 }}><LiveVaultCard item={item} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")} onOpen={() => setOpen(true)} onShip={() => setShipping(true)} /></div>}
+    {!owned && sale && <LiveSaleActivity sales={[{ ...sale, item, created_at: new Date().toISOString() }]} busy="" onContinue={() => setOpen(true)} />}
     {open && <LiveVaultSale item={item} session={session} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")}
-      onClose={() => setOpen(false)} onShip={() => { setOpen(false); setShipping(true); }} onComplete={async () => { setOpen(false); setBalance(value => value + sale.offer.price); setOwned(false); }}
+      onClose={() => setOpen(false)} onShip={() => { setOpen(false); setShipping(true); }} onSettled={onSettled} onComplete={async () => { setOpen(false); }}
       send={async tx => {
         const approval = tx.data === "0xabcd";
         window.fixtureAudit.push({ type: "send", phase: approval ? "approval" : "sale" });

@@ -143,6 +143,19 @@ test('overlapping refreshes share the request without persisting account data', 
   assert.equal(JSON.parse([...f.storage.values()][0]).paymentHash, hash);
 });
 
+test('post-sale refresh cannot reuse even a fresh request started before the sale finished', async () => {
+  let reads = 0, finishOld;
+  const f = fixture({ sessionResponse: () => ++reads === 1
+    ? new Promise(resolve => { finishOld = () => resolve(Response.json(accountSnapshot('65', [{ token_id: '19569' }]))); })
+    : Response.json(accountSnapshot('66.425', [])) });
+  const old = f.render().refresh(true); await flush();
+  const afterSale = f.render().refresh(true); await flush();
+  finishOld(); await old; await afterSale;
+  assert.equal(reads, 2);
+  assert.equal(f.render().session.balance.amount, '66.425');
+  assert.equal(f.render().session.holdings.items.length, 0);
+});
+
 const accountSnapshot = (amount = '65', items = []) => ({
   identity: { walletAddress: wallet }, balance: { amount, chain_id: 2741 }, holdings: { items }, orders: [],
 });

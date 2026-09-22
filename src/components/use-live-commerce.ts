@@ -48,7 +48,7 @@ export function useLiveCommerce() {
   const [error, setError] = useState("");
   const flowRef = useRef<PurchaseRecovery | null>(null);
   const busyRef = useRef(false);
-  const sessionRequest = useRef<{ api: typeof api; promise: Promise<SessionResponse> } | null>(null);
+  const sessionRequest = useRef<{ api: typeof api; fresh: boolean; promise: Promise<SessionResponse> } | null>(null);
 
   const api = useCallback(
     async <T>(path: string, body?: ApiRecord): Promise<T> => {
@@ -79,17 +79,18 @@ export function useLiveCommerce() {
   );
 
   const loadSession = useCallback(async (fresh = false) => {
-    const previous = sessionRequest.current;
-    if (previous?.api === api) {
+    while (sessionRequest.current?.api === api) {
+      const previous = sessionRequest.current;
       if (!fresh) return previous.promise;
       // A read started before settlement cannot confirm the new balance/vault.
       // Drain it first so it cannot overwrite the post-settlement snapshot.
       await previous.promise.catch(() => {});
-      if (sessionRequest.current?.api === api) return sessionRequest.current.promise;
+      // Only share a fresh request started after this refresh was requested.
+      if (sessionRequest.current?.api === api && sessionRequest.current.fresh) return sessionRequest.current.promise;
     }
     const promise = api<SessionResponse>(`/api/session?wallet=${encodeURIComponent(address)}${fresh ? "&fresh=1" : ""}`)
       .finally(() => { if (sessionRequest.current?.promise === promise) sessionRequest.current = null; });
-    sessionRequest.current = { api, promise };
+    sessionRequest.current = { api, fresh, promise };
     return promise;
   }, [api, address]);
 

@@ -2,13 +2,14 @@
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LiveRedemption } from "../../src/components/live-redemption";
+import { LiveShipmentActivity } from "../../src/components/live-activity";
 import "../../src/app/globals.css";
 import "../../src/components/live-storefront.css";
 
 const params = new URLSearchParams(location.search);
 const wallet = `0x${"1".repeat(40)}`, token = `0x${"2".repeat(40)}`, contract = `0x${"3".repeat(40)}`;
 const hash = `0x${"a".repeat(64)}`, approvalHash = `0x${"b".repeat(64)}`;
-const item = { token_id: "123", name: "Togekiss", quantity: 1, balance: 1 };
+const item = { token_id: "123", name: "Togekiss", image_url: "https://tcgplayer-cdn.tcgplayer.com/product/665874_400w.jpg", quantity: 1, balance: 1 };
 let approved = !params.has("approval"), confirmations = 0;
 let redemption = { id: "fixture-shipment", status: "prepared", items: [item],
   expires_at: new Date(Date.now() + 3600000).toISOString(),
@@ -42,8 +43,13 @@ function Preview() {
     }
     return { redemption };
   }, []);
-  const onSettled = useCallback(async () => { setRefreshed(true); }, []);
+  const onSettled = useCallback(async () => {
+    window.fixtureAudit.push({ action: "account-read" });
+    if (params.has("slowaccount")) await new Promise(resolve => { window.fixtureReleaseAccountRefresh = resolve; });
+    setRefreshed(true);
+  }, []);
   return <main><h1>Shipping preview</h1><p>No real payments or shipments.</p><p>Account refreshed: {String(refreshed)}</p>
+    {refreshed && <LiveShipmentActivity shipments={[redemption]} onView={() => {}} />}
     {open && <LiveRedemption holdings={[item]} initialTokenId="123" session={{ identity: { walletAddress: wallet, email: "fixture@example.test" }, balance: { chain_id: 2741 } }}
       api={api} onClose={() => setOpen(false)} onComplete={async () => setOpen(false)} onSettled={onSettled}
       send={async tx => {

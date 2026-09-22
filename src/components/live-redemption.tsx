@@ -16,6 +16,7 @@ import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
 import { isShippingQuoteError, parseShipmentRecovery, redemptionDraft, redemptionNeedsRefresh, shipmentMayHaveBeenSent, shippingOptionReference, sendShipmentTransaction, type ShipmentRecovery } from "@/lib/redemption-recovery";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { CommerceProgress } from "@/components/commerce-progress";
+import { useSettlementRefresh } from "@/components/use-settlement-refresh";
 import type {
   ApiRecord,
   Redemption,
@@ -64,12 +65,7 @@ export function LiveRedemption({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [complete, setComplete] = useState(false);
-  const notified = useRef(false);
-  useEffect(() => {
-    if (!complete || notified.current || !onSettled) return;
-    notified.current = true;
-    void onSettled().catch(() => setError("Your shipment is confirmed. Your account will update when you refresh."));
-  }, [complete, onSettled]);
+  const { status: accountRefresh, retry: retryAccountRefresh } = useSettlementRefresh(complete, onSettled);
   const [hash, setHash] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [approvalPending, setApprovalPending] = useState(false);
@@ -438,9 +434,10 @@ export function LiveRedemption({
     <>
     <LiveModal
       title={complete ? "Shipment requested" : "Ship from your vault"}
+      dismissible={!busy && !(complete && accountRefresh === "pending")}
       onClose={() => {
         if (!busy) {
-          if (complete) void onComplete();
+          if (complete && accountRefresh === "ready") void onComplete();
           else onClose();
         }
       }}
@@ -467,9 +464,12 @@ export function LiveRedemption({
             </div>
             <h2>Your shipment is being prepared.</h2>
             <p>{String(asRecord(redemption?.address).city || "")}</p>
-            <button className="lc-primary" onClick={() => void onComplete()}>
-              View shipments
-            </button>
+            {accountRefresh === "failed" ? <>
+              <p role="alert">Your shipment is confirmed. We couldn’t refresh your account yet.</p>
+              <button className="lc-primary" onClick={retryAccountRefresh}>Retry account update</button>
+            </> : <button className="lc-primary" disabled={accountRefresh !== "ready"} onClick={() => void onComplete()}>
+              {accountRefresh === "pending" ? "Updating your vault and balance…" : "View shipments"}
+            </button>}
           </>
         ) : redemption?.status === "requires_action" ? (
           <>

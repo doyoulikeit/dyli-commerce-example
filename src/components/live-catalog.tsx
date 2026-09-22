@@ -34,7 +34,8 @@ export function Art({
           alt={name}
           fill
           sizes="(max-width: 600px) 45vw, 320px"
-          priority={priority}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
           unoptimized
         />
       ) : (
@@ -100,16 +101,18 @@ export function LiveModal({
 export function LiveProductCard({
   item,
   onClick,
+  priority = false,
 }: {
   item: CatalogItem;
   onClick: () => void;
+  priority?: boolean;
 }) {
   return (
     <button
       className={`lc-product ${boxItem(item) ? "lc-box" : ""}`}
       onClick={onClick}
     >
-      <Art src={item.image} name={item.name} />
+      <Art src={item.image} name={item.name} priority={priority} />
       <span className="lc-product-info">
         <strong>{item.name}</strong>
         <span>{usd(item.price)}</span>

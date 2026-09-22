@@ -10,6 +10,9 @@ import { retryConfirmation } from '../src/lib/confirmation-retry.mjs';
 const compiled = ts.transpileModule(readFileSync(new URL('../src/components/live-redemption.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
 }).outputText;
+const refreshHook = ts.transpileModule(readFileSync(new URL('../src/components/use-settlement-refresh.ts', import.meta.url), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText;
 const wallet = `0x${'1'.repeat(40)}`, hash = `0x${'2'.repeat(64)}`;
 const storageKey = `dyli-live-shipment-v1:${wallet}`;
 const epoch = Date.parse('2026-09-10T12:00:00Z');
@@ -56,6 +59,9 @@ function fixture({ expired = false, prepared = false, saved = {}, failure = '', 
       if (name === 'viem/chains') return { abstract: {}, abstractTestnet: {} };
       if (name === '@/components/live-catalog') return { LiveModal: 'modal', Art: 'art' };
       if (name === '@/components/commerce-progress') return { CommerceProgress: 'progress' };
+      if (name === '@/components/use-settlement-refresh') {
+        const exports = {}; vm.runInNewContext(refreshHook, { exports, require: context.require }); return exports;
+      }
       if (name === '@/lib/live-commerce') return { asRecord: value => value && typeof value === 'object' ? value : {}, asRows: value => Array.isArray(value) ? value : [], assetImage: () => null, usd: value => `$${value}` };
       if (name === '@/lib/shipping-address') return { suggestedShippingAddress };
       if (name === '@/lib/abstract-rpc.mjs') return { abstractRpcUrl: () => undefined };
@@ -158,6 +164,7 @@ test('unknown broadcast stays locked even if an error also carries a rejection c
 
 test('an expired saved hash confirms the original shipment without repricing or paying again', async () => {
   const f = fixture({ expired: true, prepared: true, saved: { hash } }); await f.settle();
+  await f.settle();
   assert.ok(f.button(f.render(), 'View shipments'));
   assert.equal(f.calls.some(c => ['send', 'quote', 'prepare'].includes(c.action)), false);
   assert.equal(f.calls.find(c => c.action === 'confirm').txHash, hash);
