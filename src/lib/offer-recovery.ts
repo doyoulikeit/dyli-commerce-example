@@ -60,6 +60,10 @@ export async function settleVaultOffer({ sale, recovery, save, send, wait, appro
         try { approvalHash = await send(sale.approval_transaction, sale.expires_at); }
         catch (error) {
           if ((error as { broadcastAttempted?: boolean }).broadcastAttempted === false) persist({ approvalAttempted: false });
+          else {
+            const hash = (error as { transactionHash?: string }).transactionHash;
+            if (hash && /^0x[a-f\d]{64}$/i.test(hash)) persist({ approvalHash: hash });
+          }
           throw error;
         }
         persist({ approvalHash });
@@ -80,6 +84,10 @@ export async function settleVaultOffer({ sale, recovery, save, send, wait, appro
     try { hash = await send(sale.transaction, sale.expires_at); }
     catch (error) {
       if ((error as { broadcastAttempted?: boolean }).broadcastAttempted === false) persist({ attempted: false });
+      else {
+        const hash = (error as { transactionHash?: string }).transactionHash;
+        if (hash && /^0x[a-f\d]{64}$/i.test(hash)) persist({ hash });
+      }
       throw error;
     }
     persist({ hash });

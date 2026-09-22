@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeFunctionData, erc20Abi, keccak256, fromRlp, custom } from 'viem';
+import { concatHex, encodeFunctionData, erc20Abi, hashTypedData, keccak256, fromRlp, custom } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { getGeneralPaymasterInput } from 'viem/zksync';
-import { sendSponsoredAbstractTransaction } from '../src/lib/abstract-wallet.ts';
+import { abstractTransactionHash, sendSponsoredAbstractTransaction } from '../src/lib/abstract-wallet.ts';
 
 // Deterministic disposable signer, used only against this in-memory RPC. No
 // network, real wallet, credentials or production transaction can be accessed.
@@ -16,11 +16,12 @@ function parseTransaction(raw) {
   const fields = fromRlp(`0x${raw.slice(4)}`);
   return { type: 'eip712', to: fields[4], value: fields[5] === '0x' ? 0n : BigInt(fields[5]), data: fields[6], chainId: BigInt(fields[10]), paymaster: fields[15][0], paymasterInput: fields[15][1] };
 }
-function fixture({ fail, chainId = 2741, onSign } = {}) {
-  const calls = []; let signed; let raw;
+function fixture({ fail, chainId = 2741, onSign, rateLimits = 0 } = {}) {
+  const calls = []; let signed; let raw; let signature;
+  const expectedHash = () => keccak256(concatHex([hashTypedData(signed), keccak256(signature)]));
   const provider = { request: async ({ method, params = [] }) => {
     calls.push({ method, params });
-    if (method === fail) throw Error(`Fixture rejected ${method}`);
+    if (method === fail) throw Error(`Fixture rejected ${method}: https://rpc.example/private-key raw=0xdeadbeef`);
     if (method === 'eth_chainId') return `0x${chainId.toString(16)}`;
     if (method === 'eth_getTransactionCount') return '0x0';
     if (method === 'eth_gasPrice') return '0x5f5e100';
@@ -30,9 +31,14 @@ function fixture({ fail, chainId = 2741, onSign } = {}) {
     if (method === 'eth_signTypedData_v4') {
       signed = JSON.parse(params[1]);
       onSign?.();
-      return account.signTypedData(signed);
+      signature = await account.signTypedData(signed);
+      return signature;
     }
-    if (method === 'eth_sendRawTransaction') { raw = params[0]; return keccak256(raw); }
+    if (method === 'eth_sendRawTransaction') {
+      raw = params[0];
+      if (rateLimits-- > 0) throw Object.assign(Error('Request rejected `429`'), { code: 429 });
+      return expectedHash();
+    }
     throw Error(`Unexpected fixture RPC ${method}`);
   } };
   const walletCalls = [];
@@ -41,12 +47,14 @@ function fixture({ fail, chainId = 2741, onSign } = {}) {
     if (!['eth_chainId', 'eth_signTypedData_v4'].includes(request.method)) throw Error('Unsupported transaction type: 0x71');
     return provider.request(request);
   } }) };
-  return { calls, walletCalls, wallet, send: (tx = transfer, overrides = {}) => sendSponsoredAbstractTransaction(wallet, tx, { address: account.address, paymaster, rpcTransport: custom(provider, { retryCount: 0 }), ...overrides }), get signed() { return signed; }, get raw() { return raw; } };
+  return { calls, walletCalls, wallet, expectedHash, send: (tx = transfer, overrides = {}) => sendSponsoredAbstractTransaction(wallet, tx, { address: account.address, paymaster, rpcTransport: custom(provider, { retryCount: 0 }), ...overrides }), get signed() { return signed; }, get raw() { return raw; } };
 }
 test('balance transfer is signed and broadcast with native Abstract paymaster, exact USDC and zero ETH', async () => {
   const f = fixture(); const result = await f.send();
   const tx = parseTransaction(f.raw);
-  assert.equal(result.hash, keccak256(f.raw));
+  assert.equal(result.hash, f.expectedHash());
+  assert.equal(abstractTransactionHash(f.raw), result.hash);
+  assert.notEqual(result.hash, keccak256(f.raw));
   assert.equal(tx.type, 'eip712'); assert.equal(tx.paymaster.toLowerCase(), paymaster.address);
   assert.equal(tx.paymasterInput, paymaster.input); assert.equal(tx.data, transfer.data);
   assert.equal(tx.to.toLowerCase(), transfer.to); assert.equal(tx.value, 0n);
@@ -77,8 +85,35 @@ test('missing sponsorship, wrong wallet/network and expired quotes fail before b
 test('preparation/signing failures are safely retryable; uncertain broadcasts never are', async () => {
   for (const fail of ['eth_estimateGas', 'eth_signTypedData_v4', 'eth_sendRawTransaction']) {
     const f = fixture({ fail });
-    await assert.rejects(f.send(), error => error.broadcastAttempted === (fail === 'eth_sendRawTransaction'));
+    await assert.rejects(f.send(), error => {
+      assert.equal(error.broadcastAttempted, fail === 'eth_sendRawTransaction');
+      assert.equal(error.transactionHash, fail === 'eth_sendRawTransaction' ? f.expectedHash() : undefined);
+      assert.doesNotMatch(error.message, /private-key|deadbeef|https:/);
+      return true;
+    });
     assert.equal(f.calls.filter(call => call.method === fail).length, 1);
     if (fail !== 'eth_sendRawTransaction') assert.ok(!f.calls.some(call => call.method === 'eth_sendRawTransaction'));
   }
+});
+
+test('429 retry broadcasts identical signed bytes with only one wallet signature', async () => {
+  const f = fixture({ rateLimits: 1 });
+  const result = await f.send();
+  const sends = f.calls.filter(call => call.method === 'eth_sendRawTransaction');
+  assert.equal(sends.length, 2);
+  assert.deepEqual(sends[0].params, sends[1].params);
+  assert.equal(f.calls.filter(call => call.method === 'eth_signTypedData_v4').length, 1);
+  assert.equal(result.hash, f.expectedHash());
+});
+
+test('repeated explicit 429s stop after three attempts and leave the purchase safely retryable', async () => {
+  const f = fixture({ rateLimits: 5 });
+  await assert.rejects(f.send(), error => {
+    assert.equal(error.broadcastAttempted, false);
+    assert.equal(error.transactionHash, undefined);
+    assert.match(error.message, /network is busy/);
+    return true;
+  });
+  assert.equal(f.calls.filter(call => call.method === 'eth_sendRawTransaction').length, 3);
+  assert.equal(f.calls.filter(call => call.method === 'eth_signTypedData_v4').length, 1);
 });

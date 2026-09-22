@@ -8,20 +8,18 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const { identity, readiness } = await requireLiveContext(request, url.searchParams.get("wallet") || undefined);
-    const customer = await commerce(`/customers/${encodeURIComponent(identity.externalCustomerId)}`, {
-      method: "PUT", body: JSON.stringify(customerFor(identity)),
-    });
     const external = encodeURIComponent(identity.externalCustomerId);
     const capabilities = readiness.capabilities as ApiRecord | undefined;
     const offersReady = (capabilities?.post_vault_offers as ApiRecord | undefined)?.ready === true;
-    const [holdings, ordersPayload, redemptionsPayload, boxPlaysPayload, offersPayload] = await Promise.all([
+    const [customer, balance, holdings, ordersPayload, redemptionsPayload, boxPlaysPayload, offersPayload] = await Promise.all([
+      commerce(`/customers/${external}`, { method: "PUT", body: JSON.stringify(customerFor(identity)) }),
+      readWalletBalance(walletReadContext(readiness), identity.walletAddress as `0x${string}`),
       readApi(`/holdings/${identity.walletAddress}?pageSize=100&includeTotals=true&includeValue=true`),
       commerce(`/orders?external_customer_id=${external}&limit=100&offset=0`),
       commerce(`/redemptions?external_customer_id=${external}&limit=100&offset=0`),
       commerce(`/box-plays?external_customer_id=${external}&limit=100&offset=0`),
       offersReady ? commerce(`/offer-acceptances?external_customer_id=${external}&limit=100`) : Promise.resolve({ acceptances: [] }),
     ]);
-    const balance = await readWalletBalance(walletReadContext(readiness), identity.walletAddress as `0x${string}`);
     const owned = (items: unknown) => Array.isArray(items)
       ? (items as ApiRecord[]).filter((item) => item.external_customer_id === identity.externalCustomerId) : [];
     return Response.json({

@@ -2,6 +2,7 @@ import "server-only";
 import { createPublicClient, erc20Abi, formatUnits, http, isAddress } from "viem";
 import { abstract, abstractTestnet } from "viem/chains";
 import type { ApiRecord } from "./types";
+import { abstractRpcUrl } from "./abstract-rpc.mjs";
 
 export function walletReadContext(readiness: ApiRecord) {
   const capabilities = readiness.capabilities as ApiRecord;
@@ -12,7 +13,10 @@ export function walletReadContext(readiness: ApiRecord) {
     throw new Error("DYLI balance configuration is unavailable");
   const client = createPublicClient({
     chain: chainId === 2741 ? abstract : abstractTestnet,
-    transport: http(process.env.DYLI_ABSTRACT_RPC_URL || undefined, { timeout: 12000 }),
+    transport: http(abstractRpcUrl(chainId, {
+      url: process.env.DYLI_ABSTRACT_RPC_URL || process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL,
+      alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+    }), { timeout: 12000 }),
   });
   return { client, token, chainId };
 }

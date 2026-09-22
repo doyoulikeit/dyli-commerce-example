@@ -18,6 +18,7 @@ function fixture({ approval = false, approved = false, failure = '', recovery = 
       assert.equal(phase === 'approval' ? latest.approvalAttempted : latest.attempted, true);
       if (failure === 'rejected') throw Object.assign(Error('Rejected'), { broadcastAttempted: false });
       if (failure === 'uncertain') throw Object.assign(Error('Unknown broadcast'), { broadcastAttempted: true });
+      if (failure === 'known-uncertain') throw Object.assign(Error('Unknown broadcast'), { broadcastAttempted: true, transactionHash: phase === 'approval' ? approvalHash : hash });
       return phase === 'approval' ? approvalHash : hash;
     },
     wait: async value => {
@@ -59,6 +60,17 @@ test('unknown broadcasts never trigger a second send', async () => {
   for (const recovery of [{ attempted: true }, { approvalAttempted: true }]) {
     const f = fixture({ approval: true, recovery });
     await assert.rejects(f.run(), /wallet history/); assert.equal(f.calls.length, 0);
+  }
+});
+
+test('uncertain approval and sale retain the signed hash and recover without another send for that phase', async () => {
+  for (const approval of [false, true]) {
+    const first = fixture({ approval, failure: 'known-uncertain' });
+    await assert.rejects(first.run());
+    assert.equal(approval ? first.latest().approvalHash : first.latest().hash, approval ? approvalHash : hash);
+    const resumed = fixture({ approval, recovery: first.latest() });
+    assert.equal((await resumed.run()).status, 'completed');
+    assert.equal(resumed.calls.includes(approval ? 'approval' : 'sale'), false);
   }
 });
 test('known sale hash confirms after expiry without sending again', async () => {

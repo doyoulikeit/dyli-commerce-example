@@ -7,9 +7,29 @@ export function revealClues(product: ApiRecord, rarity?: string | null) {
   const grade = product.grade || match?.[2];
   const grader = product.grader || match?.[1];
   return [
+    ...(typeof product.brand === "string" && product.brand.trim() ? [{ label: "Brand", value: product.brand.trim() }] : []),
     ...(year ? [{ label: "Year", value: year }] : []),
     ...(grade && grader ? [{ label: "Grade", value: `${grader} ${grade}` }] : []),
     ...(rarity ? [{ label: "Rarity", value: rarity }] : []),
+  ];
+}
+
+export type ActivityRarityTone = "common" | "uncommon" | "rare" | "premium";
+export type RevealStage = { kind: "box" | "detail" | "rarity" | "result"; duration: number; detail?: { label: string; value: string } };
+
+export function rarityTone(rarity?: string | null): ActivityRarityTone {
+  const label = rarity?.trim().toLowerCase() || "";
+  if (/legend|mythic|epic|secret|rainbow|hyper|ultra|chase|grail|jackpot|god pack/.test(label)) return "premium";
+  if (/rare|holo|foil|hit/.test(label)) return "rare";
+  return label.includes("uncommon") ? "uncommon" : "common";
+}
+
+export function revealStages(product: ApiRecord, rarity: string | null | undefined, fast = false, autoSell = false): RevealStage[] {
+  if (fast && autoSell) return [];
+  return [
+    ...(!fast ? [{ kind: "box" as const, duration: 3800 },
+      ...revealClues(product).map(detail => ({ kind: "detail" as const, duration: 1800, detail }))] : []),
+    ...(rarity ? [{ kind: "rarity" as const, duration: ["rare", "premium"].includes(rarityTone(rarity)) ? 2600 : 1800 }] : []),
   ];
 }
 

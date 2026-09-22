@@ -2,6 +2,7 @@ import { apiErrorResponse, commerce } from "@/lib/dyli";
 import { authErrorResponse } from "@/lib/privy-server";
 import { requireLiveIdentity } from "@/lib/live-server";
 import type { ApiRecord } from "@/lib/types";
+import { boxPlayNeedsOpening } from "@/lib/live-commerce";
 
 async function ownedOrder(id: string, externalCustomerId: string) {
   const payload = await commerce(`/orders/${encodeURIComponent(id)}`);
@@ -37,9 +38,13 @@ export async function POST(request: Request) {
     }
 
     const playId = String(body.playId || "");
-    await ownedPlay(playId, identity.externalCustomerId);
-    if (action === "get") return Response.json(await ownedPlay(playId, identity.externalCustomerId));
+    const current = await ownedPlay(playId, identity.externalCustomerId);
+    if (action === "get") return Response.json(current);
     if (action === "decision") {
+      const play = current.box_play as ApiRecord;
+      if (boxPlayNeedsOpening({ status: String(play.status) })) {
+        return Response.json({ ...current, ready: false, restart: true });
+      }
       const decisions = body.decisions;
       if (!Array.isArray(decisions) || !decisions.length || decisions.length > 10 || decisions.some((choice) => !["claim", "sell_back"].includes(String(choice)))) {
         return Response.json({ error: "Choose claim or sell_back for every pull" }, { status: 400 });

@@ -12,6 +12,7 @@ import {
   asRows,
   balancePaymentCents,
   boxItem,
+  boxPlayNeedsOpening,
   catalogFromOrderLine,
   canClearBalanceRecovery,
   settlementSummary,
@@ -46,6 +47,7 @@ export function useLiveCommerce() {
   const [error, setError] = useState("");
   const flowRef = useRef<PurchaseRecovery | null>(null);
   const busyRef = useRef(false);
+  const sessionRequest = useRef<{ api: typeof api; promise: Promise<SessionResponse> } | null>(null);
 
   const api = useCallback(
     async <T>(path: string, body?: ApiRecord): Promise<T> => {
@@ -75,13 +77,25 @@ export function useLiveCommerce() {
     [getAccessToken, address],
   );
 
+  const loadSession = useCallback(() => {
+    if (sessionRequest.current?.api === api) return sessionRequest.current.promise;
+    const promise = api<SessionResponse>(`/api/session?wallet=${encodeURIComponent(address)}`)
+      .finally(() => { if (sessionRequest.current?.promise === promise) sessionRequest.current = null; });
+    sessionRequest.current = { api, promise };
+    return promise;
+  }, [api, address]);
+
   const refresh = useCallback(async () => {
-    const next = await api<SessionResponse>(
-      `/api/session?wallet=${encodeURIComponent(address)}`,
-    );
+    const next = await loadSession();
     setSession(next);
     return next;
-  }, [api, address]);
+  }, [loadSession]);
+
+  const refreshAfterPurchase = (message: string) => {
+    // The confirmed purchase and its saved receipts remain authoritative even
+    // when account-history refresh is unavailable. Never retry the payment.
+    void refresh().catch(() => setError(message));
+  };
 
   const readWallet = useCallback(async (hash?: string) => {
     const snapshot = await api<WalletSnapshot>(`/api/wallet?wallet=${encodeURIComponent(address)}${hash ? `&hash=${encodeURIComponent(hash)}` : ""}`);
@@ -122,9 +136,7 @@ export function useLiveCommerce() {
         );
         flowRef.current = saved;
         setFlow(saved);
-        const next = await api<SessionResponse>(
-          `/api/session?wallet=${encodeURIComponent(address)}`,
-        );
+        const next = await loadSession();
         if (active) setSession(next);
       } catch (failure) {
         if (active)
@@ -139,7 +151,7 @@ export function useLiveCommerce() {
     return () => {
       active = false;
     };
-  }, [authenticated, address, api]);
+  }, [authenticated, address, loadSession]);
 
   const run = useCallback(
     async (label: string, action: () => Promise<void>) => {
@@ -268,10 +280,14 @@ export function useLiveCommerce() {
         ? { buyHash: undefined, finalizeHash: undefined, decisions: undefined }
         : {}),
     });
+    // The backend preserves rewards across an expired opening; they are not
+    // actionable until the replacement buy transaction has been confirmed.
+    if (boxPlayNeedsOpening(payload.box_play)) {
+      payload.box_play = { ...payload.box_play, rewards: [], decisions: [] };
+    }
     setPlay(payload.box_play);
     if (payload.box_play.status === "completed") {
       save(null);
-      await refresh();
     }
     return payload.box_play;
   };
@@ -292,11 +308,10 @@ export function useLiveCommerce() {
     save({ ...next, orderId: String(order.id) });
     if (boxItem(next.item)) {
       await beginBox(String(order.id));
-      await refresh();
     } else {
       save(null);
-      await refresh();
     }
+    refreshAfterPurchase("Your payment is confirmed and your purchase is saved. Your balance and activity could not refresh. Continue your opening or reload to refresh your account.");
   };
 
   const confirmBalance = async (candidateHash?: string) => {
@@ -359,7 +374,7 @@ export function useLiveCommerce() {
         const cents = balancePaymentCents(quote, next.quote.id);
         next = { ...next, quote, payment };
         save(next);
-        const latest = await refresh();
+        const latest = await readWallet();
         if (Number(latest.balance.amount) < cents / 100)
           throw new Error(
             "Your balance is too low. Use Card or fund your wallet.",
@@ -394,6 +409,9 @@ export function useLiveCommerce() {
           next = { ...next, paymentHash: hash };
           save(next);
         } catch (failure) {
+          const hash = asRecord(failure).transactionHash;
+          if (typeof hash === "string" && /^0x[\da-f]{64}$/i.test(hash))
+            save({ ...next, paymentHash: hash });
           const code = asRecord(failure).code;
           if (asRecord(failure).broadcastAttempted === false || code === 4001 || code === "ACTION_REJECTED")
             save({ ...next, paymentAttempted: false });
@@ -526,10 +544,19 @@ export function useLiveCommerce() {
       const next = flowRef.current;
       if (!next?.orderId) throw new Error("A paid order is required");
       const fresh = { box_play: await beginBox(next.orderId) };
-      if (fresh.box_play.status === "completed") return;
+      if (fresh.box_play.status === "completed") {
+        refreshAfterPurchase("Your opening is complete. Reload to refresh your vault and balance.");
+        return;
+      }
       let hash = flowRef.current?.buyHash || fresh.box_play.buy_tx_hash;
       if (!hash && fresh.box_play.transaction) {
-        hash = await send(fresh.box_play.transaction);
+        try { hash = await send(fresh.box_play.transaction); }
+        catch (failure) {
+          const pending = asRecord(failure).transactionHash;
+          if (typeof pending === "string" && /^0x[\da-f]{64}$/i.test(pending))
+            save({ ...flowRef.current!, buyHash: pending });
+          throw failure;
+        }
         save({ ...flowRef.current!, buyHash: hash });
       }
       if (
@@ -572,7 +599,7 @@ export function useLiveCommerce() {
     });
 
   const choose = (index: number, choice: "claim" | "sell_back") => {
-    if (!flowRef.current || !play || busyRef.current) return;
+    if (!flowRef.current || !play || busyRef.current || flowRef.current.finalizeHash) return;
     const decisions = [...(flowRef.current.decisions || [])];
     decisions[index] = choice;
     save({ ...flowRef.current, decisions });
@@ -596,18 +623,25 @@ export function useLiveCommerce() {
         });
         setPlay(result.box_play);
         if (result.restart) {
-          save({ ...next, buyHash: undefined, decisions: undefined });
+          setPlay({ ...result.box_play, rewards: [], decisions: [] });
+          save({ ...next, buyHash: undefined, finalizeHash: undefined, decisions: undefined });
           throw new Error("Continue to reopen your saved purchase.");
         }
         if (!result.ready)
           throw new Error(
             "Your choices are being prepared. Your pulls are saved—continue shortly.",
           );
-        hash =
+        try { hash =
           result.finalize_tx_hash ||
           (result.box_play.transaction
             ? await send(result.box_play.transaction)
             : undefined);
+        } catch (failure) {
+          const pending = asRecord(failure).transactionHash;
+          if (typeof pending === "string" && /^0x[\da-f]{64}$/i.test(pending))
+            save({ ...next, finalizeHash: pending });
+          throw failure;
+        }
         if (!hash) throw new Error("Settlement is not ready yet");
         save({ ...next, finalizeHash: hash });
       }
@@ -618,7 +652,7 @@ export function useLiveCommerce() {
       });
       save(null);
       setPlay(null);
-      await refresh();
+      refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
     });
 
   const signOut = () =>

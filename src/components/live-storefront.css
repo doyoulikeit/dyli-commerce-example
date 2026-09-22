@@ -592,6 +592,13 @@
 }
 
 .lc-vault-offer input[type="radio"] { width: auto; margin-right: 8px; }
+.lc-vault-card { min-width: 0; }
+.lc-vault-card > .lc-product { width: 100%; }
+.lc-vault-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.lc-vault-card-actions button { min-width: 0; padding: 10px 12px; font-size: 13px; }
+.lc-vault-card-offer { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.lc-vault-unavailable { display: grid; gap: 12px; }
+.lc-vault-unavailable p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .lc-vault-sale .lc-checkout > .lc-art { width: 120px; margin: 0 auto; }
 .lc-vault-sale .lc-checkout > p { margin: 0; }
 .lc-vault-sale .lc-vault-expiry { color: var(--muted); font-size: 13px; }

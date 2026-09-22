@@ -6,11 +6,12 @@ import { abstract, abstractTestnet } from "viem/chains";
 import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, assetImage, usd } from "@/lib/live-commerce";
 import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
+import { loadVaultOffers } from "@/lib/vault-offers";
 import { offerStorageKey, parseOfferRecovery, saleMayHaveBeenSent, settleVaultOffer, type OfferRecovery } from "@/lib/offer-recovery";
 import type { ApiRecord, OfferAcceptance, SessionResponse, TransactionInstruction, VaultOffer } from "@/lib/types";
 
 type Props = {
-  item: ApiRecord; session: SessionResponse; initialAcceptanceId?: string;
+  item: ApiRecord; session: SessionResponse; initialAcceptanceId?: string; sellingAvailable?: boolean;
   api: <T>(path: string, body?: ApiRecord) => Promise<T>;
   send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
   onComplete: () => Promise<void>; onClose: () => void; onShip?: () => void;
@@ -29,7 +30,7 @@ async function prepareAcceptance(api: Props["api"], body: ApiRecord) {
   }
 }
 
-export function LiveVaultSale({ item, session, api, send, onComplete, onClose, onShip, initialAcceptanceId }: Props) {
+export function LiveVaultSale({ item, session, api, send, onComplete, onClose, onShip, initialAcceptanceId, sellingAvailable = true }: Props) {
   const wallet = session.identity.walletAddress.toLowerCase(), tokenId = String(item.token_id);
   const storageKey = offerStorageKey(wallet, tokenId);
   const [offers, setOffers] = useState<VaultOffer[]>([]);
@@ -96,10 +97,10 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
           setSale(current); setSaved(recovery);
           if (current.status === "completed") localStorage.removeItem(storageKey);
           else localStorage.setItem(storageKey, JSON.stringify(recovery));
-        } else {
-          const result = await api<{ offers: VaultOffer[] }>("/api/offers", { action: "query", tokenId });
+        } else if (sellingAvailable) {
+          const offers = await loadVaultOffers(api, tokenId, reload > 0);
           if (!active) return;
-          setOffers(result.offers); setSelected(result.offers[0]?.id || ""); setSale(null); setSaved(null);
+          setOffers(offers); setSelected(offers[0]?.id || ""); setSale(null); setSaved(null);
         }
       } catch (failure) {
         if (active) { setError(failure instanceof Error ? failure.message : "Could not load offers"); setRestoreFailed(true); }
@@ -107,7 +108,15 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
     };
     void load();
     return () => { active = false; };
-  }, [api, storageKey, tokenId, wallet, reload, initialAcceptanceId]);
+  }, [api, storageKey, tokenId, wallet, reload, initialAcceptanceId, sellingAvailable]);
+
+  useEffect(() => {
+    if (sale || restoring || restoreFailed || busy || !sellingAvailable || !offers.length) return;
+    const expiry = Math.min(...offers.map(offer => Date.parse(offer.expires_at)));
+    const timer = window.setTimeout(() => setReload(value => value + 1),
+      Math.max(1000, Math.min(2147483647, expiry - Date.now() + 100)));
+    return () => window.clearTimeout(timer);
+  }, [sale, restoring, restoreFailed, busy, sellingAvailable, offers]);
 
   const run = async (label: string, action: () => Promise<void>) => {
     if (busyRef.current || restoring) return;
@@ -169,9 +178,9 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
       const { acceptance: fresh } = await api<{ acceptance: OfferAcceptance }>("/api/offers", { action: "get", acceptanceId: sale.id });
       if (saleMayHaveBeenSent(fresh, recovery)) { setSale(fresh); throw new Error("A sale has already been submitted. Check its confirmation."); }
     }
-    const result = await api<{ offers: VaultOffer[] }>("/api/offers", { action: "query", tokenId });
+    const offers = await loadVaultOffers(api, tokenId, true);
     localStorage.removeItem(storageKey); setSaved(null); setSale(null); setRecoveryHash("");
-    setOffers(result.offers); setSelected(result.offers[0]?.id || "");
+    setOffers(offers); setSelected(offers[0]?.id || "");
   });
   const checkNeeded = pending || !!saved?.approvalAttempted;
   const chosen = offers.find(value => value.id === selected);
@@ -185,7 +194,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         <p className="lc-stat"><span>Sold for</span><strong>{usd(sale.offer.price)}</strong></p>
         <button className="lc-primary" onClick={() => { void onComplete(); }}>Back to vault</button>
       </> : restoreFailed ? <button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading</button> : sale ? <>
-        <p className="lc-stat"><span>Standing offer</span><strong>{usd(sale.offer.price)}</strong></p>
+        <p className="lc-stat"><span>{sale.offer.type === "claim_buyback" ? "48-hour claim offer" : "Standing offer"}</span><strong>{usd(sale.offer.price)}</strong></p>
         <p className="lc-vault-expiry">Expires {offerExpiry(sale.expires_at)}</p>
         {checkNeeded ? <>
           <p>A transaction may already be on its way. Check its confirmation to continue.</p>
@@ -197,7 +206,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
           <p>This offer has expired.</p>
           <button className="lc-primary" onClick={refreshOffers}>Check for new offers</button>
         </> : <>
-          <button className="lc-primary" onClick={sell}>Sell for {usd(sale.offer.price)}</button>
+          <button className="lc-primary" onClick={sell}>Accept offer · {usd(sale.offer.price)}</button>
         </>}
         {!checkNeeded && <>
           <details className="lc-vault-recovery"><summary>Already submitted this sale?</summary>
@@ -207,14 +216,16 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onClose, o
         </>}
       </> : offers.length ? <>
         {offers.map(offer => <label className="lc-stat lc-vault-offer" key={offer.id}>
-          <span>{offers.length > 1 && <input type="radio" name="vault-offer" checked={selected === offer.id} onChange={() => setSelected(offer.id)} />} Standing offer</span>
+          <span>{offers.length > 1 && <input type="radio" name="vault-offer" checked={selected === offer.id} onChange={() => setSelected(offer.id)} />}{offer.type === "claim_buyback" ? "48-hour claim offer" : "Standing offer"}</span>
           <strong>{usd(offer.price)}</strong>
         </label>)}
         {chosen && <p className="lc-vault-expiry">Expires {offerExpiry(chosen.expires_at)}</p>}
+        {chosen?.type === "claim_buyback" && chosen.standing_offer_price != null && <p className="lc-vault-expiry">After expiry, the current standing offer is {usd(chosen.standing_offer_price)}. Standing offers can change.</p>}
         {chosen && Date.parse(chosen.expires_at) - now >= 30000
-          ? <button className="lc-primary" onClick={prepare}>Sell for {usd(chosen.price)}</button>
+          ? <button className="lc-primary" onClick={prepare}>Accept offer · {usd(chosen.price)}</button>
           : <><p>This offer has expired.</p><button className="lc-primary" onClick={refreshOffers}>Check for new offers</button></>}
-      </> : <p>No offer available right now.</p>}
+      </> : !sellingAvailable ? <div className="lc-vault-unavailable"><button className="lc-primary" disabled>Sell</button><p>Selling is temporarily unavailable. Your item is safe in your vault.</p></div>
+        : <><p>No offer available right now.</p><button className="lc-secondary" onClick={refreshOffers}>Check for offers</button></>}
       {onShip && !complete && !restoring && !restoreFailed && !busy && !checkNeeded && <button className="lc-vault-ship" onClick={onShip}>Ship item</button>}
     </div>
   </LiveModal>;

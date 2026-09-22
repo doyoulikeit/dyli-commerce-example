@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LiveVaultSale } from "../../src/components/live-vault-sale";
+import { LiveVaultCard } from "../../src/components/live-vault-card";
 import "../../src/app/globals.css";
 import "../../src/components/live-storefront.css";
 
@@ -9,11 +10,15 @@ const wallet = `0x${"1".repeat(40)}`, market = `0x${"2".repeat(40)}`, collection
 const hash = `0x${"a".repeat(64)}`, approvalHash = `0x${"b".repeat(64)}`;
 const params = new URLSearchParams(location.search);
 const id = "11111111-1111-4111-8111-111111111111";
-const item = { token_id: "123", name: "Charizard · PSA 9", balance: 1 };
+const item = { token_id: "123", name: "Togekiss AR - M2a: High Class Pack: MEGA Dream ex", balance: 1, estimated_unit_value_usd: 1.77 };
 const session = { identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 2741 } };
-const expires = Math.floor(Date.now() / 1000) + (params.has("expired") ? -100 : 3600);
-const offer = { id: "77", token_id: "123", price: 75, amount: "75000000", currency: "USDC",
+const expires = Math.floor(Date.now() / 1000) + (params.has("expired") ? -100 : params.has("rollover") ? 12 : 48 * 3600);
+const offer = { id: "77", token_id: "123", price: 1.5, amount: "1500000", currency: "USDC", standing_offer_price: 1.18,
   expiration: expires, expires_at: new Date(expires * 1000).toISOString(), type: "claim_buyback", quantity: 1 };
+const currentOffer = () => !params.has("rollover") || Date.now() < expires * 1000 ? offer : {
+  ...offer, id: "78", price: 1.18, amount: "1180000", type: "standing_buyback",
+  expires_at: new Date(Date.now() + 86400000).toISOString(), expiration: Math.floor(Date.now() / 1000) + 86400,
+};
 let approvalDone = !params.has("approval");
 let sale = null;
 window.fixtureAudit = [];
@@ -30,14 +35,17 @@ window.fetch = async (_url, options) => {
   throw Error(`No external request is allowed in this fixture: ${request.method}`);
 };
 function Preview() {
-  const [open, setOpen] = useState(true), [balance, setBalance] = useState(100), [owned, setOwned] = useState(true);
+  const [open, setOpen] = useState(!params.has("vault")), [balance, setBalance] = useState(100), [owned, setOwned] = useState(true);
+  const [shipping, setShipping] = useState(false);
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "list") return { acceptances: sale ? [sale] : [] };
-    if (body.action === "query") return { offers: params.has("empty") ? [] : [offer] };
+    if (body.action === "query") return { offers: params.has("empty") ? [] : [currentOffer()] };
     if (body.action === "prepare") {
-      sale ||= { id, offer, token_id: "123", offer_id: "77", wallet_address: wallet, external_customer_id: "fixture",
-        status: params.has("expired") ? "expired" : "prepared", expires_at: offer.expires_at,
+      const quoted = currentOffer();
+      if (body.offerId !== quoted.id || body.expectedAmount !== quoted.amount) throw Error("Offer changed");
+      sale ||= { id, offer: quoted, token_id: "123", offer_id: quoted.id, wallet_address: wallet, external_customer_id: "fixture",
+        status: params.has("expired") ? "expired" : "prepared", expires_at: quoted.expires_at,
         transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: market, data: "0x1234", value: "0" },
         approval_transaction: params.has("approval") ? { chain: "abstract", chain_id: 2741, from: wallet, to: collection, data: "0xabcd", value: "0" } : null };
     }
@@ -47,10 +55,12 @@ function Preview() {
     }
     return { acceptance: structuredClone(sale) };
   }, []);
-  return <main><h1>Vault sale preview</h1><p>Local fixture. No real funds or inventory move.</p>
+  return <main className="lc-app" style={{ padding: 24 }}><h1>Vault sale preview</h1><p>Local fixture. No real funds or inventory move.</p>
     <p>Balance: ${balance} · In vault: {owned ? "1" : "0"}</p><button onClick={() => setOpen(true)}>Open vault item</button>
-    {open && <LiveVaultSale item={item} session={session} api={api}
-      onClose={() => setOpen(false)} onShip={() => setOpen(false)} onComplete={async () => { setOpen(false); setBalance(175); setOwned(false); }}
+    {shipping && <p role="status">Shipping selected</p>}
+    {owned && <div style={{ maxWidth: 280 }}><LiveVaultCard item={item} api={api} sellingAvailable={!params.has("unavailable")} onOpen={() => setOpen(true)} onShip={() => setShipping(true)} /></div>}
+    {open && <LiveVaultSale item={item} session={session} api={api} sellingAvailable={!params.has("unavailable")}
+      onClose={() => setOpen(false)} onShip={() => { setOpen(false); setShipping(true); }} onComplete={async () => { setOpen(false); setBalance(value => value + sale.offer.price); setOwned(false); }}
       send={async tx => {
         const approval = tx.data === "0xabcd";
         window.fixtureAudit.push({ type: "send", phase: approval ? "approval" : "sale" });

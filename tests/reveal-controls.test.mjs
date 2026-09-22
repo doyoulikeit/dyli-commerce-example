@@ -24,7 +24,8 @@ function previewComponent() {
       },
       useRef: initial => ({ current: initial }), useEffect: effect => effects.push(effect),
     };
-    if (name === 'motion/react') return { motion: { div: 'motion-div' }, useReducedMotion: () => false };
+    if (name === 'motion/react') return { motion: { div: 'motion-div', article: 'motion-article' }, useReducedMotion: () => false };
+    if (name === '@/components/use-reveal-sounds') return { useRevealSounds: () => ({ enabled: true, ready: false, interaction() {}, toggle() {}, unlock() {}, play() {} }) };
     if (name === '@/components/live-catalog') return { LiveModal: 'modal', Art: 'art' };
     if (name === '@/lib/opening-preferences') return preferences;
     if (name === '@/lib/live-commerce') return { assetImage: () => '/item.webp', usd: value => `$${value}`, settlementSummary: () => ({ sold: 0, claimed: 0, action: 'Confirm choices' }) };
@@ -79,8 +80,10 @@ test('paid reveal never offers mode settings, and opening locks controls while b
   assert.equal(nodes(tree, node => node.props?.['aria-label'] === 'Opening mode').length, 0);
   assert.doesNotMatch(readFileSync(new URL('../src/components/live-reveal.tsx', import.meta.url), 'utf8'), /RevealModeSelector|<small>Selected<\/small>/);
   assert.deepEqual(calls, []);
+  nodes(tree, node => node.props?.['aria-label'] === 'Open box')[0].props.onClick();
+  assert.deepEqual(calls, [['open']]);
   const loading = render({ ...props, busy: 'Opening…' });
-  assert.equal(nodes(loading, node => node.props?.className === 'vr-primary')[0].props.disabled, true);
+  assert.equal(nodes(loading, node => node.props?.['aria-label'] === 'Open box')[0].props.disabled, true);
   assert.equal(loading.props.dismissible, false);
 });
 

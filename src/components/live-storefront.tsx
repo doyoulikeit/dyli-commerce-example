@@ -30,6 +30,7 @@ import { CommerceProgress } from "@/components/commerce-progress";
 import { LiveBalance } from "@/components/live-balance";
 import { LiveRedemption } from "@/components/live-redemption";
 import { LiveVaultSale } from "@/components/live-vault-sale";
+import { LiveVaultCard } from "@/components/live-vault-card";
 import { useLiveCommerce } from "@/components/use-live-commerce";
 import { useCommerceRuntime } from "@/components/providers";
 import {
@@ -558,18 +559,8 @@ export function LiveStorefront({
             ) : holdings.length ? (
               <div className="lc-grid">
                 {holdings.map((item) => (
-                  <button
-                    className="lc-product"
-                    key={String(item.token_id)}
-                    onClick={() => setHolding(item)}
-                  >
-                    <Art src={assetImage(item)} name={String(item.name)} />
-                    <span className="lc-product-info">
-                      <strong>{String(item.name)}</strong>
-                      <span>{usd(item.estimated_unit_value_usd)}</span>
-                    </span>
-                    <small>{Number(item.balance)} in vault</small>
-                  </button>
+                  <LiveVaultCard key={String(item.token_id)} item={item} api={commerce.api} sellingAvailable={vaultSellingReady} onOpen={() => setHolding(item)}
+                    onShip={() => { setShippingToken(String(item.token_id)); setShipping(true); }} />
                 ))}
               </div>
             ) : (
@@ -776,7 +767,7 @@ export function LiveStorefront({
       )}
       {showOpening && play && flow && (
         <LiveReveal
-          key={play.id}
+          key={`${play.id}:${String(play.opening_reference || "")}`}
           play={play}
           item={flow.item}
           decisions={flow.decisions || play.decisions || []}
@@ -804,8 +795,9 @@ export function LiveStorefront({
             if (await commerce.signOut()) setProfile(false);
           }} />
       )}
-      {holding && session && vaultSellingReady ? (
+      {holding && session ? (
         <LiveVaultSale key={`${commerce.address}:${holding.token_id}`} item={holding} session={session}
+          sellingAvailable={vaultSellingReady}
           api={commerce.api} send={commerce.send} onComplete={finishVaultSale} onClose={() => setHolding(null)}
           onShip={() => { setShippingToken(String(holding.token_id)); setHolding(null); setShipping(true); }} />
       ) : holding && (

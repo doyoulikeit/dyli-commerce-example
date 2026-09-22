@@ -43,8 +43,26 @@ test('missing production keys and unavailable or malformed protection fail close
   ]) {
     const events = [];
     await assert.rejects(takeBudget('upstream-read', 'private-customer', { env, fetch, report: event => events.push(event) }), error => error.status === 503 && !error.message.includes('private'));
-    assert.deepEqual(events, [{ event: 'storefront_rate_limit_unavailable', budget: 'upstream-read' }]);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].event, 'storefront_rate_limit_unavailable');
+    assert.equal(events[0].budget, 'upstream-read');
+    assert.ok(Number.isFinite(events[0].duration_ms));
+    assert.ok(['upstream_response', 'network', 'invalid_configuration_or_response'].includes(events[0].reason));
+    assert.doesNotMatch(JSON.stringify(events), /private|fixture-key/);
   }
+});
+
+test('protection timeouts are distinguishable without retrying or allowing upstream work', async () => {
+  const events = []; let calls = 0;
+  await assert.rejects(takeBudget('upstream-read', 'private-customer', {
+    env, report: event => events.push(event), fetch: async () => {
+      calls++;
+      throw new DOMException('private-provider-message', 'TimeoutError');
+    },
+  }), error => error.status === 503);
+  assert.equal(calls, 1);
+  assert.equal(events[0].reason, 'timeout');
+  assert.doesNotMatch(JSON.stringify(events), /private|fixture-key/);
 });
 
 test('only the configured trusted proxy can supply client addresses', () => {

@@ -130,6 +130,10 @@ export function validateTransaction(
 
 export const pendingBoxPlays = (plays: BoxPlay[]) =>
   plays.filter((play) => play.status !== "completed");
+// A restarted gacha retains its awarded inventory snapshot, but its new
+// on-chain opening must confirm before those pulls can be settled again.
+export const boxPlayNeedsOpening = (play: Pick<BoxPlay, "status">) =>
+  ["buy_prepared", "drawing", "restart_required", "authorized"].includes(play.status);
 export const receiptRequired = (flow: PurchaseRecovery) =>
   Boolean(
     flow.paymentAttempted ||

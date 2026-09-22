@@ -159,6 +159,7 @@ export type VaultOffer = {
   id: string; token_id: string; price: number; amount: string; currency: string;
   expires_at: string; expiration: number; type: "claim_buyback" | "standing_buyback";
   eligibility: "requires_preparation" | "eligible"; maker_wallet: string; quantity: 1;
+  standing_offer_price?: number;
 };
 
 export type OfferAcceptance = {

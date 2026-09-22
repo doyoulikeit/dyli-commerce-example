@@ -34,19 +34,17 @@
 .vr-primary:hover:not(:disabled) { background: #32343c; }
 .vr-spinner { flex-shrink: 0; animation: lc-account-spin 1s linear infinite; }
 .vr-pending { flex: 1; display: flex; align-items: center; flex-direction: column; justify-content: center; gap: clamp(20px, 4dvh, 40px); padding: 24px 24px max(36px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 38%, #f4f5f7, white 62%); text-align: center; }
-.vr-pending > div:first-child { width: min(440px, 80vw); }
-.vr-pending .lc-art { height: min(440px, 49dvh); background: transparent; aspect-ratio: auto; }
+.vr-pending .lc-art { width: 100%; height: 100%; background: transparent; aspect-ratio: auto; }
 .vr-pending .lc-art img, .vr-stage .vr-box img { transform: scale(1.7); }
-.vr-opening-controls { display: grid; gap: 14px; width: min(100%, 330px); }
-.vr-opening-controls .vr-primary { width: 100%; }
 .vr-reward { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; width: 100%; max-width: 1280px; margin: 0 auto; padding: 24px 32px; gap: 32px; }
 .vr-reward:not(.vr-reward-ready) { grid-template-columns: 1fr; }
-.vr-stage { position: relative; height: min(650px, 67dvh); min-width: 0; display: grid; place-items: center; perspective: 1200px; isolation: isolate; overflow: hidden; }
+.vr-stage { position: relative; height: min(650px, 67dvh); min-width: 0; display: grid; place-items: center; perspective: 1200px; isolation: isolate; overflow: visible; }
 .vr-reward:not(.vr-reward-ready) .vr-stage { width: min(700px, 100%); margin: auto; }
 .vr-aura { z-index: -1; position: absolute; inset: 8%; border-radius: 50%; background: radial-gradient(ellipse, color-mix(in srgb, var(--rarity) 24%, white), transparent 68%); opacity: .6; transform: scale(.8); transition: transform 1.2s, opacity 1.2s; }
 .vr-aura-open { opacity: .95; transform: scale(1.25); }
 .vr-box, .vr-product-art { width: 100%; height: 90%; }
 .vr-stage .lc-art { height: 100%; width: 100%; aspect-ratio: auto; background: transparent; }
+.vr-pending .lc-art, .vr-stage .lc-art { overflow: visible; border-radius: 0; pointer-events: none; }
 .vr-stage .lc-art img { object-fit: contain; filter: drop-shadow(0 20px 16px #22263320); }
 .vr-stage .vr-box img { padding: 12%; }
 .vr-stage .vr-product-art img { padding: 5% 8%; }
@@ -116,3 +114,61 @@
   .vr-review-footer .vr-primary { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .vr-spinner { animation: none; } .vr-shell *, .vr-shell *::before, .vr-shell *::after { transition-duration: .01ms !important; } }
+
+/* Production box-opening choreography, scoped to the example reveal. */
+.vr-toolbar { grid-template-columns: 120px minmax(0, 1fr) 120px; }
+.vr-toolbar-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.vr-sound { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 7px; border: 1px solid #dfe3e9; background: #fff; color: #61718a; }
+.vr-sequence { position: absolute; inset: 0; display: grid; place-items: center; isolation: isolate; }
+.vr-box-opening { height: auto; width: min(53vw, 53svh); aspect-ratio: 1; animation: vr-box-open 3800ms linear both; filter: drop-shadow(0 22px 48px #18283b20); }
+.vr-stage .vr-box-opening img { padding: 0; }
+.vr-idle-box { position: relative; z-index: 1; display: grid; place-items: center; width: min(360px, 70vw, 42svh); aspect-ratio: 1; background: none; border: 0; padding: 0; }
+.vr-idle-box .lc-art { animation: vr-idle-float 4s ease-in-out infinite; }
+.vr-idle-box:not(:disabled):hover .lc-art, .vr-idle-box:not(:disabled):focus-visible .lc-art { animation: vr-idle-shake .7s ease-in-out infinite; }
+.vr-idle-box:disabled { opacity: 1 !important; }
+.vr-idle-box .lc-art img { transform: scale(1.7); }
+.vr-open-hint { position: fixed; z-index: 3; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); pointer-events: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: max-content; max-width: calc(100vw - 32px); font-size: 10px; letter-spacing: .025em; padding: 3px 8px; border-radius: 6px; color: #fff; background: #0009; }
+.vr-scroller:has(.vr-open-hint) .vr-pull-rail { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+.vr-clue { animation: vr-detail-in 450ms ease-out both; }
+.vr-clue > small { text-transform: uppercase; letter-spacing: 4px; color: #61718a; }
+.vr-clue > strong { color: #182334; font-size: clamp(36px, 9vmin, 100px); }
+.vr-rarity-reveal { position: relative; width: 90%; text-align: center; color: var(--rarity); }
+.vr-rarity-reveal > strong { position: relative; display: block; font-weight: 700; text-transform: uppercase; font-size: clamp(40px, 9vmin, 110px); letter-spacing: -.06em; line-height: 1.1; overflow-wrap: anywhere; text-shadow: 0 0 70px color-mix(in srgb, var(--rarity) 40%, transparent); animation: vr-rarity-pop 850ms cubic-bezier(.16, 1, .3, 1) both; }
+.vr-rarity-ring { position: absolute; top: 50%; left: 50%; width: min(75vmin, 650px); aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--rarity); box-shadow: 0 0 70px color-mix(in srgb, var(--rarity) 40%, transparent), inset 0 0 50px color-mix(in srgb, var(--rarity) 25%, transparent); animation: vr-rarity-wave 1600ms ease-out both; }
+.vr-stage[data-stage=rarity]::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1; background: radial-gradient(ellipse, transparent 12%, color-mix(in srgb, var(--rarity) 28%, transparent)); animation: vr-screen-bloom 2600ms ease-out both; }
+.vr-review-card { position: relative; border: 1px solid #e4e8ec; border-radius: 17px; padding: 10px; background: #fff; }
+.vr-review-card[data-decision=claim] { border-color: #71877c; }
+.vr-review-card[data-decision=sell_back] { border-color: #13855d; }
+.vr-review-card[data-decision] .vr-review-image::after { content: ''; position: absolute; inset: 0; pointer-events: none; border: 2px solid #13855d; border-radius: inherit; animation: vr-choice-flash 650ms ease-out both; }
+.vr-product-clues { flex-wrap: wrap; }
+@keyframes vr-idle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes vr-idle-shake { 0%, 100% { transform: translateY(-5px) rotate(0); } 25% { transform: translateY(-8px) rotate(-3deg); } 75% { transform: translateY(-8px) rotate(3deg); } }
+@keyframes vr-box-open {
+  0% { opacity: 0; transform: translateY(22px) scale(.72); }
+  14% { opacity: 1; transform: translateY(0) scale(.86); }
+  42% { transform: scale(1); }
+  49% { transform: scale(1.05) rotate(-3deg); }
+  54% { transform: scale(1.08) rotate(3deg); }
+  59% { transform: scale(1.1) rotate(-5deg); }
+  64% { transform: scale(1.12) rotate(5deg); }
+  69% { transform: scale(1.15) rotate(-6deg); }
+  74% { transform: scale(1.17) rotate(6deg); }
+  79% { opacity: 1; transform: scale(1.2) rotate(-3deg); }
+  85% { opacity: 1; transform: scale(1.23); }
+  100% { opacity: 0; transform: scale(1.38); }
+}
+@keyframes vr-screen-bloom { 0% { opacity: 0; } 15% { opacity: .8; } 45% { opacity: .5; } 100% { opacity: .22; } }
+@keyframes vr-rarity-pop { 0% { opacity: 0; transform: scale(.55); } 55% { opacity: 1; transform: scale(1.09); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes vr-rarity-wave { from { opacity: .9; transform: translate(-50%, -50%) scale(.2); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.65); } }
+@keyframes vr-detail-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vr-choice-flash { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 700px) {
+  .vr-toolbar { grid-template-columns: 40px minmax(0, 1fr) 118px; gap: 8px; }
+  .vr-box-opening { width: min(78vw, 50svh); }
+  .vr-review-card { padding: 6px; border-radius: 13px; }
+  .vr-review-image .lc-art { height: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vr-idle-box .lc-art, .vr-box-opening, .vr-clue, .vr-rarity-reveal > strong, .vr-stage[data-stage=rarity]::after, .vr-review-card[data-decision] .vr-review-image::after { animation: none !important; }
+  .vr-rarity-ring { display: none; }
+}

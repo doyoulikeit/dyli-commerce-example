@@ -33,12 +33,13 @@ export async function takeBudget(budget: Budget, subject = "storefront", options
   const report = options.report || ((event) => console.warn(JSON.stringify(event)));
   const apiKey = env.DYLI_API_KEY?.trim();
   if (!apiKey && env.NODE_ENV !== "production" && env.VERCEL !== "1") return;
+  const started = Date.now();
   try {
     if (!apiKey) throw new StorefrontLimitError(503);
     // Bypass commerce() to avoid recursion. DYLI keeps counters in its Supabase;
     // this app never receives database credentials or stores raw identities.
     const client = createCommerceClient({
-      apiKey, baseUrl: env.DYLI_COMMERCE_BASE_URL, fetch: options.fetch, timeoutMs: 3500,
+      apiKey, baseUrl: env.DYLI_COMMERCE_BASE_URL, fetch: options.fetch, timeoutMs: 8000,
     });
     const subjectHash = createHmac("sha256", apiKey).update(subject).digest("hex");
     const result = await client.request<{ allowed: boolean }>("/storefront/limits", {
@@ -50,7 +51,15 @@ export async function takeBudget(budget: Budget, subject = "storefront", options
       const retry = Number(error.payload.retry_after_seconds);
       throw new StorefrontLimitError(429, Number.isInteger(retry) && retry > 0 && retry <= 60 ? retry : 60);
     }
-    report({ event: "storefront_rate_limit_unavailable", budget });
+    // Keep credentials, identities and upstream response bodies out of logs.
+    report({
+      event: "storefront_rate_limit_unavailable", budget,
+      reason: error instanceof CommerceError ? "upstream_response"
+        : error instanceof Error && error.name === "TimeoutError" ? "timeout"
+        : error instanceof StorefrontLimitError ? "invalid_configuration_or_response" : "network",
+      duration_ms: Date.now() - started,
+      ...(error instanceof CommerceError ? { upstream_status: error.status, request_id: error.requestId } : {}),
+    });
     throw new StorefrontLimitError(503);
   }
 }
