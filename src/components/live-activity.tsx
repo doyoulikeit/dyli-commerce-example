@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { Art } from "./live-catalog";
+import { LiveShipmentTracking } from "./live-shipment-tracking";
 import { orderActivity, saleActivity, shipmentActivity } from "@/lib/activity";
 import { asRecord, asRows, assetImage, catalogFromOrderLine, usd } from "@/lib/live-commerce";
 import type { ApiRecord, BoxPlay, CatalogItem, OfferAcceptance } from "@/lib/types";
@@ -34,14 +35,14 @@ export function LiveShipmentActivity({ shipments, onView }: { shipments: ApiReco
     {shipments.map(shipment => {
       const items = asRows(shipment.items), item = items[0] || {};
       const count = items.reduce((sum, value) => sum + Number(value.quantity || 1), 0);
-      return <article className="lc-order-entry" key={String(shipment.id)}><div className="lc-order-heading">
+      return <article className="lc-order-entry lc-shipment-entry" key={String(shipment.id)}><div className="lc-order-heading">
         <Art src={assetImage(item)} name={String(item.name || "Collectible")} />
         <div className="lc-order-copy"><h2>{String(item.name || "Shipment")}{items.length > 1 && ` + ${items.length - 1} more`}</h2>
           <p><strong>{count} {count === 1 ? "item" : "items"}</strong><span>{shipmentActivity(shipment)}</span><ActivityDate value={shipment.created_at} /></p>
         </div>
         {asRecord(shipment.pricing).amount != null && <div className="lc-order-amount"><strong>{usd(asRecord(shipment.pricing).amount)}</strong><small>Shipping</small></div>}
         <button className="lc-secondary" onClick={onView}>View shipment</button>
-      </div></article>;
+      </div><LiveShipmentTracking shipment={shipment} /></article>;
     })}
   </section>;
 }

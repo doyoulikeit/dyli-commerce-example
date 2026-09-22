@@ -26,6 +26,7 @@ import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences } from "@/lib/opening-preferences";
 import { LiveActivity, LiveSaleActivity, LiveShipmentActivity } from "@/components/live-activity";
 import { shipmentActivity } from "@/lib/activity";
+import { LiveShipmentTracking } from "@/components/live-shipment-tracking";
 import { EmbeddedCardCheckout } from "@/components/embedded-card-checkout";
 import { CommerceProgress } from "@/components/commerce-progress";
 import { LiveBalance } from "@/components/live-balance";
@@ -502,7 +503,7 @@ export function LiveStorefront({
                 >
                   Collection
                 </button>
-                <button aria-pressed={shipped} onClick={() => setShipped(true)}>
+                <button aria-pressed={shipped} onClick={() => { setShipped(true); navigate("collection"); }}>
                   Shipments
                 </button>
               </div>
@@ -543,6 +544,7 @@ export function LiveStorefront({
                           <small>
                             {String(asRecord(shipment.address).city || "")}
                           </small>
+                          <LiveShipmentTracking shipment={shipment} />
                         </div>
                       </article>
                     ))}

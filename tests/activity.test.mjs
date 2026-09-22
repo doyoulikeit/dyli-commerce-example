@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { orderActivity, saleActivity, shipmentActivity } from "../src/lib/activity.ts";
+import { orderActivity, saleActivity, shipmentActivity, shipmentTracking } from "../src/lib/activity.ts";
 
 const order = { id: "one", items: [{ type: "box", quantity: 3 }], price_breakdown: { total_cents: 10500 } };
 const reward = { index: 0, product: { name: "Actual API product" }, buyback_amount: 29.03 };
@@ -36,4 +36,48 @@ test("shipping activity distinguishes a paid request from tracking and delivery"
   assert.equal(shipmentActivity({ status: 'completed' }), 'Shipment requested');
   assert.equal(shipmentActivity({ status: 'completed', result: { orders: [{ tracking_number: '123' }] } }), 'Tracking available');
   assert.equal(shipmentActivity({ status: 'completed', result: { orders: [{ delivered: true }] } }), 'Delivered');
+});
+
+const withParcels = orders => ({ status: 'completed', result: { orders } });
+
+test('Easyship IDs link to the resolved shipment even before a carrier number is assigned', () => {
+  const shipment = withParcels([{ shipment_id: 'ESUS360467167', shipment_status: 'in_transit',
+    tracking_url: 'https://example.test/old-shipment' }]);
+  const [parcel] = shipmentTracking(shipment);
+  assert.equal(parcel.reference, 'ESUS360467167');
+  assert.equal(parcel.url, 'https://www.trackmyshipment.co/shipment-tracking/ESUS360467167');
+  assert.equal(shipmentActivity(shipment), 'In transit');
+});
+
+test('merged orders share one tracking entry and provider outages retain its link', () => {
+  const order = { shipment_id: 'ESUS360467167', tracking_number: 'CARRIER-123', tracking_unavailable: true };
+  const tracking = shipmentTracking(withParcels([{ id: 1, ...order }, { id: 2, ...order }]));
+  assert.equal(tracking.length, 1);
+  assert.equal(tracking[0].number, 'CARRIER-123');
+  assert.equal(tracking[0].unavailable, true);
+  assert.equal(tracking[0].status, 'Tracking available');
+  assert.ok(tracking[0].url);
+});
+
+test('split packages expose every tracking number and never mark partial delivery as complete', () => {
+  const shipment = withParcels([{ shipment_id: 42, shipment_status: 'fulfilled', shipments: [
+    { tracking_number: 'ONE', tracking_url: 'https://example.test/one', delivered: true },
+    { tracking_number: 'TWO', tracking_url: 'https://example.test/two', shipment_status: 'OUT_FOR_DELIVERY' },
+  ] }]);
+  assert.deepEqual(shipmentTracking(shipment).map(parcel => [parcel.reference, parcel.status]), [
+    ['ONE', 'Delivered'], ['TWO', 'Out for delivery'],
+  ]);
+  assert.equal(shipmentActivity(shipment), 'Partially delivered');
+  assert.equal(shipmentActivity(withParcels([{ shipment_status: 'fulfilled' }])), 'Shipped');
+  assert.equal(shipmentActivity(withParcels([{ shipment_status: 'Successfully Delivered' }])), 'Delivered');
+});
+
+test('manual tracking is readable without inventing links or trusting unsafe provider URLs', () => {
+  for (const tracking_url of [null, '', 'javascript:alert(1)', 'data:text/html,unsafe', '/relative']) {
+    const [parcel] = shipmentTracking(withParcels([{ tracking_number: 'MANUAL-123', tracking_url }]));
+    assert.equal(parcel.reference, 'MANUAL-123');
+    assert.equal(parcel.url, null);
+  }
+  assert.equal(shipmentTracking(withParcels([{ shipment_id: 'internal-order-id' }]))[0].reference, '');
+  assert.equal(shipmentActivity(withParcels([{ shipment_status: 'pending' }])), 'Preparing shipment');
 });

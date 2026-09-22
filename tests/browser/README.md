@@ -71,6 +71,15 @@ close and reopen the item in the same page: an uncertain sale must never send ag
 A successful sale updates the fixture balance from $100 to $175 and removes the item.
 Check desktop and phone widths and inspect `window.fixtureAudit` for duplicate sends.
 
+## Shipment tracking preview
+
+Run `VERIFY_VIEW=shipping node tests/browser/server.mjs` with the same temporary
+esbuild settings and open `http://127.0.0.1:3111/?tracking`. The actual shipment
+activity component renders two fixture orders merged into `ESUS360467167`.
+Verify one tracking link, the In transit status, and the last-update time at
+desktop and phone widths. The link opens the matching Track My Shipment page
+in a new tab; no carrier number is required. This is simulated tracking data.
+
 ## Balance preview
 
 `?balance` uses the actual balance sheet with a fixture wallet (never a real send).

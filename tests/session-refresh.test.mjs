@@ -13,6 +13,9 @@ const compile = path => ts.transpileModule(readFileSync(new URL(path, import.met
 }).outputText;
 const walletSource = compile('../src/lib/wallet-server.ts'), metadataSource = compile('../src/lib/activity-items.ts');
 const routeSource = compile('../src/app/api/session/route.ts');
+const trackingOrder = { id: 123, shipment_id: 'ESUS360467167', tracking_number: null,
+  tracking_url: 'https://www.trackmyshipment.co/shipment-tracking/ESUS360467167', shipment_status: 'in_transit',
+  delivered: false, tracking_unavailable: false };
 
 function fixture({ rpcFailure = false, metadataFailure = false } = {}) {
   const calls = [];
@@ -53,11 +56,14 @@ function fixture({ rpcFailure = false, metadataFailure = false } = {}) {
       commerce: async path => path.startsWith('/offer-acceptances') ? { acceptances: [
         { id: 'sold', token_id: '10', status: 'completed', external_customer_id: 'customer', wallet_address: wallet },
         { id: 'foreign', token_id: '99', status: 'completed', external_customer_id: 'other', wallet_address: wallet },
+      ] } : path.startsWith('/redemptions') ? { redemptions: [
+        { id: 'shipment', external_customer_id: 'customer', status: 'completed', items: [{ token_id: '11' }], result: { orders: [trackingOrder] } },
+        { id: 'foreign-shipment', external_customer_id: 'other', status: 'completed', items: [], result: { orders: [trackingOrder] } },
       ] } : {},
       readApi: async (path, options) => {
         calls.push({ path, options });
         if (path.startsWith('/holdings')) return structuredClone(stale);
-        assert.equal(path, '/metadata/advanced?tokenIds=10');
+        assert.equal(path, '/metadata/advanced?tokenIds=10,11');
         if (metadataFailure) throw Error('Artwork unavailable');
         return { items: [{ token_id: '10', name: 'Houndstone Holo', image_url: 'https://example.test/houndstone.webp' }] };
       },
@@ -80,6 +86,9 @@ test('fresh account reads remove sold/shipped items and preserve remaining copie
   assert.equal(snapshot.offerAcceptances[0].status, 'completed');
   assert.equal(snapshot.offerAcceptances[0].item.name, 'Houndstone Holo');
   assert.equal(snapshot.offerAcceptances[0].item.image_url, 'https://example.test/houndstone.webp');
+  assert.equal(snapshot.redemptions.length, 1);
+  assert.equal(snapshot.redemptions[0].items[0].name, 'Multiple copies');
+  assert.deepEqual(snapshot.redemptions[0].result.orders, [trackingOrder]);
 });
 
 test('RPC failure cannot return stale holdings as a successful refreshed account', async () => {

@@ -882,6 +882,20 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+.lc-shipment-tracking { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.lc-shipment-tracking li { min-width: 0; }
+.lc-tracking-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12px; }
+.lc-tracking-heading a { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.lc-tracking-heading a svg { flex-shrink: 0; }
+.lc-tracking-heading a:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 2px; }
+.lc-tracking-heading strong { overflow-wrap: anywhere; }
+.lc-tracking-status { color: var(--muted); }
+.lc-shipment-tracking small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.lc-tracking-pending { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+.lc-shipment-entry > .lc-shipment-tracking, .lc-shipment-entry > .lc-tracking-pending { margin-left: 88px; }
+@media (max-width: 700px) {
+  .lc-shipment-entry > .lc-shipment-tracking, .lc-shipment-entry > .lc-tracking-pending { margin-left: 0; }
+}
 .lc-shipment-images .lc-art {
   width: 90px;
 }

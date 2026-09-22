@@ -22,6 +22,7 @@ Normal card checkout is embedded in the starter. DYLI creates the Stripe session
 - `/api/box-plays`: one paid order → one batch of up to 10 → real ordered rewards → per-pull Vault/Sell → receipt confirmation. No client RNG and no legacy flip contracts.
 - `/api/session`: real holdings, balance, orders and redemptions. Account lists currently fetch their first 100 entries; add pagination for larger portfolios.
 - `/api/redemptions`: ownership, address validation, live rates, exact USDC approval, customer transaction and confirmation. “Completed” means the redemption was recorded, not that a carrier has delivered it.
+- Shipments and Activity display the current `result.orders` tracking details returned by Commerce (carrier updates can be cached up to 15 minutes). Easyship IDs such as `ESUS360467167` link to their tracking page, even before a carrier tracking number exists. Items shipped together share one tracking entry; split packages retain separate entries. Opening Shipments refreshes account data. Provider outages retain known links and show that the latest update is unavailable.
 
 The live UI and the simulator are separate components. Shipping and payment records remain authoritative on DYLI. Browser storage contains only recovery/display information; it is never evidence of payment or ownership.
 

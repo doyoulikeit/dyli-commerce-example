@@ -16,6 +16,11 @@ let redemption = { id: "fixture-shipment", status: "prepared", items: [item],
   address: { name: "Fixture Buyer", city: "New York", country_alpha2: "US" },
   pricing: { amount: 5 }, payment: { token_address: token, spender: contract, amount_cents: 500 },
   transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: contract, data: "0x1234", value: "0" } };
+if (params.has("tracking")) redemption = { ...redemption, status: "completed", result: { orders: [
+  { id: 1, shipment_id: "ESUS360467167", shipment_status: "in_transit", tracking_number: null,
+    tracking_updated_at: "2026-09-22T15:00:00Z" },
+  { id: 2, shipment_id: "ESUS360467167", shipment_status: "in_transit", tracking_number: null },
+] } };
 localStorage.setItem(`dyli-live-shipment-v1:${wallet}`, JSON.stringify({ id: redemption.id,
   ...(params.has("resume") ? { hash, attempted: true } : {}) }));
 window.fixtureAudit = [];
@@ -33,7 +38,7 @@ window.fetch = async (_url, init) => {
   throw Error(`Unexpected external call: ${request.method}`);
 };
 function Preview() {
-  const [open, setOpen] = useState(true), [refreshed, setRefreshed] = useState(false);
+  const [open, setOpen] = useState(!params.has("tracking")), [refreshed, setRefreshed] = useState(params.has("tracking"));
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ action: body.action });
     if (body.action === "confirm") {
