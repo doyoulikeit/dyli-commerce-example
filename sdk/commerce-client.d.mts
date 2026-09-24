@@ -11,4 +11,14 @@ export function createCommerceClient(options: ClientOptions): {
   stripeCheckout(quoteId: string, body: JsonObject, key: string): Promise<JsonObject>;
   createOrder(body: JsonObject, key: string): Promise<JsonObject>;
   openBox(orderId: string, key: string): Promise<JsonObject>;
+  communitySettings(): Promise<JsonObject>;
+  market(query?: Record<string, string>): Promise<JsonObject>;
+  collectors(query: string): Promise<JsonObject>;
+  collectorHoldings(username: string, page?: number): Promise<JsonObject>;
+  trades(customer: string, offset?: number, view?: 'all' | 'incoming' | 'outgoing' | 'history'): Promise<JsonObject>;
+  prepareCommunityAction(body: JsonObject, key: string): Promise<JsonObject>;
+  communityAction(id: string): Promise<JsonObject>;
+  communityActions(customer: string): Promise<JsonObject>;
+  confirmCommunityAction(id: string, txHash: string): Promise<JsonObject>;
+  declineTrade(id: string, customer: string): Promise<JsonObject>;
 };

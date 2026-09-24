@@ -55,6 +55,16 @@ export function createCommerceClient({ apiKey, partnerSlug, baseUrl = 'https://w
     stripeCheckout: (quoteId, body, key) => write(`/quotes/${encodeURIComponent(quoteId)}/stripe-checkout`, body, key),
     createOrder: (body, key) => write('/orders', body, key),
     openBox: (orderId, key) => write('/box-plays', { order_id: orderId }, key),
+    communitySettings: () => request('/community/settings'),
+    market: (query = {}) => request(`/community/market?${new URLSearchParams(query)}`),
+    collectors: query => request(`/community/collectors?q=${encodeURIComponent(query)}`),
+    collectorHoldings: (username, page = 1) => request(`/community/collectors/${encodeURIComponent(username)}/holdings?page=${encodeURIComponent(page)}`),
+    trades: (customer, offset = 0, view = 'all') => request(`/community/trades?external_customer_id=${encodeURIComponent(customer)}&offset=${encodeURIComponent(offset)}&view=${encodeURIComponent(view)}`),
+    prepareCommunityAction: (body, key) => write('/community/actions', body, key),
+    communityAction: id => request(`/community/actions/${encodeURIComponent(id)}`),
+    communityActions: customer => request(`/community/actions?external_customer_id=${encodeURIComponent(customer)}`),
+    confirmCommunityAction: (id, txHash) => request(`/community/actions/${encodeURIComponent(id)}/confirm`, { method: 'POST', body: { tx_hash: txHash } }),
+    declineTrade: (id, customer) => request(`/community/trades/${encodeURIComponent(id)}/decline`, { method: 'POST', body: { external_customer_id: customer } }),
     // Never retry a mutation automatically. Recover using its key and receipts.
   });
 }

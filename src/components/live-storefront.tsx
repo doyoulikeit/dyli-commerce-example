@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Activity,
   Wallet,
+  ArrowLeftRight,
 } from "lucide-react";
 import { storefrontConfig } from "@/config/storefront";
 import {
@@ -33,6 +34,9 @@ import { LiveBalance } from "@/components/live-balance";
 import { LiveRedemption } from "@/components/live-redemption";
 import { LiveVaultSale } from "@/components/live-vault-sale";
 import { LiveVaultCard } from "@/components/live-vault-card";
+import { LiveCommunity } from "@/components/live-community";
+import { CommunityActivity } from "@/components/community-activity";
+import type { CommunityIntent } from "@/components/community-market";
 import { useLiveCommerce } from "@/components/use-live-commerce";
 import { useCommerceRuntime } from "@/components/providers";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
@@ -59,6 +63,7 @@ const allNavigation = (
     { id: "shop", label: "Shop", Icon: ShoppingBag },
     { id: "boxes", label: "Boxes", Icon: Box },
     { id: "collection", label: "Vault", Icon: Archive },
+    { id: "trades", label: "Trades", Icon: ArrowLeftRight },
     { id: "activity", label: "Activity", Icon: Activity },
   ] as const
 );
@@ -72,7 +77,6 @@ export function LiveStorefront({
   const runtime = useCommerceRuntime();
   const boxesOnly = runtime?.boxesOnly ?? storefrontConfig.navigation.boxesOnly;
   const brandName = runtime?.name || storefrontConfig.brand.name;
-  const navigation = allNavigation.filter(entry => !boxesOnly || entry.id !== "shop");
   const commerce = useLiveCommerce();
   const { session, flow, play, busy, error, refresh: refreshAccount, setError: setCommerceError } = commerce;
   const [tab, setTab] = useState<Tab>("home");
@@ -94,6 +98,7 @@ export function LiveStorefront({
   const [checkoutReturn, setCheckoutReturn] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [communityIntent, setCommunityIntent] = useState<CommunityIntent | null>(null);
   const refreshConfirmedAccount = useCallback(async () => {
     await retryConfirmation(() => refreshAccount(true));
   }, [refreshAccount]);
@@ -138,6 +143,9 @@ export function LiveStorefront({
     session?.identity.name || session?.identity.email?.split("@")[0] || "",
   );
   const capabilities = asRecord(storefront?.readiness.capabilities);
+  const community = asRecord(capabilities.community);
+  const marketplace = asRecord(community.marketplace), trading = asRecord(community.trading);
+  const navigation = allNavigation.filter(entry => entry.id === "shop" ? marketplace.ready === true || !boxesOnly : entry.id !== "trades" || trading.ready === true);
   const vaultSellingReady = asRecord(capabilities.post_vault_offers).ready === true;
   const paymentMethods = Array.isArray(capabilities.payments)
     ? capabilities.payments
@@ -455,7 +463,7 @@ export function LiveStorefront({
               : empty("No live boxes", "Check back for the next opening.")}
           </>
         )}
-        {tab === "shop" && (
+        {tab === "shop" && marketplace.ready !== true && (
           <>
             <h1>Shop</h1>
             <div className="lc-toolbar">
@@ -482,6 +490,9 @@ export function LiveStorefront({
               : empty("Nothing here yet", "Try another search.")}
           </>
         )}
+        <LiveCommunity key={commerce.address || "guest"} view={tab} session={session} api={commerce.api} send={commerce.send}
+          marketplace={marketplace} trading={trading} intent={communityIntent} clearIntent={() => setCommunityIntent(null)}
+          login={commerce.login} refresh={refreshConfirmedAccount} />
         {tab === "collection" && (
           <>
             <div className="lc-section-title">
@@ -574,11 +585,12 @@ export function LiveStorefront({
         {tab === "activity" && (
           <>
             <h1>Activity</h1>
+            {session && (marketplace.ready || trading.ready) && <CommunityActivity api={commerce.api} hasOtherActivity={!!(session.orders.length || session.offerAcceptances?.length || session.redemptions.length)} />}
             {!!session?.redemptions.length && <LiveShipmentActivity shipments={session.redemptions} onView={() => { navigate("collection"); setShipped(true); }} />}
             {!!session?.offerAcceptances?.length && <LiveSaleActivity sales={session.offerAcceptances} busy={busy} onContinue={setSelling} />}
             {session?.orders.length ? (
               <LiveActivity orders={session.orders} plays={session.boxPlays || []} busy={busy} onOpen={(item, orderId) => void showResume(item, orderId)} />
-            ) : !session?.offerAcceptances?.length && !session?.redemptions.length ? (
+            ) : !session?.offerAcceptances?.length && !session?.redemptions.length && !(session && (marketplace.ready || trading.ready)) ? (
               empty("No activity yet", "Your purchases will appear here.")
             ) : null}
           </>
@@ -787,6 +799,8 @@ export function LiveStorefront({
         <LiveVaultSale key={`${commerce.address}:${holding.token_id}`} item={holding} session={session}
           sellingAvailable={vaultSellingReady}
           api={commerce.api} send={commerce.send} onSettled={refreshConfirmedAccount} onComplete={finishVaultSale} onClose={() => setHolding(null)}
+          onList={marketplace.ready === true ? () => { setCommunityIntent({ kind: "list", item: holding }); setHolding(null); navigate("shop", false); } : undefined}
+          onTrade={trading.ready === true ? () => { setCommunityIntent({ kind: "trade", item: holding }); setHolding(null); navigate("trades", false); } : undefined}
           onShip={() => { setShippingToken(String(holding.token_id)); setHolding(null); setShipping(true); }} />
       ) : holding && (
         <LiveModal title="In your vault" onClose={() => setHolding(null)}>

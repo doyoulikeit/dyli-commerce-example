@@ -18,6 +18,7 @@ type Props = {
   send: (tx: TransactionInstruction, expiresAt?: string) => Promise<`0x${string}`>;
   onComplete: () => Promise<void>; onClose: () => void; onShip?: () => void;
   onSettled?: () => Promise<void>;
+  onList?: () => void; onTrade?: () => void;
 };
 
 const offerExpiry = (value: string) => new Date(value).toLocaleString(undefined, {
@@ -33,7 +34,7 @@ async function prepareAcceptance(api: Props["api"], body: ApiRecord) {
   }
 }
 
-export function LiveVaultSale({ item, session, api, send, onComplete, onSettled, onClose, onShip, initialAcceptanceId, sellingAvailable = true }: Props) {
+export function LiveVaultSale({ item, session, api, send, onComplete, onSettled, onClose, onShip, onList, onTrade, initialAcceptanceId, sellingAvailable = true }: Props) {
   const wallet = session.identity.walletAddress.toLowerCase(), tokenId = String(item.token_id);
   const storageKey = offerStorageKey(wallet, tokenId);
   const [offers, setOffers] = useState<VaultOffer[]>([]);
@@ -265,6 +266,10 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
       </> : offersUnavailable ? <div className="lc-vault-unavailable"><p>Your item is safe in your vault.</p><button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading offers</button></div>
         : <><p>No offer available right now.</p><button className="lc-secondary" onClick={refreshOffers}>Check for offers</button></>}
       {onShip && !complete && !restoring && !restoreFailed && !busy && !checkNeeded && <button className="lc-vault-ship" onClick={onShip}>Ship item</button>}
+      {!complete && !restoring && !busy && !checkNeeded && (onList || onTrade) && <div className="cm-actions">
+        {onList && <button className="lc-secondary" onClick={onList}>List for sale</button>}
+        {onTrade && <button className="lc-secondary" onClick={onTrade}>Trade</button>}
+      </div>}
     </div>
   </LiveModal>;
 }

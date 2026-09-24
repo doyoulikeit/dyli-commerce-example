@@ -23,7 +23,7 @@ npm ci
 # Add NEXT_PUBLIC_DEMO_MODE=true to your existing private .env.local.
 ```
 
-Keep the same DYLI connection for catalog reads. Optional POC-only address autocomplete settings:
+Keep a server-side **Commerce key** for catalog reads: this example calls Commerce endpoints even in demo mode. A free Read key or missing key won't populate its live catalog. No Privy login is needed for simulated purchases. For a custom UI, mock data needs no key and the Public Read API accepts a free Read key. Optional POC-only address autocomplete settings:
 
 ```bash
 NEXT_PUBLIC_STOREFRONT_NAME=Vaulted

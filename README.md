@@ -1,12 +1,12 @@
 # DYLI Commerce example
 
-Run your own Box storefront with DYLI's live inventory and checkout.
+Run your own collectibles storefront with DYLI's live inventory, checkout, marketplace and trading.
 
 **[Start here: setup and run](docs/PARTNER-QUICKSTART.md)** · [Commerce overview](https://www.dyli.io/docs/api/commerce)
 
 ## Available in v1
 
-Commerce v1 is **boxes-only**, with vaulting, sell-backs and physical redemptions: sign in → choose 1–10 of one box → pay → open → Vault or Sell. Eligible vaulted items can be shipped through a separate checkout.
+Commerce includes boxes, vaulting, sell-backs, shipping, secondary marketplace and P2P trading. Open 1–10 of a box, buy or list collectibles, make offers, trade items and ship from the vault.
 
 When the connected API reports `capabilities.post_vault_offers.ready`, opening an
 item in **Vault** also shows its available DYLI buyback amount, expiration and
@@ -22,11 +22,11 @@ with payer authorization. See [custom payments](docs/PAYMENT-OWNERSHIP.md).
 The balance popup also supports direct **Abstract USDC deposits and withdrawals**:
 copy/scan the wallet address to deposit, or enter a recipient and amount, review,
 then confirm a withdrawal. It reuses the key-discovered token/network and existing
-paymaster configuration—no additional environment variables. This is a transfer
+paymaster configuration with no additional environment variables. This is a transfer
 on Abstract, not a bank cash-out or cross-chain bridge. Pending withdrawals are
 saved per wallet and checked against on-chain receipts before another send.
 
-Coming soon: secondary marketplace listings and peer offers, P2P trading and eBay integration. These are not live Commerce v1 features; optional demo screens don't enable them.
+Shop and Trades use DYLI's existing contracts and the customer's Abstract USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). Card checkout is available for boxes, not peer transactions.
 
 ## Quick setup
 
@@ -50,22 +50,27 @@ Optional server settings: `INCLUDED_IDS` selects your boxes; `FLAT_FEE` or `PERC
 
 ## Live or demo?
 
-- `NEXT_PUBLIC_DEMO_MODE=false`: real accounts, production money and inventory by default—even on localhost.
-- `NEXT_PUBLIC_DEMO_MODE=true`: non-paying [UI demo](docs/DEMO-MODE.md), using live catalog data.
+- `NEXT_PUBLIC_DEMO_MODE=false`: real accounts, production money and inventory, including on localhost.
+- `NEXT_PUBLIC_DEMO_MODE=true`: non-paying [UI demo](docs/DEMO-MODE.md), without customer login. A Commerce key is still required to load this example's live catalog.
 
-A lab needs a separately provisioned URL and key. Copying this repo does not create one.
+A custom UI can start with mock data without a key, or the Public Read API with a free Read key. Read keys cannot call Commerce endpoints, including this example's catalog and bootstrap.
+
+A lab needs a separately provisioned URL and key. Copying this repo does not create one. [Ask DYLI about testing](https://www.dyli.io/docs/api/commerce-support#testing).
 
 **A passing doctor check is not end-to-end certification.** Test login, payments, wallet gas, openings, sell-back and any shipping before inviting paying customers.
 
 Before deployment, run `npm run protection:check`. The example uses DYLI's
-Supabase-backed request limits with the same API key—no extra database credentials.
+Supabase-backed request limits with the same API key. No extra database credentials are needed.
 If the counter service is unavailable, requests continue; explicit limits still
 return 429, and authentication and DYLI's API quotas still apply. Configure host-level limits
 and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 
 ## When you need more
 
+For managed login, domain changes, payments or testing, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support). Sign in to send a request. DYLI emails you a copy, and you can see the status and date in your request history. Managed login uses a separate Privy app for your storefront, not your customers' existing DYLI login.
+
 - [Before launch](docs/PILOT-LAUNCH.md)
+- [Display boxes and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)
 - [Security and private vulnerability reports](SECURITY.md)
 - [Keep your existing login](docs/EXISTING-AUTH.md)
 - [Own payment processor or app balance](docs/PAYMENT-OWNERSHIP.md)

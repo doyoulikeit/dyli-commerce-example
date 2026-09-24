@@ -16,6 +16,10 @@ export function publicStorefrontReadiness(payload: ApiRecord): ApiRecord {
         ? capabilities.payments.filter(value => value === "usdc" || value === "stripe_card") : [],
       box_play: { contract_version: box.contract_version === "gacha" ? "gacha" : null },
       post_vault_offers: { ready: record(capabilities.post_vault_offers).ready === true },
+      community: Object.fromEntries(["marketplace", "trading"].map(key => {
+        const feature = record(record(capabilities.community)[key]);
+        return [key, { ready: feature.ready === true, include_dyli: feature.include_dyli === true }];
+      })),
     },
     partner: {
       display_name: typeof partner.display_name === "string" ? partner.display_name : null,

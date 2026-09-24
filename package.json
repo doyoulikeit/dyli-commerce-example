@@ -15,7 +15,8 @@
     "doctor": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/doctor.mjs",
     "protection:check": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/check-protection.mjs",
     "source:check": "node scripts/check-public-source.mjs",
-    "pilot:configure": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/configure-box-pilot.mjs"
+    "pilot:configure": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/configure-box-pilot.mjs",
+    "community:configure": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/configure-community.mjs"
   },
   "dependencies": {
     "@privy-io/react-auth": "3.37.4",

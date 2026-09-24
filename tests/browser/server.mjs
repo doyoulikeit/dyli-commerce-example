@@ -12,10 +12,11 @@ const { build } = await import(process.env.ESBUILD_PACKAGE_PATH);
 const revealOnly = process.env.VERIFY_VIEW === "reveal";
 const offersOnly = process.env.VERIFY_VIEW === "offers";
 const shippingOnly = process.env.VERIFY_VIEW === "shipping";
-const previewPort = shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
-const isolated = revealOnly || offersOnly || shippingOnly;
+const communityOnly = process.env.VERIFY_VIEW === "community";
+const previewPort = communityOnly ? 3112 : shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
+const isolated = communityOnly || revealOnly || offersOnly || shippingOnly;
 await build({
-  entryPoints: { harness: path.join(root, `tests/browser/${shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
+  entryPoints: { harness: path.join(root, `tests/browser/${communityOnly ? "community-preview" : shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
   bundle: true,
   outdir: output,
   format: "esm",
