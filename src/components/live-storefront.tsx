@@ -37,6 +37,7 @@ import { LiveVaultCard } from "@/components/live-vault-card";
 import { LiveCommunity } from "@/components/live-community";
 import { CommunityActivity } from "@/components/community-activity";
 import type { CommunityIntent } from "@/components/community-market";
+import { MarketplacePreview } from "@/components/market-cards";
 import { useLiveCommerce } from "@/components/use-live-commerce";
 import { useCommerceRuntime } from "@/components/providers";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
@@ -408,7 +409,10 @@ export function LiveStorefront({
               </div>
               {cards(boxes, 3, true)}
             </section>
-            {products.length > 0 && (
+            {marketplace.ready === true && <MarketplacePreview wallet={commerce.address || ""}
+              onViewAll={() => navigate("shop")}
+              onSelect={item => { setCommunityIntent({ kind: "inspect", item }); navigate("shop"); }} />}
+            {marketplace.ready !== true && products.length > 0 && (
               <section>
                 <div className="lc-section-title">
                   <h2>Shop</h2>

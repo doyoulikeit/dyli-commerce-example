@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, ShoppingBag, ArrowUpRight } from "lucide-react";
+import { Plus, Search, ShoppingBag } from "lucide-react";
 import { Art, LiveModal } from "./live-catalog";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import type { ApiRecord } from "@/lib/types";
+import { MarketCard, MarketSkeleton, publicMarket } from "./market-cards";
+import { MarketFilterSidebar, MarketFilterButton, MarketSort, emptyMarketFilters, type MarketFiltersValue } from "./market-filters";
 
 export type CommunityApi = <T>(path: string, body?: ApiRecord) => Promise<T>;
 export type CommunityIntent = {
-  kind: "list" | "offer" | "trade";
+  kind: "list" | "offer" | "trade" | "inspect";
   item?: ApiRecord;
 };
 export type MarketProps = {
@@ -42,8 +44,13 @@ export function CommunityMarket({
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
   const [selected, setSelected] = useState<ApiRecord | null>(null);
+  const [filters, setFilters] = useState(emptyMarketFilters), [facets, setFacets] = useState<ApiRecord>({});
+  const [retry, setRetry] = useState(0);
+  const detail = intent?.kind === "inspect" ? intent.item : selected;
+  const changeFilters = (value: MarketFiltersValue) => { setFilters(value); setOffset(0); };
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       setError("");
@@ -55,22 +62,13 @@ export function CommunityMarket({
               mine,
               q: query,
               offset,
+              ...filters,
             })
-          : await fetch(
-              `/api/community?${new URLSearchParams({ kind: view, q: query, offset: String(offset) })}`,
-            ).then(async (response) => {
-              const body = await response.json();
-              if (!response.ok)
-                throw new Error(
-                  body.message ||
-                    body.error ||
-                    "Could not load the marketplace",
-                );
-              return body;
-            });
+          : await publicMarket({ kind: view, q: query, offset: String(offset), ...filters }, controller.signal);
         if (!active) return;
         setItems(asRows(data.items));
         setNext(asRecord(data.pagination).next_offset as number | null);
+        setFacets(asRecord(data.facets));
       } catch (failure) {
         if (active)
           setError(
@@ -84,23 +82,24 @@ export function CommunityMarket({
     }, 250);
     return () => {
       active = false;
+      controller.abort();
       clearTimeout(timer);
     };
-  }, [api, wallet, view, mine, query, offset, revision]);
+  }, [api, wallet, view, mine, query, offset, revision, filters, retry]);
   const act = (input: ApiRecord, title: string) => {
     if (!wallet) {
       login();
       return;
     }
     setSelected(null);
+    clearIntent();
     submit(input, title);
   };
   return (
     <section className="cm-surface">
       <div className="cm-heading">
         <div>
-          <span className="cm-eyebrow">The collector marketplace</span>
-          <h1>Shop</h1>
+          <h1>Marketplace</h1>
           <p>
             {includeDyli
               ? "Discover listings and offers from collectors across DYLI."
@@ -154,10 +153,18 @@ export function CommunityMarket({
                 setOffset(0);
               }}
             />{" "}
-            Only mine
+            {view === "listing" ? "My listings" : "My offers"}
           </label>
         )}
+        <div className="cm-sort-desktop"><MarketSort value={filters.sort} onChange={sort => changeFilters({ ...filters, sort })} /></div>
       </div>
+      <div className="cm-filter-bar">
+        <MarketFilterButton value={filters} facets={facets} onChange={changeFilters} />
+        <MarketSort value={filters.sort} onChange={sort => changeFilters({ ...filters, sort })} />
+      </div>
+      <div className="cm-market-layout">
+      <MarketFilterSidebar value={filters} facets={facets} onChange={changeFilters} />
+      <div className="cm-market-results">
       {error ? (
         <div className="cm-empty" role="alert">
           <p>{error}</p>
@@ -165,55 +172,17 @@ export function CommunityMarket({
             className="lc-secondary"
             onClick={() => {
               setOffset(0);
-              setQuery((value) => `${value} `);
+              setRetry(value => value + 1);
             }}
           >
             Try again
           </button>
         </div>
       ) : loading ? (
-        <div
-          className="cm-grid"
-          aria-label="Loading marketplace"
-          aria-busy="true"
-        >
-          {[0, 1, 2, 3].map((key) => (
-            <div className="cm-skeleton" key={key} />
-          ))}
-        </div>
+        <MarketSkeleton />
       ) : items.length ? (
         <div className="cm-grid">
-          {items.map((item) => {
-            const product = asRecord(item.product),
-              owned = String(item.maker).toLowerCase() === wallet.toLowerCase();
-            return (
-              <button
-                className="cm-market-card"
-                key={`${view}:${item.order_id}`}
-                onClick={() => setSelected(item)}
-              >
-                <div className="cm-art">
-                  <Art src={assetImage(product)} name={String(product.name)} />
-                  <span className="cm-chip">
-                    {owned
-                      ? "Yours"
-                      : view === "offer"
-                        ? "Offer"
-                        : `${item.quantity} available`}
-                  </span>
-                </div>
-                <small>{String(product.brand || "Collectible")}</small>
-                <h3>{String(product.name)}</h3>
-                <div className="cm-card-price">
-                  <strong>{usd(Number(item.price))}</strong>
-                  <ArrowUpRight size={19} />
-                </div>
-                <p>
-                  @{String(asRecord(item.collector).username || "collector")}
-                </p>
-              </button>
-            );
-          })}
+          {items.map(item => <MarketCard key={`${view}:${item.order_id}`} item={item} wallet={wallet} onClick={() => setSelected(item)} />)}
         </div>
       ) : (
         <div className="cm-empty">
@@ -226,7 +195,7 @@ export function CommunityMarket({
           </p>
         </div>
       )}
-      {(offset > 0 || next !== null) && (
+      {!error && (offset > 0 || next !== null) && (
         <div className="cm-pagination">
           <button
             className="lc-secondary"
@@ -245,21 +214,24 @@ export function CommunityMarket({
           </button>
         </div>
       )}
-      {selected && !selected.compose && (
+      </div>
+      </div>
+      {detail && !detail.compose && (
         <MarketDetail
-          item={selected}
+          item={detail}
           wallet={wallet}
           holdings={holdings}
           api={api}
-          onClose={() => setSelected(null)}
+          onClose={() => { setSelected(null); clearIntent(); }}
           onOffer={(item) => {
             if (!wallet) return login();
+            clearIntent();
             setSelected({ compose: "offer", ...item });
           }}
           act={act}
         />
       )}
-      {(selected?.compose || (intent && intent.kind !== "trade")) && (
+      {(selected?.compose || intent?.kind === "list" || intent?.kind === "offer") && (
         <MarketComposer
           kind={(intent?.kind || selected?.compose) as "list" | "offer"}
           item={intent?.item || (selected?.token_id ? selected : undefined)}

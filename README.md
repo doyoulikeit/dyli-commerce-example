@@ -26,7 +26,7 @@ paymaster configuration with no additional environment variables. This is a tran
 on Abstract, not a bank cash-out or cross-chain bridge. Pending withdrawals are
 saved per wallet and checked against on-chain receipts before another send.
 
-Shop and Trades use DYLI's existing contracts and the customer's Abstract USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). Card checkout is available for boxes, not peer transactions.
+The homepage shows Marketplace below Boxes, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Abstract USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for boxes, not peer transactions.
 
 ## Quick setup
 

@@ -2,6 +2,7 @@ import { apiErrorResponse, commerce } from "@/lib/dyli";
 import { AuthError, authErrorResponse } from "@/lib/privy-server";
 import { requireLiveContext, requestKey } from "@/lib/live-server";
 import type { ApiRecord } from "@/lib/types";
+import { ensureCommunitySettings } from "@/lib/community-server";
 
 const uuid =
   /^[\da-f]{8}-[\da-f]{4}-[1-8][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
@@ -19,6 +20,21 @@ function marketQuery(body: ApiRecord) {
     kind: body.kind === "offer" ? "offer" : "listing",
   });
   params.set("q", String(body.q || "").slice(0, 100));
+  for (const key of ["brand", "category", "subcategory", "seller", "min_price", "max_price", "sort"]) {
+    if (body[key] === undefined || body[key] === "") continue;
+    if (typeof body[key] !== "string" || body[key].length > 80)
+      throw new AuthError(400, "Invalid marketplace filter");
+    params.set(key, body[key].trim());
+  }
+  for (const key of ["min_price", "max_price"]) {
+    const value = params.get(key);
+    if (value !== null && (!/^(0|[1-9]\d{0,6})(\.\d{1,6})?$/.test(value) || Number(value) > 1000000))
+      throw new AuthError(400, "Enter a price between 0 and 1,000,000");
+  }
+  if (params.has("min_price") && params.has("max_price") && Number(params.get("min_price")) > Number(params.get("max_price")))
+    throw new AuthError(400, "Minimum price must not exceed maximum price");
+  if (params.has("sort") && !["newest", "price_low", "price_high"].includes(params.get("sort")!))
+    throw new AuthError(400, "Choose a valid sort order");
   if (body.tokenId !== undefined) {
     if (!integer.test(String(body.tokenId)))
       throw new AuthError(400, "Choose a valid collectible");
@@ -34,8 +50,10 @@ function marketQuery(body: ApiRecord) {
 export async function GET(request: Request) {
   try {
     const query = Object.fromEntries(new URL(request.url).searchParams);
+    const params = marketQuery(query);
+    await ensureCommunitySettings();
     // Discovery is public. Writes and personal history require a verified login.
-    return respond(await commerce(`/community/market?${marketQuery(query)}`));
+    return respond(await commerce(`/community/market?${params}`));
   } catch (error) {
     return authErrorResponse(error) || apiErrorResponse(error);
   }
@@ -50,6 +68,8 @@ export async function POST(request: Request) {
     );
     const external = identity.externalCustomerId;
     const action = String(body.action || "");
+    // Receipt recovery remains available even if an owner is changing settings.
+    if (["market", "collectors", "holdings", "trades", "prepare"].includes(action)) await ensureCommunitySettings();
     if (action === "market") {
       const params = marketQuery(body);
       if (body.mine === true) params.set("external_customer_id", external);

@@ -9,6 +9,7 @@ function fixture(foreign = false) {
   const calls = [], exports = {};
   class AuthError extends Error { constructor(status, message) { super(message); this.status = status; } }
   vm.runInNewContext(source, { exports, Response, URL, URLSearchParams, require(name) {
+    if (name === '@/lib/community-server') return { ensureCommunitySettings: async () => {} };
     if (name === '@/lib/live-server') return { requireLiveContext: async request => {
       if (!request.headers.get('authorization')) throw new AuthError(401, 'Sign in');
       return { identity: { externalCustomerId: 'signed-in-user', walletAddress: wallet } };
@@ -30,6 +31,14 @@ test('prepare binds authenticated identity and strips client fees, target wallet
 test('public market cannot inject a customer, path or inclusion setting', async () => {
   const f = fixture(); await f.get('external_customer_id=another&include_dyli_marketplace=true&path=/config');
   assert.match(f.calls[0].path, /^\/community\/market\?/); assert.doesNotMatch(f.calls[0].path, /another|include_dyli|config/);
+});
+test('market filters are forwarded through the allowlist and invalid prices/sorts are rejected', async () => {
+  const f = fixture();
+  assert.equal((await f.get('brand=Pokemon&category=TCG&subcategory=Graded&min_price=10&max_price=50&sort=price_low&seller=alex')).status, 200);
+  const query = new URL(`http://test${f.calls[0].path}`).searchParams;
+  assert.equal(query.get('brand'), 'Pokemon'); assert.equal(query.get('seller'), 'alex'); assert.equal(query.get('sort'), 'price_low');
+  for (const invalid of ['min_price=-1', 'min_price=99&max_price=1', 'sort=sql', 'max_price=NaN', 'min_price=1e5']) assert.equal((await f.get(invalid)).status, 400);
+  assert.equal(f.calls.length, 1);
 });
 test('foreign actions cannot be viewed or confirmed and invalid references never reach settlement', async () => {
   for (const action of ['get', 'confirm']) { const f = fixture(true); assert.equal((await f.post({ action, id, txHash: hash })).status, 403); assert.equal(f.calls.length, 1); }

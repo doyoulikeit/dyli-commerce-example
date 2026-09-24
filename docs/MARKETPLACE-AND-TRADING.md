@@ -1,8 +1,10 @@
 # Marketplace and trading
 
-Shop supports listings, purchases, offers and cancellations. From the vault, choose **List for sale** or **Trade**. Trades has a collector search, an item-and-cash composer, incoming requests and sent/history views.
+Marketplace appears below Boxes on the homepage. Choose **View all** to browse listings and offers, search, filter by brand or type, set a price range, and sort by price. **My listings** and **My offers** show your open orders. Click a collectible to buy, make an offer, or manage your own listing. From the vault, choose **List for sale** or **Trade**. Trades has a collector search, an item-and-cash composer, incoming requests and sent/history views.
 
 Activity shows your marketplace and trade actions with item images, quantities and transaction status.
+
+Desktop filters sit beside the listings. On mobile, **Filters** opens a bottom sheet. Choose your filters and tap **Show results** to apply them, or close the sheet to keep your current results.
 
 These are real transactions, not demo balances. Both use DYLI's existing Abstract contracts. Customers sign with their own wallet. Marketplace payments and optional trade cash are Abstract USDC. Card checkout remains available for boxes, not these peer transactions.
 
@@ -17,14 +19,15 @@ INCLUDE_DYLI_MARKETPLACE=false
 INCLUDE_DYLI_COLLECTORS=false
 ```
 
-Preview, then save:
+Restart locally or redeploy after editing. The running server applies these explicit settings to your DYLI app automatically. Unspecified settings stay unchanged. No separate setup command is required. The browser cannot change the owner settings.
+
+Use the same settings in each deployment that shares a Commerce key. These settings belong to the app, not an individual deployment. To preview them without saving:
 
 ```sh
 npm run community:configure
-npm run community:configure -- --apply
 ```
 
-The command updates your app's saved `community_settings` through `PATCH /config`. It does not buy anything. Unspecified settings stay unchanged. Editing the env file alone does not update the API policy. The browser never receives an owner configuration endpoint.
+You can also save manually with `npm run community:configure -- --apply`. Both paths use `PATCH /config`; neither makes purchases. Server checks are coalesced and cached briefly, and only differing settings are written. Builds do not update app configuration.
 
 - **Include DYLI marketplace:** show and transact against outside DYLI listings and offers. Off means only orders created through this Commerce app.
 - **Include DYLI collectors:** find and trade with collectors outside this app. Off means people synchronized as customers of this app.

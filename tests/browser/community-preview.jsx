@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Home, ShoppingBag, Box, Layers, ArrowLeftRight, Activity } from "lucide-react";
 import { LiveCommunity } from "../../src/components/live-community";
 import { CommunityActivity } from "../../src/components/community-activity";
+import { MarketplacePreview } from "../../src/components/market-cards";
 import "../../src/app/globals.css";
 import "../../src/components/live-storefront.css";
 
@@ -23,7 +24,25 @@ const trades = [
 let action = JSON.parse(sessionStorage.getItem("community-fixture-action") || "null");
 window.fixtureAudit = [];
 window.fixtureRecordingAvailable = !params.has("recording");
+function marketResults(body = {}) {
+  let rows = params.has("empty") ? [] : items.map((product, index) => ({ product: { ...product, category: "TCG", subcategory: index === 3 ? "Graded" : "Raw card" }, token_id: product.token_id, kind: body.kind || "listing", order_id: String(77 + index), unit_amount: String((index + 1) * 25000000), price: (index + 1) * 25, quantity: 1, maker: index === 3 ? wallet : other, collector: { username: index === 3 ? "alex" : "collector1234" } }));
+  if (body.mine) rows = rows.filter(item => item.maker === wallet);
+  if (body.tokenId) rows = rows.filter(item => item.token_id === body.tokenId);
+  if (body.q) rows = rows.filter(item => item.product.name.toLowerCase().includes(body.q.trim().toLowerCase()));
+  for (const key of ['brand', 'category', 'subcategory']) if (body[key]) rows = rows.filter(item => item.product[key] === body[key]);
+  if (body.min_price) rows = rows.filter(item => item.price >= Number(body.min_price));
+  if (body.max_price) rows = rows.filter(item => item.price <= Number(body.max_price));
+  if (body.seller) rows = rows.filter(item => item.collector.username === body.seller.replace(/^@/, ''));
+  if (body.sort === 'price_low') rows.sort((a,b) => a.price-b.price);
+  if (body.sort === 'price_high') rows.sort((a,b) => b.price-a.price);
+  return { items: rows, pagination: { next_offset: null }, facets: { brands: ['Pokemon'], categories: ['TCG'], subcategories: ['Graded', 'Raw card'] } };
+}
 window.fetch = async (_url, options) => {
+  if (String(_url).startsWith('/api/community?')) {
+    window.fixtureAudit.push({ type: 'public-market', url: _url });
+    if (params.has('error')) return Response.json({ message: 'Marketplace is temporarily unavailable.' }, { status: 503 });
+    return Response.json(marketResults(Object.fromEntries(new URL(_url, location.origin).searchParams)));
+  }
   const request = JSON.parse(options.body);
   const rpc = value => Response.json({ jsonrpc: "2.0", id: request.id, result: value });
   if (request.method === "eth_blockNumber") return rpc("0x1");
@@ -36,16 +55,13 @@ window.fetch = async (_url, options) => {
 };
 function Preview() {
   const [view, setView] = useState(params.get("view") || "shop");
+  const [intent, setIntent] = useState(null);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
   const [session, setSession] = useState({ identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 2741 }, holdings: { items } });
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "market") {
-      let rows = params.has("empty") ? [] : items.map((product, index) => ({ product, token_id: product.token_id, kind: body.kind || "listing", order_id: String(77 + index), unit_amount: String((index + 1) * 25000000), price: (index + 1) * 25, quantity: 1, maker: index === 3 ? wallet : other, collector: { username: index === 3 ? "alex" : "collector1234" } }));
-      if (body.mine) rows = rows.filter(item => item.maker === wallet);
-      if (body.tokenId) rows = rows.filter(item => item.token_id === body.tokenId);
-      if (body.q) rows = rows.filter(item => item.product.name.toLowerCase().includes(body.q.trim().toLowerCase()));
-      return { items: rows, pagination: { next_offset: null } };
+      return marketResults(body);
     }
     if (body.action === "collectors") return { collectors: [{ username: "collector1234", wallet: other }] };
     if (body.action === "holdings") return { items: items.slice(1), pagination: { has_more: false } };
@@ -85,8 +101,10 @@ function Preview() {
       <button className="lc-secondary">$500.00</button>
     </header>
     <main style={{ width: "min(1440px,100%)", margin: "auto", padding: "32px 20px 100px" }}>
+      {view === 'home' && <><section className="lc-portfolio"><div><p>Your next great find.</p><h1>Start your collection.</h1></div></section><section style={{ marginBottom: 48 }}><div className="lc-section-title"><h2>Boxes</h2><button onClick={() => setView('boxes')}>View all</button></div><div className="lc-grid"><div className="cm-preview-notice">Box catalog fixture</div></div></section>
+        <MarketplacePreview wallet={wallet} onViewAll={() => setView('shop')} onSelect={item => { setIntent({ kind: 'inspect', item }); setView('shop'); }} /></>}
       {view === "activity" && <><h1>Activity</h1><CommunityActivity api={api} hasOtherActivity={false} /></>}
-      <LiveCommunity view={view} session={session} api={api} marketplace={{ ready: true, include_dyli: true }} trading={{ ready: true, include_dyli: true }} intent={null} clearIntent={() => {}} login={() => {}} refresh={refresh}
+      <LiveCommunity view={view} session={session} api={api} marketplace={{ ready: true, include_dyli: true }} trading={{ ready: true, include_dyli: true }} intent={intent} clearIntent={() => setIntent(null)} login={() => {}} refresh={refresh}
         send={async () => { window.fixtureAudit.push({ type: "send" }); return hash; }} />
     </main>
     <nav className="lc-bottom-nav" aria-label="Mobile navigation">{nav.map(([key, label, Icon]) => <button key={key} aria-current={view === key ? "page" : undefined} onClick={() => setView(key)}><Icon size={20}/><span>{label}</span></button>)}</nav>
