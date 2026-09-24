@@ -21,7 +21,7 @@
   "dependencies": {
     "@privy-io/react-auth": "3.37.4",
     "@privy-io/server-auth": "^1.32.5",
-    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/react-stripe-js": "^6.9.0",
     "@stripe/stripe-js": "^9.13.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.33.0",
