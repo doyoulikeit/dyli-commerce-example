@@ -69,6 +69,8 @@ and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 
 Save your domains and login/wallet choices in [Commerce setup](https://www.dyli.io/requestapi#commerce-setup). Your own login and wallets can activate automatically. Managed provisioning stays pending until DYLI adds the provider client/app; activation emails include next steps. Shared DYLI login keeps the existing DYLI account and wallet. A separate Privy app is available for isolated identity. Existing login can also use DYLI-managed embedded wallets. For payments, testing or questions, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support).
 
+Separate identity is the default. Shared DYLI clients are reserved for DYLI-controlled or explicitly trusted storefronts: they share users, wallets and the parent app's access-token audience. Domain restrictions do not separate that authority. See [Privy's access-token claims](https://docs.privy.io/authentication/user-authentication/access-tokens); shared activation requires an Inventory trust review.
+
 - [Before launch](docs/PILOT-LAUNCH.md)
 - [Display boxes and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)
 - [Security and private vulnerability reports](SECURITY.md)
