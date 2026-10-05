@@ -2,6 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCommerceClient, CommerceError } from '../sdk/commerce-client.mjs';
 const options = { apiKey: 'server-only-key' };
+test('existing managed-wallet verification forwards the backend-verified customer with a separate wallet token', async () => {
+  const client = createCommerceClient({ ...options, fetch: async (url, init) => {
+    assert.equal(url, 'https://www.dyli.io/api/commerce/v1/auth/session');
+    assert.equal(init.headers.get('x-api-key'), options.apiKey);
+    assert.equal(init.headers.get('x-customer-access-token'), 'wallet-session');
+    assert.deepEqual(JSON.parse(init.body), { external_customer_id: 'user_clerk', wallet_address: `0x${'a'.repeat(40)}` });
+    return Response.json({ identity: {} });
+  } });
+  await client.verifySession('wallet-session', `0x${'a'.repeat(40)}`, 'user_clerk');
+});
 test('client keeps keys in headers, rejects redirects, and serializes stable idempotency keys', async () => {
   let calls = 0;
   const client = createCommerceClient({ ...options, fetch: async (url, init) => {

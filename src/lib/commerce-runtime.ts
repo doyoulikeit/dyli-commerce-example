@@ -20,6 +20,9 @@ export function parseAbstractPaymaster(wallet: ApiRecord | undefined): AbstractP
 export type CommerceRuntime = {
   authMode: "dyli_managed" | "partner" | "existing";
   appId: string;
+  clientId?: string | null;
+  identityScope?: "dyli" | "partner";
+  managedWalletAuth?: { appId: string; clientId: string | null; sessionEndpoint: "/auth/session" };
   chainId: 2741 | 11124;
   allowedOrigins: string[];
   storefrontOrigin: string | null;
@@ -46,12 +49,25 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
   if (auth?.mode === "existing" && auth.available === true) {
     const origin = typeof auth.storefront_origin === "string" ? auth.storefront_origin : null;
     if (!origin || new URL(origin).protocol !== "https:") throw new Error("Register a storefront origin with DYLI");
+    const managed = wallet?.managed_auth as ApiRecord | undefined;
+    const integration = payload.integration as ApiRecord | undefined;
+    if (integration?.wallet_mode === "managed" && (managed?.available !== true || typeof managed.app_id !== "string" || !managed.app_id || managed.session_endpoint !== "/auth/session")) {
+      throw new Error("Ask DYLI to activate managed wallets for your existing login");
+    }
+    const allowed = integration?.wallet_mode === "managed" ? managed?.allowed_origins : auth.allowed_origins;
+    const origins = Array.isArray(allowed) ? allowed.filter((value): value is string => typeof value === "string") : [origin];
+    if (!origins.includes(origin)) throw new Error("Register your primary storefront origin with DYLI");
     return {
       authMode: "existing", appId: "", chainId: Number(wallet?.chain_id) as 2741 | 11124,
-      allowedOrigins: [origin], storefrontOrigin: origin, sponsorTransactions: false,
+      allowedOrigins: origins, storefrontOrigin: origin, sponsorTransactions: false,
       paymaster: parseAbstractPaymaster(wallet),
       name: typeof storefront?.name === "string" ? storefront.name : "Vaulted",
       boxesOnly: storefront?.boxes_only === true,
+      ...(integration?.wallet_mode === "managed" ? { managedWalletAuth: {
+        appId: managed!.app_id as string,
+        clientId: typeof managed!.client_id === "string" ? managed!.client_id : null,
+        sessionEndpoint: "/auth/session" as const,
+      } } : {}),
     };
   }
   if (auth?.mode !== "dyli_managed" || auth.available !== true || typeof auth.app_id !== "string" || !auth.app_id) {
@@ -62,6 +78,8 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
   if (!origin || !origins.includes(origin)) throw new Error("DYLI must register a storefront origin before checkout");
   return {
     authMode: "dyli_managed", appId: auth.app_id,
+    clientId: typeof auth.client_id === "string" ? auth.client_id : null,
+    identityScope: auth.identity_scope === "dyli" ? "dyli" : "partner",
     chainId: Number(wallet?.chain_id) as 2741 | 11124,
     allowedOrigins: origins, storefrontOrigin: origin,
     sponsorTransactions: false,

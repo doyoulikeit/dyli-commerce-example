@@ -33,3 +33,11 @@ The item must come from the allowed catalog. The API computes price/fees and val
 Use `request('/box-plays/...')` for the documented buy/results/decision/finalize states. Always preserve transaction hashes and idempotency keys. A timeout is not proof of failure. Errors expose HTTP status and DYLI's request ID for support; secrets never belong in logs.
 
 See the authoritative [Commerce API](https://www.dyli.io/docs/api/commerce) and its OpenAPI document. The SDK intentionally does not invent a second payment state machine, silently retry money movements, or wrap third-party receipts into a paid flag.
+## Existing login with DYLI-managed wallets
+
+After verifying the customer with your existing provider on your backend, call
+`client.verifySession(privyWalletAccessToken, walletAddress, verifiedCustomerId)`.
+Use the provider-verified stable subject for the last argument; never a customer
+ID supplied by the browser. DYLI matches it to Privy's verified custom-auth record
+and linked wallet. Public app/client settings come from bootstrap. See
+[existing-auth integration](../docs/EXISTING-AUTH.md).

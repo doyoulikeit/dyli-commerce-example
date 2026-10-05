@@ -6,7 +6,7 @@ export function createCommerceClient(options: ClientOptions): {
   request<T = JsonObject>(path: string, options?: RequestOptions): Promise<T>;
   readiness(): Promise<JsonObject>;
   bootstrap(): Promise<JsonObject>;
-  verifySession(accessToken: string, walletAddress?: string): Promise<JsonObject>;
+  verifySession(accessToken: string, walletAddress?: string, verifiedExternalCustomerId?: string): Promise<JsonObject>;
   quote(body: JsonObject, key: string): Promise<JsonObject>;
   stripeCheckout(quoteId: string, body: JsonObject, key: string): Promise<JsonObject>;
   createOrder(body: JsonObject, key: string): Promise<JsonObject>;

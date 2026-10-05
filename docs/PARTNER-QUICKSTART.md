@@ -10,15 +10,15 @@ At [Create an API key](https://www.dyli.io/requestapi), use a DYLI Pro developer
 - **Use your own Privy app** for a new storefront.
 - **DYLI-hosted checkout and balance** for payments.
 
-Enter your company, use case and HTTPS storefront domain. A temporary Vercel deployment you control is fine; your finished site doesn't need to be live yet. The domain controls checkout returns, not just DYLI's records. [Request a domain change](https://www.dyli.io/docs/api/commerce-support#domains-and-login) before switching to your launch URL. Save the Commerce key; it identifies the app automatically.
+Enter your company, use case and HTTPS storefront domain. A temporary Vercel deployment you control is fine; your finished site doesn't need to be live yet. The domain controls checkout returns, not just DYLI's records. [Update domains in Commerce setup](https://www.dyli.io/requestapi#commerce-setup) before switching to your launch URL. Save the Commerce key; it identifies the app automatically.
 
 Create a dedicated Privy app for your storefront and register its allowed domains. Keep its server secret private. You do not need DYLI's Privy app or your own Stripe account.
 
 **Already have login?** Choose “Use your own login” and connect the [client/server adapters](EXISTING-AUTH.md).
 
-**DYLI-managed login:** [Contact us to activate](https://www.dyli.io/requestapi?inquiry=managed_login#commerce-support). We set up a separate Privy app for your storefront, not shared DYLI sign-in. The example reads the public app ID and approved domains from bootstrap. You don't need a Privy secret for this option.
+**DYLI-managed login:** Save your settings in [Commerce setup](https://www.dyli.io/requestapi#commerce-setup). Choose shared DYLI identity with the same account and wallet, or a separate Privy app. The request stays pending until DYLI provisions the client/app. The example discovers the public app ID, client ID and approved domains from bootstrap. You only need your Commerce key for this option.
 
-If `auth.available` is `false`, keep login disabled and contact support. Catalog access can still work. To change an existing app's login provider, [send a request](https://www.dyli.io/requestapi?inquiry=domain_login#commerce-support). Rotating the key won't change it.
+If `auth.available` is `false`, keep login disabled and contact support. Catalog access can still work. To change an existing app's login provider, [save new settings](https://www.dyli.io/requestapi#commerce-setup). Rotating the key won't change it.
 
 ## 2. Set up the repo
 

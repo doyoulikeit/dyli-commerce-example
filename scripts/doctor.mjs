@@ -18,6 +18,9 @@ try {
   if (mode === 'existing') {
     check(bootstrap.auth?.mode === 'existing', 'Partner-owned authentication registered; no DYLI Privy configuration required');
     check(Boolean(bootstrap.auth?.storefront_origin), 'Checkout return origin registered');
+    if (bootstrap.integration?.wallet_mode === 'managed') {
+      check(bootstrap.wallet?.managed_auth?.available === true && Boolean(bootstrap.wallet?.managed_auth?.app_id), 'Managed wallet provider activated for existing login');
+    }
     console.log('ACTION: implement and acceptance-test the client wallet/auth adapter and server identity verifier. This checker cannot certify your authentication.');
   } else if (mode === 'partner' || mode === 'privy') {
     check(Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID && process.env.PRIVY_SECRET_KEY), 'Partner-owned Privy credentials paired');

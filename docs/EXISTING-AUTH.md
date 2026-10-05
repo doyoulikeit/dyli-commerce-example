@@ -29,3 +29,61 @@ The DYLI connection is just `DYLI_API_KEY`. DYLI discovers the application and s
 You can keep your own card checkout, Apple Pay, or ledger. Your backend verifies that customer payment and separately settles DYLI through the supported treasury USDC flow. A receipt string or `paid: true` is not settlement proof. You own refunds/disputes in your processor, and sell-back USDC goes to the registered customer wallet unless your separately reviewed product handles reconciliation.
 
 For fewer moving parts, use DYLI-managed Stripe checkout, embedded in the example, or customer-wallet USDC. See [payment ownership](PAYMENT-OWNERSHIP.md). A requested payment preference does not activate a processor or remove readiness checks.
+
+## Keep Clerk and use DYLI-managed wallets
+
+In [Commerce setup](https://www.dyli.io/requestapi#commerce-setup), select your existing app, existing login, Clerk and DYLI-managed wallets. Enter your production JWKS URL and exact storefront origins. DYLI creates a dedicated Privy wallet app and configures JWT authentication with your provider's verification key and stable subject (`sub`). The request stays pending until this provider setup is ready; you receive an activation email. You do not need to open your own Privy account or hold a Privy server secret.
+
+After activation, bootstrap returns `auth.mode: existing` and `wallet.managed_auth.available: true`. The example discovers the public wallet app settings using its Commerce key. A Clerk session token and a Privy wallet access token have different roles: Clerk establishes the signed-in customer, and Privy establishes their linked wallet.
+
+On the frontend, keep your existing `ClerkProvider` outside `Providers`. Inside Clerk, pass its state to the supplied bridge:
+
+```tsx
+"use client";
+import { useAuth, useClerk } from "@clerk/nextjs";
+import { Providers } from "@/components/providers";
+import type { CommerceRuntime } from "@/lib/commerce-runtime";
+
+export function ClerkWallets({ runtime, children }: {
+  runtime: CommerceRuntime; children: React.ReactNode;
+}) {
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  const { openSignIn, signOut } = useClerk();
+  return <Providers runtime={runtime} existingLogin={{
+    ready: isLoaded,
+    authenticated: Boolean(isSignedIn),
+    userId: userId || null,
+    getToken: async () => isSignedIn ? getToken() : null,
+    login: () => openSignIn(),
+    logout: async () => { await signOut(); },
+  }}>{children}</Providers>;
+}
+```
+
+`Providers` synchronizes the JWT to Privy, creates the embedded Ethereum wallet and supplies the existing signing/transaction interface. It refuses stale wallet actions while the linked Clerk ID differs from the current signed-in customer. Keep this bridge mounted throughout the app.
+
+On the backend, implement `verifyPartnerIdentity` using Clerk's request/session verifier first, then call `verifyManagedPartnerWallet` from `src/lib/managed-partner-wallet.ts`. For a Next.js app using Clerk cookies and configured Clerk middleware, the core is:
+
+```ts
+import "server-only";
+import { auth } from "@clerk/nextjs/server";
+import { verifyManagedPartnerWallet } from "./managed-partner-wallet";
+
+export async function verifyPartnerIdentity(request: Request, requestedWallet?: string) {
+  const session = await auth(); // Verified Clerk session cookie in this request.
+  if (!session.userId) throw Object.assign(new Error("Sign in required"), { status: 401 });
+  const header = request.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ") || !header.slice(7).trim()) {
+    throw Object.assign(new Error("Wallet session required"), { status: 401 });
+  }
+  return verifyManagedPartnerWallet(
+    { userId: session.userId }, header.slice(7).trim(), requestedWallet,
+  );
+}
+```
+
+The bearer token here is the **Privy wallet token** supplied by `CommerceAuth`. Clerk authenticates independently through its verified session cookie. Configure Clerk middleware and its authorized-party/origin checks for your exact domains, and enforce CSRF/origin protections for cookie-authenticated mutations. A mobile/API backend instead verifies a separately supplied Clerk token with Clerk's server SDK; never attempt to authenticate Clerk by decoding the Privy token or trusting a request-body customer ID.
+
+DYLI verifies the dedicated Privy token, reads the provider-owned custom-auth subject, requires that it equals the backend-verified Clerk ID, and resolves a wallet linked to that same provider user. Stable Clerk customer IDs, app keys and payment preferences stay intact. Test logout, account switching, token renewal, expired sessions, a second customer's wallet and wallet-creation delay before launch.
+
+Provider references: [Privy JWT setup](https://docs.privy.io/authentication/user-authentication/jwt-based-auth/setup), [Privy JWT state synchronization](https://docs.privy.io/authentication/user-authentication/jwt-based-auth/usage), [Clerk server authentication](https://clerk.com/docs/reference/backend/types/auth-object).
