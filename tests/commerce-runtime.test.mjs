@@ -38,6 +38,23 @@ test('runtime discovery is public-only and keeps sponsorship disabled by default
   assert.equal(runtime.sponsorTransactions, false);
   assert.ok(!JSON.stringify(runtime).includes('must-not-escape'));
 });
+
+test('shared identity passes only the public client ID and honors the selected identity scope', () => {
+  const runtime = parseCommerceRuntime({ ...bootstrap, auth: { ...bootstrap.auth, client_id: 'wh-client', identity_scope: 'dyli' } });
+  assert.equal(runtime.clientId, 'wh-client');
+  assert.equal(runtime.identityScope, 'dyli');
+  assert.ok(!JSON.stringify(runtime).includes('must-not-escape'));
+});
+
+test('existing login cannot start managed wallet actions until its provider is available', () => {
+  const payload = { ...bootstrap, auth: { mode: 'existing', available: true, storefront_origin: 'https://shop.example' }, integration: { wallet_mode: 'managed' } };
+  assert.throws(() => parseCommerceRuntime(payload), /activate managed wallets/);
+  const managed = { available: true, app_id: 'holo-wallet-app', client_id: null, session_endpoint: '/auth/session', app_secret: 'must-not-escape' };
+  const runtime = parseCommerceRuntime({ ...payload, wallet: { ...payload.wallet, managed_auth: managed } });
+  assert.equal(runtime.authMode, 'existing');
+  assert.deepEqual(runtime.managedWalletAuth, { appId: 'holo-wallet-app', clientId: null, sessionEndpoint: '/auth/session' });
+  assert.ok(!JSON.stringify(runtime).includes('must-not-escape'));
+});
 test('Box-only partner discovery does not fetch disabled Shop endpoints or require an env override', () => {
   assert.equal(shopEnabled({ partner: { catalog_rules: { show_boxes: true, show_primary: false, show_secondary: false } } }), false);
   assert.equal(shopEnabled({ partner: { catalog_rules: { show_explore: false, show_primary: true } } }), false);

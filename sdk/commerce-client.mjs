@@ -48,8 +48,8 @@ export function createCommerceClient({ apiKey, partnerSlug, baseUrl = 'https://w
     request,
     readiness: () => request('/'),
     bootstrap: () => request('/bootstrap'),
-    verifySession: (accessToken, walletAddress) => request('/auth/session', {
-      method: 'POST', headers: { 'x-customer-access-token': accessToken }, body: { wallet_address: walletAddress },
+    verifySession: (accessToken, walletAddress, verifiedExternalCustomerId) => request('/auth/session', {
+      method: 'POST', headers: { 'x-customer-access-token': accessToken }, body: { wallet_address: walletAddress, external_customer_id: verifiedExternalCustomerId },
     }),
     quote: (body, key) => write('/quotes', body, key),
     stripeCheckout: (quoteId, body, key) => write(`/quotes/${encodeURIComponent(quoteId)}/stripe-checkout`, body, key),

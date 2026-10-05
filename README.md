@@ -67,7 +67,7 @@ and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 
 ## When you need more
 
-For managed login, domain changes, payments or testing, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support). Sign in to send a request. DYLI emails you a copy, and you can see the status and date in your request history. Managed login uses a separate Privy app for your storefront, not your customers' existing DYLI login.
+Save your domains and login/wallet choices in [Commerce setup](https://www.dyli.io/requestapi#commerce-setup). Your own login and wallets can activate automatically. Managed provisioning stays pending until DYLI adds the provider client/app; activation emails include next steps. Shared DYLI login keeps the existing DYLI account and wallet. A separate Privy app is available for isolated identity. Existing login can also use DYLI-managed embedded wallets. For payments, testing or questions, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support).
 
 - [Before launch](docs/PILOT-LAUNCH.md)
 - [Display boxes and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)
