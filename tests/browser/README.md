@@ -71,6 +71,14 @@ close and reopen the item in the same page: an uncertain sale must never send ag
 A successful sale updates the fixture balance from $100 to $175 and removes the item.
 Check desktop and phone widths and inspect `window.fixtureAudit` for duplicate sends.
 
+For stale ownership, check `?notowned`, `?vault&notowned`,
+`?notowned&accountfail`, and `?lostbeforeprepare`. Missing ownership must remove
+Sell/Ship/List/Trade without an error alert or wallet send, refresh the account
+once from the item sheet, and keep a neutral refresh button if that read fails.
+`?empty` still owns the item; `?unavailable` is retryable, not missing ownership.
+With the isolated offers server running, automate these and submitted-sale
+recovery checks with `PUPPETEER_PACKAGE_PATH=/path/to/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js node tests/browser/stale-offer-check.mjs`.
+
 ## Shipment tracking preview
 
 Run `VERIFY_VIEW=shipping node tests/browser/server.mjs` with the same temporary

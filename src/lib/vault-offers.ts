@@ -1,9 +1,10 @@
 import type { ApiRecord, VaultOffer } from "./types";
 
 export type VaultOffersApi = <T>(path: string, body?: ApiRecord) => Promise<T>;
-type Entry = { offers: VaultOffer[]; loaded: number };
+export type VaultOfferSnapshot = { offers: VaultOffer[]; owned: boolean | null };
+type Entry = VaultOfferSnapshot & { loaded: number };
 const cache = new WeakMap<VaultOffersApi, Map<string, Entry>>();
-const pending = new WeakMap<VaultOffersApi, Map<string, Promise<VaultOffer[]>>>();
+const pending = new WeakMap<VaultOffersApi, Map<string, Promise<VaultOfferSnapshot>>>();
 const waiting: Array<() => void> = [];
 let active = 0;
 
@@ -14,27 +15,33 @@ export const activeVaultOffers = (offers: VaultOffer[], now = Date.now()) => off
 // Card previews share their authenticated request with the detail sheet. A
 // large vault must not fan out a separate RPC-backed discovery for every item.
 export async function loadVaultOffers(api: VaultOffersApi, tokenId: string, fresh = false): Promise<VaultOffer[]> {
+  return (await loadVaultOfferSnapshot(api, tokenId, fresh)).offers;
+}
+
+export async function loadVaultOfferSnapshot(api: VaultOffersApi, tokenId: string, fresh = false): Promise<VaultOfferSnapshot> {
   let requests = pending.get(api);
   if (!requests) { requests = new Map(); pending.set(api, requests); }
-  const inFlight = requests.get(tokenId);
+  const requestMap = requests;
+  const inFlight = requestMap.get(tokenId);
   if (inFlight) return inFlight;
   let entries = cache.get(api);
   if (!entries) { entries = new Map(); cache.set(api, entries); }
   const saved = entries.get(tokenId);
   if (!fresh && saved && Date.now() - saved.loaded < 30000 &&
-      saved.offers.every(offer => Date.parse(offer.expires_at) > Date.now())) return activeVaultOffers(saved.offers);
+      saved.offers.every(offer => Date.parse(offer.expires_at) > Date.now())) return { offers: activeVaultOffers(saved.offers), owned: saved.owned };
   const request = (async () => {
     await new Promise<void>(resolve => {
       const start = () => { active++; resolve(); };
       if (active < 2) start(); else waiting.push(start);
     });
     try {
-      const result = await api<{ offers: VaultOffer[] }>("/api/offers", { action: "query", tokenId });
-      const offers = activeVaultOffers(result.offers);
-      entries.set(tokenId, { offers, loaded: Date.now() });
-      return offers;
+      const result = await api<{ offers: VaultOffer[]; ownership?: { owned?: boolean } }>("/api/offers", { action: "query", tokenId });
+      const owned = typeof result.ownership?.owned === "boolean" ? result.ownership.owned : null;
+      const snapshot = { offers: owned === false ? [] : activeVaultOffers(result.offers), owned };
+      entries.set(tokenId, { ...snapshot, loaded: Date.now() });
+      return snapshot;
     } finally { active--; waiting.shift()?.(); }
-  })().finally(() => requests.delete(tokenId));
-  requests.set(tokenId, request);
+  })().finally(() => requestMap.delete(tokenId));
+  requestMap.set(tokenId, request);
   return request;
 }

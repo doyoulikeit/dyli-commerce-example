@@ -6,7 +6,7 @@ import { abstract, abstractTestnet } from "viem/chains";
 import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, assetImage, usd } from "@/lib/live-commerce";
 import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
-import { loadVaultOffers } from "@/lib/vault-offers";
+import { loadVaultOfferSnapshot } from "@/lib/vault-offers";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { useSettlementRefresh } from "@/components/use-settlement-refresh";
 import { offerStorageKey, parseOfferRecovery, saleMayHaveBeenSent, settleVaultOffer, type OfferRecovery } from "@/lib/offer-recovery";
@@ -46,6 +46,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
   const [restoring, setRestoring] = useState(true);
   const [restoreFailed, setRestoreFailed] = useState(false);
   const [offersUnavailable, setOffersUnavailable] = useState(false);
+  const [owned, setOwned] = useState<boolean | null>(null);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [now, setNow] = useState(Date.now);
   const [reload, setReload] = useState(0);
@@ -63,6 +64,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
   const complete = sale?.status === "completed";
   const { status: accountRefresh, retry: retryAccountRefresh } = useSettlementRefresh(complete, onSettled);
   const pending = saleMayHaveBeenSent(sale, saved);
+  const { status: ownershipRefresh, retry: retryOwnershipRefresh } = useSettlementRefresh(owned === false && !sale && !pending, onSettled);
   const expired = !!sale && Date.parse(sale.expires_at) - now < 30000;
 
   useEffect(() => {
@@ -119,9 +121,10 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
           // Catalog readiness is only a cached hint. The authenticated offer
           // endpoint checks current availability when this item is opened.
           checkingOffers = true;
-          const offers = await loadVaultOffers(api, tokenId, reload > 0 || !sellingAvailable);
+          const snapshot = await loadVaultOfferSnapshot(api, tokenId, reload > 0 || !sellingAvailable);
+          const offers = snapshot.offers;
           if (!active) return;
-          setOffers(offers); setSelected(offers[0]?.id || ""); setSale(null); setSaved(null);
+          setOffers(offers); setOwned(snapshot.owned); setSelected(offers[0]?.id || ""); setSale(null); setSaved(null);
         }
       } catch (failure) {
         if (active) {
@@ -167,10 +170,26 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
     if (!offer || Date.parse(offer.expires_at) - Date.now() < 30000) throw new Error("Refresh offers to get an available price.");
     const previous = readRecovery();
     if (previous?.id) throw new Error("A sale is already open. Close and reopen this item to continue it.");
-    const recovery = previous || { wallet, tokenId, key: crypto.randomUUID(), offerId: offer.id, expectedAmount: offer.amount };
+    const recovery: OfferRecovery = previous || { wallet, tokenId, key: crypto.randomUUID(), offerId: offer.id, expectedAmount: offer.amount };
     writeRecovery(recovery);
-    const result = await prepareAcceptance(api, { action: "prepare", tokenId,
-      offerId: recovery.offerId, expectedAmount: recovery.expectedAmount, idempotencyKey: recovery.key });
+    let result;
+    try {
+      result = await prepareAcceptance(api, { action: "prepare", tokenId,
+        offerId: recovery.offerId, expectedAmount: recovery.expectedAmount, idempotencyKey: recovery.key });
+    } catch (failure) {
+      // Preparation cannot send a sale. Recheck a stale preview before asking
+      // for a signature, without clearing any submitted transaction recovery.
+      if (asRecord(failure).code === "item_not_owned" && !recovery.id &&
+          !recovery.attempted && !recovery.approvalAttempted && !recovery.hash && !recovery.approvalHash) {
+        const snapshot = await loadVaultOfferSnapshot(api, tokenId, true);
+        if (snapshot.owned === false) {
+          localStorage.removeItem(storageKey); setSaved(null); setSale(null);
+          setOffers([]); setSelected(""); setOwned(false);
+          return;
+        }
+      }
+      throw failure;
+    }
     writeRecovery({ ...recovery, id: result.acceptance.id });
     setSale(result.acceptance);
     await submit(result.acceptance);
@@ -209,9 +228,10 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
       const { acceptance: fresh } = await api<{ acceptance: OfferAcceptance }>("/api/offers", { action: "get", acceptanceId: sale.id });
       if (saleMayHaveBeenSent(fresh, recovery)) { setSale(fresh); throw new Error("A sale has already been submitted. Check its confirmation."); }
     }
-    const offers = await loadVaultOffers(api, tokenId, true);
+    const snapshot = await loadVaultOfferSnapshot(api, tokenId, true);
+    const offers = snapshot.offers;
     localStorage.removeItem(storageKey); setSaved(null); setSale(null); setRecoveryHash("");
-    setOffers(offers); setSelected(offers[0]?.id || "");
+    setOffers(offers); setOwned(snapshot.owned); setSelected(offers[0]?.id || "");
   });
   const checkNeeded = pending || !!saved?.approvalAttempted;
   const knownHash = sale?.tx_hash || saved?.hash || saved?.approvalHash;
@@ -230,7 +250,11 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
         </> : <button className="lc-primary" disabled={accountRefresh !== "ready"} onClick={() => { void onComplete(); }}>
           {accountRefresh === "pending" ? "Updating your vault and balance…" : "Back to vault"}
         </button>}
-      </> : restoreFailed ? <button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading</button> : sale ? <>
+      </> : restoreFailed ? <button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading</button> : owned === false && !sale ? <>
+        <p role="status">This item is no longer in your vault.</p>
+        {ownershipRefresh === "failed" ? <button className="lc-secondary" onClick={retryOwnershipRefresh}>Refresh vault</button>
+          : <button className="lc-secondary" onClick={onClose}>{ownershipRefresh === "pending" ? "Updating vault…" : "Back to vault"}</button>}
+      </> : sale ? <>
         <p className="lc-stat"><span>{sale.offer.type === "claim_buyback" ? "48-hour claim offer" : "Standing offer"}</span><strong>{usd(sale.offer.price)}</strong></p>
         <p className="lc-vault-expiry">Expires {offerExpiry(sale.expires_at)}</p>
         {checkNeeded ? <>
@@ -265,8 +289,8 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
           : <><p>This offer has expired.</p><button className="lc-primary" onClick={refreshOffers}>Check for new offers</button></>}
       </> : offersUnavailable ? <div className="lc-vault-unavailable"><p>Your item is safe in your vault.</p><button className="lc-secondary" onClick={() => setReload(value => value + 1)}>Retry loading offers</button></div>
         : <><p>No offer available right now.</p><button className="lc-secondary" onClick={refreshOffers}>Check for offers</button></>}
-      {onShip && !complete && !restoring && !restoreFailed && !busy && !checkNeeded && <button className="lc-vault-ship" onClick={onShip}>Ship item</button>}
-      {!complete && !restoring && !busy && !checkNeeded && (onList || onTrade) && <div className="cm-actions">
+      {owned !== false && onShip && !complete && !restoring && !restoreFailed && !busy && !checkNeeded && <button className="lc-vault-ship" onClick={onShip}>Ship item</button>}
+      {owned !== false && !complete && !restoring && !busy && !checkNeeded && (onList || onTrade) && <div className="cm-actions">
         {onList && <button className="lc-secondary" onClick={onList}>List for sale</button>}
         {onTrade && <button className="lc-secondary" onClick={onTrade}>Trade</button>}
       </div>}

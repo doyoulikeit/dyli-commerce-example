@@ -27,6 +27,7 @@ window.fixtureAudit = [];
 window.fixtureOffersAvailable = !params.has("unavailable");
 window.fixtureRecordingAvailable = !params.has("recording");
 window.fixtureRefreshAvailable = !params.has("accountfail");
+window.fixtureOwned = !params.has("notowned");
 window.fetch = async (_url, options) => {
   const request = JSON.parse(options.body);
   const rpc = value => Response.json({ jsonrpc: "2.0", id: request.id, result: value });
@@ -46,16 +47,22 @@ function Preview() {
     window.fixtureAudit.push({ type: "account-read" });
     if (params.has("slowaccount")) await new Promise(resolve => { window.fixtureReleaseAccountRefresh = resolve; });
     if (!window.fixtureRefreshAvailable) throw Error("Account unavailable");
-    setBalance(101.425); setOwned(false);
+    if (sale?.status === "completed") setBalance(101.425);
+    setOwned(false);
   }, []);
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "list") return { acceptances: sale ? [sale] : [] };
     if (body.action === "query") {
       if (!window.fixtureOffersAvailable) throw Object.assign(Error("Vault selling is not available yet. Please try again later."), { status: 503 });
-      return { offers: params.has("empty") ? [] : [currentOffer()] };
+      return { offers: !window.fixtureOwned || params.has("empty") ? [] : [currentOffer()],
+        ownership: { owned: window.fixtureOwned, balance: window.fixtureOwned ? "1" : "0" } };
     }
     if (body.action === "prepare") {
+      if (params.has("lostbeforeprepare")) {
+        window.fixtureOwned = false;
+        throw Object.assign(Error("The customer wallet no longer owns this item"), { status: 409, code: "item_not_owned" });
+      }
       const quoted = currentOffer();
       if (body.offerId !== quoted.id || body.expectedAmount !== quoted.amount) throw Error("Offer changed");
       sale ||= { id, offer: quoted, token_id: "123", offer_id: quoted.id, wallet_address: wallet, external_customer_id: "fixture",
@@ -79,6 +86,7 @@ function Preview() {
     {owned && <div style={{ maxWidth: 280 }}><LiveVaultCard item={item} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")} onOpen={() => setOpen(true)} onShip={() => setShipping(true)} /></div>}
     {!owned && sale && <LiveSaleActivity sales={[{ ...sale, item, created_at: new Date().toISOString() }]} busy="" onContinue={() => setOpen(true)} />}
     {open && <LiveVaultSale item={item} session={session} api={api} sellingAvailable={!params.has("unavailable") && !params.has("stale")}
+      onList={() => { throw Error("Unexpected list action"); }} onTrade={() => { throw Error("Unexpected trade action"); }}
       onClose={() => setOpen(false)} onShip={() => { setOpen(false); setShipping(true); }} onSettled={onSettled} onComplete={async () => { setOpen(false); }}
       send={async tx => {
         const approval = tx.data === "0xabcd";
