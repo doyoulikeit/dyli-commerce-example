@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as viem from 'viem';
+import { sponsoredTransferReceipt } from '../src/lib/sponsored-transfer.mjs';
 
 const wallet = '0x1111111111111111111111111111111111111111';
 const recipient = '0x2222222222222222222222222222222222222222';
@@ -31,6 +32,7 @@ function routeFixture(options = {}) {
   const source = ts.transpileModule(readFileSync(new URL('../src/app/api/wallet/route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   vm.runInNewContext(source, { exports, URL, Response, require(name) {
     if (name === 'viem') return viem;
+    if (name === '@/lib/sponsored-transfer.mjs') return { sponsoredTransferReceipt };
     if (name === '@/lib/live-server') return { requireLiveContext: async (request, requested) => {
       calls.push('auth');
       if (!request.headers.get('authorization')) throw new AuthError(401, 'Sign in required');

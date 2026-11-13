@@ -21,8 +21,8 @@ export function isRpcRateLimit(error: unknown): boolean {
   return false;
 }
 
-// Ordinary Base transactions use ETH for gas. Managed pack sponsorship is a
-// separate, play-scoped transport; it cannot sponsor transfers or shipping.
+// Ordinary Base transactions use ETH for gas. DYLI-managed actions use the
+// separate customer-scoped sponsorship transport in the wallet provider.
 export async function sendBaseTransaction(
   wallet: BaseWallet | undefined,
   transaction: CommerceTransaction,

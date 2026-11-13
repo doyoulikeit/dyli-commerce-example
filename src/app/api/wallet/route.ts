@@ -4,6 +4,7 @@ import { AuthError, authErrorResponse } from "@/lib/privy-server";
 import { requireLiveContext } from "@/lib/live-server";
 import { readWalletBalance, walletReadContext } from "@/lib/wallet-server";
 import type { WalletSnapshot } from "@/lib/wallet-transfer";
+import { sponsoredTransferReceipt } from "@/lib/sponsored-transfer.mjs";
 
 // Read-only: deposits are direct USDC transfers and withdrawals are signed by
 // the customer's own wallet. This route cannot move money or accept a balance.
@@ -18,8 +19,11 @@ export async function GET(request: Request) {
     if (hash) {
       const typedHash = hash as `0x${string}`;
       try {
-        const receipt = await context.client.getTransactionReceipt({ hash: typedHash });
-        const transaction = await context.client.getTransaction({ hash: typedHash });
+        let receipt = await context.client.getTransactionReceipt({ hash: typedHash });
+        let transaction = await context.client.getTransaction({ hash: typedHash });
+        try {
+          ({ receipt, transaction } = sponsoredTransferReceipt({ transaction, receipt, wallet: snapshot.wallet, token: context.token }));
+        } catch { throw new AuthError(400, "This is not a verified USDC transfer from your wallet."); }
         if (transaction.from.toLowerCase() !== snapshot.wallet || transaction.to?.toLowerCase() !== context.token.toLowerCase())
           throw new AuthError(400, "This is not a USDC transfer from your wallet.");
         const decoded = decodeFunctionData({ abi: erc20Abi, data: transaction.input });

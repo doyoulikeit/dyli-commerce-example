@@ -14,7 +14,7 @@ export type CommerceAuth = {
   getAccessToken: () => Promise<string | null>;
   wallet?: { address: string; switchChain: (chain: number) => Promise<unknown> };
   sendTransaction: (transaction: { to: `0x${string}`; data: `0x${string}`; value: bigint; chainId: number }, options: {
-    address: string; sponsor: boolean; pack?: BoxPlay; externalCustomerId?: string; expiresAt?: string; uiOptions: { showWalletUIs: boolean };
+    address: string; sponsor: boolean; pack?: BoxPlay; instruction?: import("@/lib/types").TransactionInstruction; externalCustomerId?: string; expiresAt?: string; uiOptions: { showWalletUIs: boolean };
   }) => Promise<{ hash: `0x${string}` }>;
   signMessage: (message: { message: string }, options: { address: string; uiOptions?: { showWalletUIs: boolean } }) => Promise<{ signature: string }>;
 };

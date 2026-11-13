@@ -37,10 +37,11 @@ DYLI links the wallet to a customer profile and tracks their pulls, holdings and
 
 Gas is the small network fee for sending a transaction.
 
-- With your own wallets, fund Base ETH for gas or provide your own sponsorship.
-- Approved DYLI-managed wallets can use DYLI's sponsored pack openings when bootstrap says they are available.
-- That pack sponsorship does not pay gas for withdrawals, marketplace actions or shipping.
-- Paying for a pack by card does not put ETH in the customer's wallet.
+With DYLI-managed wallets, DYLI pays gas for pack openings, sell-backs, marketplace actions, trades, gifts, USDC withdrawals and shipping. Customers do not need to add ETH. The example automatically sponsors its supported wallet actions.
+
+Customers still pay the pack price, purchase price or shipping charge. Sponsorship covers the network fee.
+
+With your own wallets, arrange sponsorship with your wallet provider or fund Base ETH for gas. The example's existing-login adapter needs to connect your provider's sender.
 
 The example uses Base mainnet, chain ID `8453`. Base Sepolia, `84532`, is only for a separately supplied test lab. Demo mode simulates the UI and does not create a lab.
 

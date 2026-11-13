@@ -20,7 +20,7 @@ function fixture(kind, { foreignPlay = false, foreignWallet = false } = {}) {
       return identity;
     }, requestKey: key => key };
     if (name === '@/lib/runtime-server') return { loadCommerceRuntime: async () => ({ walletRegistration: true,
-      authMode: 'dyli_managed', packSponsorship: { chainId: 8453 } }) };
+      authMode: 'dyli_managed', packSponsorship: { chainId: 8453 }, actionSponsorship: ['marketplace', 'shipping', 'usdc_transfers'] }) };
     if (name === '@/lib/dyli') return { apiErrorResponse: reply, commerce: async (path, options) => {
       calls.push({ path, options });
       if (!options) return { box_play: { id: 'play-a', external_customer_id: foreignPlay ? 'customer-b' : 'customer-a',
@@ -82,4 +82,20 @@ test('sponsored RPC forwards the current provider token and only the allowed sco
   assert.equal(sent.options.headers['x-customer-access-token'], 'customer-wallet-token');
   assert.deepEqual(JSON.parse(sent.options.body), { external_customer_id: 'customer-a', box_play_id: 'play-a',
     intent: 'intent-a', method: 'eth_sendUserOperation', params: [] });
+});
+
+test('action sponsorship forwards one customer-bound scope and drops injected wallet fields', async () => {
+  for (const scope of [{ community_action_id: 'action-a' }, { offer_acceptance_id: 'offer-a' }, { redemption_id: 'shipment-a' },
+    { transfer: { id: 'transfer-a', recipient: wallet, amount: '1' } }]) {
+    const f = fixture('sponsorship');
+    const result = await f.post({ action: 'intent', external_customer_id: 'customer-a', ...scope, calls: [], callData: '0x',
+      bankWithdrawalId: 'injected', provider: 'injected' });
+    assert.equal(result.status, 200);
+    const sent = f.calls.find(call => call.options);
+    assert.equal(sent.path, '/wallet/intent');
+    assert.deepEqual(JSON.parse(sent.options.body), { external_customer_id: 'customer-a', ...scope, calls: [], callData: '0x' });
+  }
+  const f = fixture('sponsorship');
+  assert.equal((await f.post({ action: 'intent', external_customer_id: 'customer-a', redemption_id: 'a', transfer: {} })).status, 400);
+  assert.equal(f.calls.length, 0);
 });

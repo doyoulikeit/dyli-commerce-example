@@ -29,7 +29,11 @@ function PrivyAdapter({ children }: { children: React.ReactNode }) {
     login: auth.login, logout: auth.logout, getAccessToken: auth.getAccessToken,
     wallet,
     sendTransaction: async (transaction, options) => {
-      if (!options.pack || !runtime?.packSponsorship) {
+      const scope = options.instruction?.sponsorship;
+      const action = scope?.transfer ? "usdc_transfers" : scope?.redemption_id ? "shipping"
+        : scope?.offer_acceptance_id || scope?.community_action_id ? "marketplace" : null;
+      const sponsoredAction = action && runtime?.actionSponsorship?.includes(action);
+      if ((!options.pack || !runtime?.packSponsorship) && !sponsoredAction) {
         const approval = options.pack?.approval_transaction;
         if (approval) {
           validateTransaction(approval, options.address, transaction.chainId);
@@ -50,14 +54,15 @@ function PrivyAdapter({ children }: { children: React.ReactNode }) {
       }
       if (!wallet || wallet.address.toLowerCase() !== options.address.toLowerCase() || !options.externalCustomerId)
         throw Object.assign(Error("Sign in with the registered customer wallet"), { broadcastAttempted: false });
-      const pack = options.pack;
+      const pack = options.pack || { id: scope?.transfer?.id || scope?.redemption_id || scope?.offer_acceptance_id || scope?.community_action_id,
+        transaction: options.instruction };
       if (pack.transaction?.to !== transaction.to || pack.transaction.data !== transaction.data ||
           pack.transaction.chain_id !== transaction.chainId || transaction.value !== BigInt(0))
         throw Object.assign(Error("Use the current pack transaction"), { broadcastAttempted: false });
       await wallet.switchChain(transaction.chainId);
-      const { commercePrivyOwner, createCommercePackSender } = await import("@/lib/commerce-base-pack-wallet.mjs");
+      const { commercePrivyOwner, createCommercePackSender, createCommerceActionSender } = await import("@/lib/commerce-base-pack-wallet.mjs");
       const owner = commercePrivyOwner(await toViemAccount({ wallet }), signAuthorization, transaction.chainId);
-      const sender = createCommercePackSender({
+      const sender = (options.pack ? createCommercePackSender : createCommerceActionSender)({
         owner, externalCustomerId: options.externalCustomerId,
         chain: transaction.chainId === 8453 ? base : baseSepolia,
         rpcUrl: baseRpcUrl(transaction.chainId, { url: process.env.NEXT_PUBLIC_BASE_RPC_URL, alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY }),

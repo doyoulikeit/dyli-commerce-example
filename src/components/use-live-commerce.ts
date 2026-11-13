@@ -235,7 +235,7 @@ export function useLiveCommerce() {
         {
           address,
           sponsor: false,
-          pack, externalCustomerId: session.identity.externalCustomerId,
+          pack, instruction: tx, externalCustomerId: session.identity.externalCustomerId,
           expiresAt,
           uiOptions: { showWalletUIs: true },
         },

@@ -81,6 +81,8 @@ export type CheckoutResponse = {
 };
 
 export type TransactionInstruction = {
+  sponsorship?: { community_action_id?: string; offer_acceptance_id?: string; redemption_id?: string;
+    transfer?: { id: string; recipient: string; amount: string } };
   chain: "base";
   chain_id?: number;
   from: `0x${string}`;

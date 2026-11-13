@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCommerceRuntime, parsePackSponsorship, registeredCheckoutOrigin, checkoutReturnUrls, shopEnabled } from '../src/lib/commerce-runtime.ts';
+import { parseCommerceRuntime, parsePackSponsorship, parseActionSponsorship, registeredCheckoutOrigin, checkoutReturnUrls, shopEnabled } from '../src/lib/commerce-runtime.ts';
 
 const bootstrap = {
   bootstrap_version: 1,
@@ -19,6 +19,15 @@ test('managed Base pack sponsorship exposes only public capability metadata', ()
    assert.throws(() => parsePackSponsorship({ ...wallet, gas_sponsorship: { ...gas, ...patch } }));
  assert.equal(parsePackSponsorship(undefined), null);
  assert.equal(parsePackSponsorship({ ...wallet, gas_sponsorship: { available: false } }), null);
+});
+
+test('action sponsorship uses the explicit public action list and preserves older pack-only servers', () => {
+  const wallet = { chain_id: 8453, gas_sponsorship: { available: true, provider: 'alchemy_gas_manager', chain_id: 8453,
+    account_mode: 'eip7702', scope: 'paid_pack_openings', requires_dyli_login: false,
+    supported_actions: ['marketplace', 'trading', 'shipping', 'usdc_transfers', 'arbitrary_calls', { secret: 'hidden' }] } };
+  assert.deepEqual(parseActionSponsorship(wallet), ['marketplace', 'trading', 'shipping', 'usdc_transfers']);
+  assert.deepEqual(parseActionSponsorship({ ...wallet, gas_sponsorship: { ...wallet.gas_sponsorship, supported_actions: undefined } }), []);
+  assert.deepEqual(parseActionSponsorship({ ...wallet, gas_sponsorship: { ...wallet.gas_sponsorship, available: false } }), []);
 });
 test('existing auth discovers a registered origin without Privy, provider secrets or sponsorship', () => {
   const runtime = parseCommerceRuntime({ ...bootstrap, auth: { mode: 'existing', available: true, provider: 'custom', storefront_origin: 'https://shop.example', secret: 'must-not-escape' } });

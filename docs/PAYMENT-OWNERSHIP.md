@@ -12,7 +12,7 @@ Hosted wallet options depend on Stripe/device/domain eligibility. Do not promise
 
 The balance is actual USDC on the network/token returned by DYLI. Send the exact authoritative amount to its prescribed recipient, retain the transaction hash, sign the payer-bound authorization, and submit the order. If sending may have succeeded, recover the receipt instead of transferring again. A wallet signature alone is not payment evidence.
 
-The gacha purchase transaction is separate from paying for the Commerce order. A verified prepaid order permits the customer-action gacha transaction with zero additional onchain purchase cost. Your own wallets need Base ETH for gas or your own sponsorship. Approved DYLI-managed wallets can use sponsored pack buy and finalize actions when bootstrap reports availability. Transfers, marketplace actions and shipping need their own gas handling. A card payment does not put ETH into the wallet.
+The pack opening transaction is separate from paying for a prepaid Commerce order. A verified prepaid order opens without charging the pack price again. With DYLI-managed wallets, DYLI pays gas for pack openings, sell-backs, marketplace actions, trades, gifts, USDC withdrawals and shipping. Customers still pay the item price and shipping charge. With your own wallets, arrange sponsorship with your wallet provider or fund Base ETH for gas.
 
 ## Bring your own payment experience
 

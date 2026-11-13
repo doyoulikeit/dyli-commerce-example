@@ -372,6 +372,7 @@ export function LiveRedemption({
             const approval = await sendShipmentTransaction({ recovery: saved || { id: redemption.id }, approval: true, send, save: persist,
               expiresAt: fresh.redemption.expires_at, transaction: {
               chain: "base",
+              sponsorship: fresh.redemption.transaction?.sponsorship,
               chain_id: session.balance.chain_id,
               from: owner,
               to: token,

@@ -13,6 +13,7 @@ export type WalletSnapshot = {
   };
 };
 export type Withdrawal = {
+  id?: string;
   version: 1; wallet: string; recipient: string; amount: string;
   token: `0x${string}`; chainId: number; createdAt: number;
   status: "submitting" | "pending" | "confirmed" | "failed";
@@ -42,7 +43,7 @@ export function makeWithdrawal(recipient: string, amount: string, snapshot: Wall
   if (units <= BigInt(0)) throw new Error("Enter an amount greater than zero.");
   if (units > usdcUnits(snapshot.balance.amount)) throw new Error("This amount exceeds your available balance.");
   return {
-    version: 1, wallet: wallet.toLowerCase(), recipient: getAddress(destination), amount: formatUnits(units, 6),
+    version: 1, id: crypto.randomUUID(), wallet: wallet.toLowerCase(), recipient: getAddress(destination), amount: formatUnits(units, 6),
     token: snapshot.balance.token, chainId: snapshot.balance.chain_id, createdAt: Date.now(), status: "submitting",
   } satisfies Withdrawal;
 }
@@ -51,7 +52,7 @@ export function parseWithdrawal(raw: string | null, wallet: string): Withdrawal 
   if (!raw) return null;
   try {
     const record = JSON.parse(raw) as Withdrawal;
-    if (record.version !== 1 || record.wallet !== wallet.toLowerCase() || !isAddress(record.recipient) ||
+    if (record.version !== 1 || (record.id !== undefined && !/^[0-9a-f-]{36}$/i.test(record.id)) || record.wallet !== wallet.toLowerCase() || !isAddress(record.recipient) ||
         !isAddress(record.token) || ![8453, 84532].includes(record.chainId) ||
         !Number.isFinite(record.createdAt) || record.createdAt <= 0 || usdcUnits(record.amount) <= BigInt(0) ||
         !["submitting", "pending", "confirmed", "failed"].includes(record.status) ||
@@ -68,6 +69,7 @@ export async function submitWithdrawal(record: Withdrawal, dependencies: {
 }) {
   if (pendingWithdrawal(dependencies.load())) throw new Error("Check your pending transfer before sending another.");
   const fresh = makeWithdrawal(record.recipient, record.amount, await dependencies.read(), record.wallet);
+  fresh.id = record.id || fresh.id;
   if (fresh.token.toLowerCase() !== record.token.toLowerCase() || fresh.chainId !== record.chainId)
     throw new Error("Your network changed. Review the transfer again.");
   // A durable marker is mandatory before signing/broadcasting. After a crash or
@@ -77,6 +79,7 @@ export async function submitWithdrawal(record: Withdrawal, dependencies: {
   try {
     hash = await dependencies.send({
       chain: "base", chain_id: fresh.chainId, from: fresh.wallet as `0x${string}`,
+      sponsorship: { transfer: { id: fresh.id!, recipient: fresh.recipient, amount: usdcUnits(fresh.amount).toString() } },
       to: fresh.token, value: "0",
       data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [fresh.recipient as `0x${string}`, usdcUnits(fresh.amount)] }),
     });

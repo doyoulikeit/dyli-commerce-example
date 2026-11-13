@@ -111,6 +111,6 @@ npm run pilot:configure -- --name="My Pack Shop" --pack-id=YOUR_PACK_ID
 
 Replace the ID with a real positive integer from the catalog. Repeat `--pack-id` for more Packs. This is a dry run; add `--apply` only after reviewing the target environment and preview. An empty API allowlist means all Packs, not none.
 
-A zero partner fee does not remove the Pack price, card processing or shipping. Your own wallets need Base ETH for gas or your own sponsorship. Approved managed wallets can use sponsored pack openings when bootstrap reports availability. Pack sponsorship does not cover transfers, marketplace actions or shipping. Card checkout does not fund gas.
+A zero partner fee does not remove the pack price, card processing or shipping. DYLI pays gas for supported actions with DYLI-managed wallets, including pack openings, sell-backs, USDC withdrawals and shipping. The example handles this automatically. With your own wallets, arrange sponsorship with your wallet provider or fund Base ETH for gas.
 
 **Next: [test before launch](PILOT-LAUNCH.md).** A successful doctor check is not an end-to-end payment test.

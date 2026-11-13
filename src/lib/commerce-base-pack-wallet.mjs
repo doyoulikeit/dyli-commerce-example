@@ -32,6 +32,7 @@ export function commercePrivyOwner(owner, signAuthorization, chainId = 8453) {
 // Privy access token, and forwards to /api/commerce/v1/wallet/{action}.
 export const createCommercePackSender = options => createCommerceSender(options, 'pack');
 export const createCommerceGiftSender = options => createCommerceSender(options, 'gift');
+export const createCommerceActionSender = options => createCommerceSender(options, 'action');
 
 function createCommerceSender({ owner, externalCustomerId, request, chain = base,
   rpcUrl, storage = globalThis.localStorage, makeSmartAccount = toModularAccountV2,
@@ -40,10 +41,10 @@ function createCommerceSender({ owner, externalCustomerId, request, chain = base
     throw Error('Use a Base wallet with EIP-7702 authorization support.');
   const client = createPublicClient({ chain, transport: http(rpcUrl) });
   let smartPromise;
-  const prefix=kind==='gift'?'GIFT':'PACK', scopeField=kind==='gift'?'item_gift_id':'box_play_id';
+  const prefix=kind==='gift'?'GIFT':kind==='action'?'WALLET':'PACK', scopeField=kind==='gift'?'item_gift_id':'box_play_id';
   const pending = id => Object.assign(Error(`This ${kind} transaction is pending. Resume it before sending another.`), { operationId: id, code: `${prefix}_TRANSACTION_PENDING` });
   async function recover(saved, key, resubmit = false) {
-    const result = await request('recovery', { external_customer_id: externalCustomerId, [scopeField]: saved[scopeField],
+    const result = await request('recovery', { external_customer_id: externalCustomerId, ...(saved.scope || { [scopeField]: saved[scopeField] }),
       id: saved.id, intent: saved.token, resubmit });
     if (result.state === 'confirmed' && result.transactionHash) { storage?.removeItem(key); return result.transactionHash; }
     if (result.state === 'reverted') { storage?.removeItem(key); throw Object.assign(Error(`The ${kind} transaction reverted.`), { code: `${prefix}_TRANSACTION_REVERTED` }); }
@@ -55,6 +56,10 @@ function createCommerceSender({ owner, externalCustomerId, request, chain = base
   return {
     async send(boxPlay, { resubmit = false } = {}) {
       const tx = boxPlay?.transaction;
+      const actionScope = kind === 'action' ? tx?.sponsorship : null;
+      if (kind === 'action' && (!actionScope || Object.keys(actionScope).length !== 1
+        || !['community_action_id', 'offer_acceptance_id', 'redemption_id', 'transfer'].includes(Object.keys(actionScope)[0])))
+        throw Object.assign(Error('Use the wallet action returned by DYLI.'), { broadcastAttempted: false });
       if (!boxPlay?.id || !tx || tx.chain_id !== chain.id || tx.from.toLowerCase() !== owner.address.toLowerCase()
         || kind==='pack'&&!['buy', 'finalize'].includes(tx.phase) || BigInt(tx.value || 0) !== 0n)
         throw Error('Use the current transaction returned for this customer’s pack play.');
@@ -72,9 +77,9 @@ function createCommerceSender({ owner, externalCustomerId, request, chain = base
         throw Error('Use this pack’s returned approval.');
       const calls = [...(approval ? [{ to:approval.to, data:approval.data, value:0n }] : []),
         { to: tx.to, data: tx.data, value: 0n }];
-      const scope = { external_customer_id: externalCustomerId, [scopeField]: boxPlay.id };
+      const scope = { external_customer_id: externalCustomerId, ...(actionScope || { [scopeField]: boxPlay.id }) };
       const saved = { ...await request('intent', { ...scope, calls: calls.map(call => ({ ...call, value: '0' })),
-        callData: await smart.encodeCalls(calls) }), [scopeField]: boxPlay.id };
+        callData: await smart.encodeCalls(calls) }), ...(actionScope ? { scope: actionScope } : { [scopeField]: boxPlay.id }) };
       // Save before signing. No wallet key, customer access token or signed
       // UserOperation is stored here; DYLI retains the durable recovery record.
       storage?.setItem(key, JSON.stringify(saved));

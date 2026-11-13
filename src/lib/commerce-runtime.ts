@@ -13,6 +13,13 @@ export function parsePackSponsorship(wallet: ApiRecord | undefined): PackSponsor
   return { chainId: chainId as 8453 | 84532, provider: "alchemy_gas_manager", scope: "paid_pack_openings" };
 }
 
+export function parseActionSponsorship(wallet: ApiRecord | undefined): string[] {
+  if (!parsePackSponsorship(wallet)) return [];
+  const actions = (wallet?.gas_sponsorship as ApiRecord)?.supported_actions;
+  return Array.isArray(actions) ? actions.filter((action): action is string => typeof action === "string" &&
+    ["marketplace", "trading", "shipping", "usdc_transfers"].includes(action)) : [];
+}
+
 // Explicit public allowlist: never serialize an upstream response or env wholesale.
 export type CommerceRuntime = {
   authMode: "dyli_managed" | "partner" | "existing";
@@ -22,6 +29,7 @@ export type CommerceRuntime = {
   storefrontOrigin: string | null;
   sponsorTransactions: boolean;
   packSponsorship?: PackSponsorship | null;
+  actionSponsorship?: string[];
   walletRegistration?: boolean;
   clientId?: string;
   name: string;
@@ -49,6 +57,7 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
       authMode: "existing", appId: "", chainId: Number(wallet?.chain_id) as 8453 | 84532,
       allowedOrigins: [origin], storefrontOrigin: origin, sponsorTransactions: false,
       packSponsorship: parsePackSponsorship(wallet),
+      actionSponsorship: parseActionSponsorship(wallet),
     walletRegistration: (wallet?.registration as ApiRecord | undefined)?.ready === true,
       name: typeof storefront?.name === "string" ? storefront.name : "Vaulted",
       boxesOnly: storefront?.boxes_only === true,
@@ -67,6 +76,7 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
     allowedOrigins: origins, storefrontOrigin: origin,
     sponsorTransactions: false,
     packSponsorship: parsePackSponsorship(wallet),
+    actionSponsorship: parseActionSponsorship(wallet),
       walletRegistration: (wallet?.registration as ApiRecord | undefined)?.ready === true,
     name: typeof storefront?.name === "string" ? storefront.name : "Vaulted",
     boxesOnly: storefront?.boxes_only === true,
