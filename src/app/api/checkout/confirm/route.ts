@@ -39,7 +39,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "Checkout does not belong to this account" }, { status: 403 });
     }
     const quoteItems = Array.isArray(quote?.items) ? quote.items as ApiRecord[] : [];
-    return Response.json({ ...result, order: { ...order, items: quoteItems }, isBox: quoteItems.length === 1 && String(quoteItems[0]?.type || "") === "box" });
+    const isPack = quoteItems.length === 1 && ["pack", "box"].includes(String(quoteItems[0]?.type || ""));
+    return Response.json({ ...result, order: { ...order, items: quoteItems }, isPack, isBox: isPack });
   } catch (error) {
     return authErrorResponse(error) || apiErrorResponse(error);
   }

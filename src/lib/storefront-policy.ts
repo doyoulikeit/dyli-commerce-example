@@ -10,7 +10,7 @@ export function storefrontPolicy(env: Env = process.env) {
     : [];
   if (includedIds.length > 100 || includedIds.some((id) =>
     !/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id)))) {
-    throw new Error("INCLUDED_IDS must contain up to 100 comma-separated positive box IDs");
+    throw new Error("INCLUDED_IDS must contain up to 100 comma-separated positive pack IDs");
   }
   const flat = env.FLAT_FEE?.trim();
   const percent = env.PERCENT_FEE?.trim();
@@ -21,7 +21,7 @@ export function storefrontPolicy(env: Env = process.env) {
     const value = Number(raw);
     if (!/^\d+(\.\d{1,2})?$/.test(raw) || !Number.isFinite(value) ||
       value < 0 || value > (flat ? 100000 : 100)) {
-      throw new Error("Box fees must be non-negative amounts with up to two decimals (percentage: 0–100)");
+      throw new Error("Pack fees must be non-negative amounts with up to two decimals (percentage: 0–100)");
     }
     feeRules = {
       enabled: value > 0,

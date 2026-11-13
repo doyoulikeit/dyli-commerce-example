@@ -25,7 +25,7 @@ export const loadCommerceRuntime = cache(async (): Promise<CommerceRuntime> => {
       packSponsorship: null,
       walletRegistration: ((payload.wallet as ApiRecord | undefined)?.registration as ApiRecord | undefined)?.ready === true,
       name: process.env.NEXT_PUBLIC_STOREFRONT_NAME || String(storefront?.name || "Vaulted"),
-      boxesOnly: process.env.NEXT_PUBLIC_BOXES_ONLY === "true" || storefront?.boxes_only === true,
+      boxesOnly: (process.env.NEXT_PUBLIC_PACKS_ONLY ?? process.env.NEXT_PUBLIC_BOXES_ONLY) === "true" || storefront?.boxes_only === true,
     };
   }
   if (!["dyli_managed", "existing"].includes(String(authMode))) throw new Error("Unsupported DYLI_AUTH_MODE");
@@ -34,6 +34,6 @@ export const loadCommerceRuntime = cache(async (): Promise<CommerceRuntime> => {
   return {
     ...runtime,
     name: process.env.NEXT_PUBLIC_STOREFRONT_NAME || runtime.name,
-    boxesOnly: process.env.NEXT_PUBLIC_BOXES_ONLY === "true" || runtime.boxesOnly,
+    boxesOnly: (process.env.NEXT_PUBLIC_PACKS_ONLY ?? process.env.NEXT_PUBLIC_BOXES_ONLY) === "true" || runtime.boxesOnly,
   };
 });

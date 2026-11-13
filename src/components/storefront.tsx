@@ -31,12 +31,14 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import { LiveProductDetail } from "@/components/live-catalog";
+import "./live-storefront.css";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApiRecord, CatalogItem, StorefrontResponse } from "@/lib/types";
 
-type Tab = "home" | "market" | "boxes" | "collection" | "activity";
+type Tab = "home" | "market" | "packs" | "collection" | "activity";
 type PaymentMethod = "balance" | "card";
 type ShopView = "graded" | "sealed";
 type BalanceSignal = { id: string; delta: number };
@@ -193,7 +195,7 @@ const record = (value: unknown): ApiRecord =>
 const records = (value: unknown): ApiRecord[] =>
   Array.isArray(value) ? (value as ApiRecord[]) : [];
 const isBox = (item: CatalogItem) =>
-  item.type.toLowerCase() === "box" || item.surface === "boxes";
+  ["pack", "box"].includes(item.type.toLowerCase()) || ["packs", "boxes"].includes(item.surface);
 const isSealed = (item: CatalogItem) =>
   ["booster pack", "booster box", "booster bundle"].includes(
     text(item.subcategory).toLowerCase(),
@@ -441,7 +443,7 @@ export function Storefront({
     0,
   );
   const catalog = storefront?.catalog || [];
-  const boxes = storefront?.boxes || [];
+  const boxes = storefront?.packs || storefront?.boxes || [];
 
   const navigate = (next: Tab) => {
     if (next === "collection") setCollectionSection("owned");
@@ -460,7 +462,7 @@ export function Storefront({
   };
 
   const loadBoxData = async (item: CatalogItem) =>
-    api<BoxData>(`/api/boxes/${encodeURIComponent(item.id)}`);
+    api<BoxData>(`/api/packs/${encodeURIComponent(item.id)}`);
 
   const checkout = async () => {
     if (!purchase || checkoutStage !== "checkout") return;
@@ -594,7 +596,7 @@ export function Storefront({
       );
     }
     if (!pool.length) {
-      setNotice("This box does not expose an available prize pool.");
+      setNotice("This pack does not expose an available prize pool.");
       return;
     }
     const inventoryWeight = pool.reduce(
@@ -873,7 +875,7 @@ export function Storefront({
             onBuy={beginPurchase}
           />
         ) : null}
-        {tab === "boxes" ? (
+        {tab === "packs" ? (
           <BoxesView
             items={boxes}
             loading={!storefront && !storefrontError}
@@ -1035,7 +1037,7 @@ export function Storefront({
 const NAV: Array<{ id: Tab; label: string; icon: ReactNode }> = [
   { id: "home", label: "Home", icon: <Home /> },
   { id: "market", label: "Shop", icon: <ShoppingBag /> },
-  { id: "boxes", label: "Boxes", icon: <Box /> },
+  { id: "packs", label: "Packs", icon: <Box /> },
   { id: "collection", label: "Collection", icon: <Layers3 /> },
   { id: "activity", label: "Activity", icon: <Activity /> },
 ];
@@ -1312,11 +1314,11 @@ function HomeView({
       {boxes.length ? (
         <section className="asset-section" id="home-buy">
           <SectionTitle
-            title="Open a box"
+            title="Open a pack"
             action="See all"
-            onAction={() => onNavigate("boxes")}
+            onAction={() => onNavigate("packs")}
           />
-          <div className="home-box-grid">
+          <div className="home-pack-grid">
             {boxes.slice(0, 3).map((item) => (
               <BoxCard
                 key={item.key}
@@ -1456,7 +1458,7 @@ function MarketView({
             Sealed
           </button>
         </div>
-        <label className="search-box">
+        <label className="search-pack">
           <Search />
           <input
             value={query}
@@ -1554,10 +1556,10 @@ function BoxesView({
 }) {
   return (
     <div className="page-in">
-      <PageTitle title="Boxes" count={items.length} />
+      <PageTitle title="Packs" count={items.length} />
       {loading ? <BoxSkeleton /> : null}
       {error ? <Empty message={error} /> : null}
-      <div className="boxes-grid">
+      <div className="packs-grid">
         {items.map((item) => (
           <BoxCard key={item.key} item={item} onSelect={() => onSelect(item)} />
         ))}
@@ -1575,13 +1577,13 @@ function BoxCard({
 }) {
   const raw = record(item.raw);
   return (
-    <article className="box-card">
+    <article className="pack-card">
       <button
         className="cover-button"
         onClick={onSelect}
         aria-label={`View ${item.name}`}
       />
-      <div className="box-art">
+      <div className="pack-art">
         <ProductImage
           src={item.image}
           alt={item.name}
@@ -1589,9 +1591,9 @@ function BoxCard({
           boost={false}
         />
       </div>
-      <div className="box-copy">
+      <div className="pack-copy">
         <small>
-          {item.brand} · {text(raw.type || "Box")}
+          {item.brand} · {"Pack"}
         </small>
         <strong>{item.name}</strong>
         <p>
@@ -1601,7 +1603,7 @@ function BoxCard({
             left
           </span>
         </p>
-        <button onClick={onSelect}>Open box</button>
+        <button onClick={onSelect}>Open pack</button>
       </div>
     </article>
   );
@@ -1710,7 +1712,7 @@ function CollectionView({
             </button>
           </section>
           {!holdings.length ? (
-            <Empty message="Open a box or shop to start your Collection." />
+            <Empty message="Open a pack or shop to start your Collection." />
           ) : null}
           <div className="collection-grid">
             {holdings.map((holding) => (
@@ -1961,7 +1963,13 @@ function HoldingDetail({
   );
 }
 
-function ProductDetail({
+function ProductDetail(props: Parameters<typeof CollectibleDetail>[0]) {
+  return isBox(props.item)
+    ? <LiveProductDetail item={props.item} onClose={props.onClose} onCheckout={props.onBuy} />
+    : <CollectibleDetail {...props} />;
+}
+
+function CollectibleDetail({
   item,
   ownedHolding,
   orders,
@@ -1985,7 +1993,7 @@ function ProductDetail({
   useEffect(() => {
     if (!isBox(item)) return;
     let active = true;
-    void api<BoxData>(`/api/boxes/${encodeURIComponent(item.id)}`)
+    void api<BoxData>(`/api/packs/${encodeURIComponent(item.id)}`)
       .then((payload) => active && setDetail(payload))
       .catch(() => undefined);
     return () => {
@@ -2013,7 +2021,7 @@ function ProductDetail({
           <button aria-label="Close details" onClick={onClose}>
             <ArrowLeft />
           </button>
-          <span>{isBox(item) ? "Box details" : "Product details"}</span>
+          <span>{isBox(item) ? "Pack details" : "Product details"}</span>
         </header>
         <div className="detail-body">
           <div className="detail-art">
@@ -2038,7 +2046,7 @@ function ProductDetail({
             <strong className="detail-price">{money(item.price || 0)}</strong>
             {isBox(item) ? (
               <>
-                <div className="box-stats">
+                <div className="pack-stats">
                   <span>
                     <small>Inventory</small>
                     <strong>
@@ -2155,7 +2163,7 @@ function ProductDetail({
           <div className="detail-actions">
             {isBox(item) ? (
               <button onClick={onBuy}>
-                Open box
+                Open pack
                 <ArrowRight />
               </button>
             ) : ownedHolding ? (
@@ -2906,7 +2914,7 @@ function BoxReveal({
   return (
     <div className="reveal-screen">
       <header>
-        <button aria-label="Close box" onClick={onClose}>
+        <button aria-label="Close pack" onClick={onClose}>
           <X />
         </button>
         <div
@@ -2915,7 +2923,7 @@ function BoxReveal({
           <span className="desktop-count">
             {run.stage === "complete"
               ? "Complete"
-              : `Box ${pullNumber} of ${run.total}`}
+              : `Pack ${pullNumber} of ${run.total}`}
           </span>
           <span className="mobile-count">
             {run.stage === "complete" ? "Done" : `${pullNumber} / ${run.total}`}
@@ -2971,10 +2979,10 @@ function BoxReveal({
             <strong>{run.item.name}</strong>
             <small>
               {run.total > 1
-                ? `${run.total - run.opened} boxes remaining`
+                ? `${run.total - run.opened} packs remaining`
                 : "Ready when you are"}
             </small>
-            <button onClick={onReveal}>Open box</button>
+            <button onClick={onReveal}>Open pack</button>
           </motion.section>
         ) : null}
         {run.stage === "suspense" ? (
@@ -2986,7 +2994,7 @@ function BoxReveal({
             exit={{ opacity: 0 }}
             transition={enter}
           >
-            <div className="opening-box">
+            <div className="opening-pack">
               <motion.div
                 animate={
                   reduceMotion
@@ -3023,7 +3031,7 @@ function BoxReveal({
               />
             </div>
             <motion.small initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              Box {pullNumber} of {run.total}
+              Pack {pullNumber} of {run.total}
             </motion.small>
             <motion.h1
               initial={{ opacity: 0, y: 7 }}
@@ -3235,9 +3243,9 @@ function CardSkeleton() {
 }
 function BoxSkeleton() {
   return (
-    <div className="boxes-grid">
+    <div className="packs-grid">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div className="box-skeleton" key={index}>
+        <div className="pack-skeleton" key={index}>
           <span />
           <i />
         </div>

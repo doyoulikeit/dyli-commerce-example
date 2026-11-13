@@ -1,12 +1,12 @@
 # Marketplace and trading
 
-Marketplace appears below Boxes on the homepage. Choose **View all** to browse listings and offers, search, filter by brand or type, set a price range, and sort by price. **My listings** and **My offers** show your open orders. Click a collectible to buy, make an offer, or manage your own listing. From the vault, choose **List for sale** or **Trade**. Trades has a collector search, an item-and-cash composer, incoming requests and sent/history views.
+Marketplace appears below Packs on the homepage. Choose **View all** to browse listings and offers, search, filter by brand or type, set a price range, and sort by price. **My listings** and **My offers** show your open orders. Click a collectible to buy, make an offer, or manage your own listing. From the vault, choose **List for sale** or **Trade**. Trades has a collector search, an item-and-cash composer, incoming requests and sent/history views.
 
 Activity shows your marketplace and trade actions with item images, quantities and transaction status.
 
 Desktop filters sit beside the listings. On mobile, **Filters** opens a bottom sheet. Choose your filters and tap **Show results** to apply them, or close the sheet to keep your current results.
 
-These are real transactions, not demo balances. Both use DYLI's existing Base contracts. Customers sign with their own wallet. Marketplace payments and optional trade cash are Base USDC. Card checkout remains available for boxes, not these peer transactions.
+These are real transactions, not demo balances. Both use DYLI's existing Base contracts. Customers sign with their own wallet. Marketplace payments and optional trade cash are Base USDC. Card checkout remains available for packs, not these peer transactions.
 
 ## Choose your community
 
@@ -47,7 +47,7 @@ The example saves each attempt and transaction reference before moving on. A slo
 
 Listings and offers expire after the chosen period. Preparation does not reserve items or funds. Offers currently cover one item; listings support up to 20 copies. Trades support up to 20 different items per side, up to 20 copies of each, and cash on one side only. Diamonds remain a DYLI-native feature.
 
-DYLI's native marketplace fees apply. Box `FLAT_FEE`, `PERCENT_FEE`, and the box profit share do not add a fee or earnings share to marketplace orders or trades.
+DYLI's native marketplace fees apply. Pack `FLAT_FEE`, `PERCENT_FEE`, and the pack profit share do not add a fee or earnings share to marketplace orders or trades.
 
 ## Before inviting customers
 

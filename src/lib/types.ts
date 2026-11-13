@@ -28,6 +28,7 @@ export type CatalogItem = {
 export type CatalogSurface =
   | "explore"
   | "listings"
+  | "packs"
   | "boxes"
   | "ebay"
   | "collections"
@@ -40,6 +41,7 @@ export type StorefrontResponse = {
   readiness: ApiRecord;
   partner: ApiRecord;
   catalog: CatalogItem[];
+  packs: CatalogItem[];
   boxes: CatalogItem[];
   options: {
     brands: string[];

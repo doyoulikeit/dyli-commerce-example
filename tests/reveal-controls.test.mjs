@@ -80,10 +80,10 @@ test('paid reveal never offers mode settings, and opening locks controls while b
   assert.equal(nodes(tree, node => node.props?.['aria-label'] === 'Opening mode').length, 0);
   assert.doesNotMatch(readFileSync(new URL('../src/components/live-reveal.tsx', import.meta.url), 'utf8'), /RevealModeSelector|<small>Selected<\/small>/);
   assert.deepEqual(calls, []);
-  nodes(tree, node => node.props?.['aria-label'] === 'Open box')[0].props.onClick();
+  nodes(tree, node => node.props?.['aria-label'] === 'Open pack')[0].props.onClick();
   assert.deepEqual(calls, [['open']]);
   const loading = render({ ...props, busy: 'Opening…' });
-  assert.equal(nodes(loading, node => node.props?.['aria-label'] === 'Open box')[0].props.disabled, true);
+  assert.equal(nodes(loading, node => node.props?.['aria-label'] === 'Open pack')[0].props.disabled, true);
   assert.equal(loading.props.dismissible, false);
 });
 

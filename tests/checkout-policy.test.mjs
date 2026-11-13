@@ -22,8 +22,18 @@ function fixture(env, { acknowledged = true, fee = 400 } = {}) {
     if (['@/lib/commerce-runtime', '@/lib/runtime-server'].includes(name)) return {};
     throw Error(name);
   } });
-  return { calls, quote: (boxId = 12997) => exports.POST({ json: async () => ({ quoteItem: { type: 'box', box_id: boxId, quantity: 2 }, fee_rules: { enabled: false }, feeRules: { enabled: false } }) }) };
+  return { calls, quote: (boxId = 12997, type = 'box') => exports.POST({ json: async () => ({ quoteItem: { type, [type === 'pack' ? 'pack_id' : 'box_id']: boxId, quantity: 2 }, fee_rules: { enabled: false }, feeRules: { enabled: false } }) }) };
 }
+test('pack checkout uses canonical fields while saved box checkouts keep the same fee and allowlist checks', async () => {
+  for (const type of ['pack', 'box']) {
+    const f = fixture({ FLAT_FEE: '2', INCLUDED_IDS: '12997' });
+    assert.equal((await f.quote(12997, type)).status, 200);
+    assert.deepEqual(f.calls[1].body.items[0], { type: 'pack', pack_id: 12997, quantity: 2 });
+    const before = f.calls.length;
+    assert.equal((await f.quote(12998, type)).status, 404);
+    assert.equal(f.calls.length, before);
+  }
+});
 test('shopper input cannot remove configured fees; server quotes carry per-box policy', async () => {
   const f = fixture({ FLAT_FEE: '2', INCLUDED_IDS: '12997' });
   assert.equal((await f.quote()).status, 200);

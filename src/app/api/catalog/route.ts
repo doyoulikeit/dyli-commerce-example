@@ -1,10 +1,10 @@
 import { apiErrorResponse, commerce, normalizeCatalog } from "@/lib/dyli";
 import { applyBoxConfig, applyCatalogConfig, applyMarketplaceConfig, storefrontConfig } from "@/config/storefront";
 import type { CatalogSurface } from "@/lib/types";
-import { loadStorefrontBoxes } from "@/lib/storefront-boxes";
+import { loadStorefrontPacks } from "@/lib/storefront-packs";
 
 const SURFACES = new Set<CatalogSurface>([
-  "explore", "listings", "boxes", "ebay", "collections", "fair-drops", "digital-packs", "redemptions", "search",
+  "explore", "listings", "packs", "boxes", "ebay", "collections", "fair-drops", "digital-packs", "redemptions", "search",
 ]);
 const QUERY_KEYS = new Set(["q", "brand", "category", "subcategory", "min_price", "max_price", "sort", "limit", "offset", "product_id", "token_id"]);
 
@@ -31,14 +31,14 @@ export async function GET(request: Request) {
     }
     if (!params.has("limit")) params.set("limit", "48");
     const surface = requested as CatalogSurface;
-    const payload = surface === "boxes"
-      ? await loadStorefrontBoxes(params.toString())
+    const payload = ["packs", "boxes"].includes(surface)
+      ? await loadStorefrontPacks(params.toString())
       : await commerce(`/catalog/${surface}?${params}`);
     const limit = Math.min(100, Math.max(1, Number(params.get("limit") || 48)));
     const normalized = normalizeCatalog(payload, surface);
     const items = surface === "listings"
       ? applyMarketplaceConfig(normalized)
-      : surface === "boxes"
+      : ["packs", "boxes"].includes(surface)
         ? applyBoxConfig(normalized)
         : applyCatalogConfig(normalized);
     return Response.json({ items: items.slice(0, limit), pagination: payload.pagination || null });

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         .then(value => fresh ? readWalletHoldings(context, wallet, value) : value),
       commerce(`/orders?external_customer_id=${external}&limit=100&offset=0`),
       commerce(`/redemptions?external_customer_id=${external}&limit=100&offset=0`),
-      commerce(`/box-plays?external_customer_id=${external}&limit=100&offset=0`),
+      commerce(`/pack-plays?external_customer_id=${external}&limit=100&offset=0`),
       offersReady ? commerce(`/offer-acceptances?external_customer_id=${external}&limit=100`) : Promise.resolve({ acceptances: [] }),
     ]);
     const owned = (items: unknown) => Array.isArray(items)

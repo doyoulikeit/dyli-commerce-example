@@ -20,7 +20,7 @@ Customers can start with other crypto too. Your checkout can use a swap or bridg
 
 Your backend verifies the processor's webhook or atomically debits your ledger, records your durable payment reference, and uses your treasury wallet to settle DYLI's authoritative quote. The treasury signer signs the authorization; the customer's registered wallet receives the items and signs the opening actions. Use `/quotes/{id}/payment-authorization` and `/orders`, not a custom paid flag.
 
-Keep your own durable mapping: customer payment ID → DYLI quote → settlement hash → DYLI order → Box play. Recover by IDs/idempotency keys when responses are lost. Do not automatically recharge, retransmit or refund on an ambiguous response. Check both systems first.
+Keep your own durable mapping: customer payment ID → DYLI quote → settlement hash → DYLI order → Pack play. Recover by IDs/idempotency keys when responses are lost. Do not automatically recharge, retransmit or refund on an ambiguous response. Check both systems first.
 
 Your backend owns your provider's refunds, disputes, ledger correctness and reconciliation. DYLI owns its verified order and fulfillment state. Sell-back USDC goes to the customer's registered wallet; a partner ledger should credit only after verified settlement, and only under an explicit custody/settlement design. Never credit merely because the user tapped Sell.
 

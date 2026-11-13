@@ -14,7 +14,7 @@ try {
   check(bootstrap.wallet?.chain_id !== 84532 || root.environment === 'lab', 'Base Sepolia is limited to a separate test lab');
   check(Boolean(bootstrap.integration?.application_id && bootstrap.partner?.slug), 'Application discovered from the Commerce key');
   check(capability.box_play?.contract_version === 'gacha' && capability.box_play?.max_quantity === 10, 'Bulk gacha protocol (1–10)');
-  check(capability.writes?.enabled === true && capability.box_play?.ready === true, 'Box writes configured (not an end-to-end certification)');
+  check(capability.writes?.enabled === true && capability.box_play?.ready === true, 'Pack writes configured (not an end-to-end certification)');
   check(Array.isArray(capability.payments) && capability.payments.length > 0, 'At least one payment method enabled');
   const mode = process.env.DYLI_AUTH_MODE || bootstrap.auth?.mode;
   if (mode === 'existing') {

@@ -41,7 +41,7 @@ export const assetImage = (item: ApiRecord): string | null => {
   return typeof first === "string" ? first : null;
 };
 export const boxItem = (item: CatalogItem) =>
-  item.surface === "boxes" || item.purchase.quoteItem?.type === "box";
+  ["packs", "boxes"].includes(item.surface) || ["pack", "box"].includes(String(item.purchase.quoteItem?.type));
 export const quantityLimit = (item: CatalogItem) =>
   Math.max(0, Math.min(boxItem(item) ? 10 : 1, item.availability ?? 0));
 
@@ -164,12 +164,12 @@ export function balancePaymentCents(
 }
 
 export function catalogFromOrderLine(line: ApiRecord): CatalogItem {
-  const id = String(line.box_id || line.listing_id || line.id || "");
-  const isBox = line.type === "box";
+  const id = String(line.pack_id || line.box_id || line.listing_id || line.id || "");
+  const isBox = line.type === "pack" || line.type === "box";
   return {
     id,
     key: `order:${id}`,
-    surface: isBox ? "boxes" : "listings",
+    surface: isBox ? "packs" : "listings",
     type: String(line.type),
     name: String(line.name || "Collectible"),
     image: assetImage(line),

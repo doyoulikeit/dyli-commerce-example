@@ -118,11 +118,12 @@ const itemPrice = (raw: ApiRecord) => {
 };
 
 function rowsFor(payload: ApiRecord) {
-  const keys = ["listings", "boxes", "items", "collections", "products", "redemptions"];
+  const keys = ["listings", "packs", "boxes", "items", "collections", "products", "redemptions"];
   for (const key of keys) {
     const value = payload[key];
     if (Array.isArray(value)) return value as ApiRecord[];
   }
+  if (payload.pack && typeof payload.pack === "object") return [payload.pack as ApiRecord];
   if (payload.box && typeof payload.box === "object") return [payload.box as ApiRecord];
   if (payload.product && typeof payload.product === "object") return [payload.product as ApiRecord];
   if (payload.partnership && typeof payload.partnership === "object") return [payload.partnership as ApiRecord];
@@ -136,7 +137,7 @@ export function normalizeCatalog(payload: ApiRecord, surface: CatalogSurface): C
       ? (purchase.quote_item as ApiRecord)
       : null;
     const prize = raw.prizeProduct as ApiRecord | undefined;
-    const id = text(raw.listing_id ?? raw.item_id ?? raw.box_id ?? raw.machine_id ?? raw.order_id ?? raw.dropId ?? raw.id ?? raw.slug ?? raw.product_id ?? raw.productId ?? index);
+    const id = text(raw.listing_id ?? raw.item_id ?? raw.pack_id ?? raw.box_id ?? raw.machine_id ?? raw.order_id ?? raw.dropId ?? raw.id ?? raw.slug ?? raw.product_id ?? raw.productId ?? index);
     const type = text(quoteItem?.type || raw.market_type || surface);
     const availabilityValue = Number(raw.quantity_available ?? raw.inventory_count ?? raw.available ?? raw.supply);
     const displayName = surface === "redemptions"
@@ -168,7 +169,7 @@ export function normalizeCatalog(payload: ApiRecord, surface: CatalogSurface): C
         supported: purchase.supported === true,
         action: text(purchase.action || "view"),
         reason: typeof purchase.reason === "string" ? purchase.reason : null,
-        quoteItem,
+        quoteItem: quoteItem?.type === "box" ? { ...quoteItem, type: "pack", pack_id: quoteItem.pack_id ?? quoteItem.box_id } : quoteItem,
       },
       raw,
     };

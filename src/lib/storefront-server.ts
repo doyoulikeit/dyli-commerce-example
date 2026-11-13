@@ -13,7 +13,7 @@ import {
 import { commerce, normalizeCatalog, readApi } from "@/lib/dyli";
 import { shopEnabled } from "@/lib/commerce-runtime";
 import type { ApiRecord, StorefrontResponse } from "@/lib/types";
-import { loadStorefrontBoxes } from "@/lib/storefront-boxes";
+import { loadStorefrontPacks } from "@/lib/storefront-packs";
 import { publicStorefrontReadiness } from "@/lib/public-storefront";
 
 const SHOP_LIMIT_PER_VIEW = 48;
@@ -38,8 +38,8 @@ function enrichBoxes(commercePayload: ApiRecord, publicPayload: ApiRecord) {
   const commerceBoxes = Array.isArray(commercePayload.boxes)
     ? (commercePayload.boxes as ApiRecord[])
     : [];
-  const publicBoxes = Array.isArray(publicPayload.boxes)
-    ? (publicPayload.boxes as ApiRecord[])
+  const publicBoxes = Array.isArray(publicPayload.packs || publicPayload.boxes)
+    ? ((publicPayload.packs || publicPayload.boxes) as ApiRecord[])
     : [];
   const publicById = new Map(
     publicBoxes.map((box) => [String(box.box_id), box]),
@@ -127,21 +127,19 @@ async function loadStorefrontUncached(): Promise<StorefrontResponse> {
     readinessPromise.then(readiness =>
       shopEnabled(readiness, storefrontConfig.navigation.boxesOnly) ? loadShopCatalog() : [],
     ),
-    loadStorefrontBoxes(),
-    optionalRead("/boxes?limit=100"),
+    loadStorefrontPacks(),
+    optionalRead("/packs?limit=100"),
     optional("/catalog/options"),
   ]);
   const rawOptions = (options.options || {}) as ApiRecord;
   const publicReadiness = publicStorefrontReadiness(readiness);
+  const packs = orderConfiguredBoxes(applyBoxConfig(normalizeCatalog(enrichBoxes(boxes, publicBoxes), "packs"))).slice(0, process.env.INCLUDED_IDS?.trim() ? 100 : 48);
   return {
+    packs,
     readiness: publicReadiness,
     partner: publicReadiness.partner as ApiRecord,
     catalog: listings,
-    boxes: orderConfiguredBoxes(
-      applyBoxConfig(
-        normalizeCatalog(enrichBoxes(boxes, publicBoxes), "boxes"),
-      ),
-    ).slice(0, process.env.INCLUDED_IDS?.trim() ? 100 : 48),
+    boxes: packs,
     options: {
       brands: applyOptionConfig(
         rawOptions.brands,

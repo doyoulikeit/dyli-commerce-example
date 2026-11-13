@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       throw new AuthError(400, "Choose a supported pack wallet action");
     if (body.external_customer_id !== identity.externalCustomerId)
       throw new AuthError(403, "This wallet request belongs to another customer");
-    const payload = await commerce(`/box-plays/${encodeURIComponent(body.box_play_id)}`);
+    const payload = await commerce(`/pack-plays/${encodeURIComponent(body.box_play_id)}`);
     const play = payload.box_play as ApiRecord | undefined;
     if (!play || play.external_customer_id !== identity.externalCustomerId ||
         String(play.wallet_address).toLowerCase() !== identity.walletAddress.toLowerCase())

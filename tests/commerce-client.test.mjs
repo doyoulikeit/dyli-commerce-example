@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCommerceClient, CommerceError } from '../sdk/commerce-client.mjs';
 const options = { apiKey: 'server-only-key' };
+test('pack opening uses the canonical route and the old helper remains compatible', async () => {
+  const calls = [];
+  const client = createCommerceClient({ ...options, fetch: async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body), key: init.headers.get('Idempotency-Key') });
+    return Response.json({ box_play: { id: 'play' } });
+  } });
+  await client.openPack('order', 'open:pack-key');
+  await client.openBox('order', 'open:legacy-key');
+  assert.ok(calls.every(call => call.url.endsWith('/pack-plays')));
+  assert.deepEqual(calls.map(call => call.body), [{ order_id: 'order' }, { order_id: 'order' }]);
+  assert.deepEqual(calls.map(call => call.key), ['open:pack-key', 'open:legacy-key']);
+});
 test('client keeps keys in headers, rejects redirects, and serializes stable idempotency keys', async () => {
   let calls = 0;
   const client = createCommerceClient({ ...options, fetch: async (url, init) => {

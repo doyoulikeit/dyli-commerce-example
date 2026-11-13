@@ -16,7 +16,7 @@ export function RevealModeSelector({ value, onChange, disabled = false, quantity
       <button type="button" aria-pressed={value.mode === "turbo"} disabled={disabled} onClick={() => onChange({ ...value, mode: "turbo" })}><Flame size={17} color="#ff9c48" />Blitz</button>
     </div>
     <p id={descriptionId} className="vr-mode-description">{value.mode === "normal"
-      ? "Open each box yourself, then choose whether to vault or sell."
+      ? "Open each pack yourself, then choose whether to vault or sell."
       : "Skip the buildup and auto-select sales for the rarities you choose."}</p>
     {value.mode === "turbo" && <div className="vr-preference-list">
       {([['common', 'Commons'], ['uncommon', 'Uncommons'], ['rare', 'Rares']] as const).map(([rarity, label]) => <label className="vr-preference" key={rarity}>

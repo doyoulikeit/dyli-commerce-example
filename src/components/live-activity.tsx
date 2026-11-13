@@ -60,13 +60,13 @@ export function LiveActivity({ orders, plays, busy, onOpen }: {
         {line && <Art src={assetImage(line)} name={String(line.name || "Purchase")} />}
         <div className="lc-order-copy">
           <h2>{String(line?.name || "Purchase")}{activity.items.length > 1 && ` + ${activity.items.length - 1} more`}</h2>
-          <p>{activity.quantity > 0 && <strong>{activity.quantity} {line?.type === "box" ? activity.quantity === 1 ? "box" : "boxes" : activity.quantity === 1 ? "item" : "items"}</strong>}
+          <p>{activity.quantity > 0 && <strong>{activity.quantity} {["pack", "box"].includes(String(line?.type)) ? activity.quantity === 1 ? "pack" : "packs" : activity.quantity === 1 ? "item" : "items"}</strong>}
             <span>{String(order.status || "").replaceAll("_", " ")}</span>
             {!Number.isNaN(date.getTime()) && <time dateTime={date.toISOString()}>{date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time>}
           </p>
         </div>
         <div className="lc-order-amount">{activity.total != null && <strong>{usd(activity.total)}</strong>}{activity.sold > 0 && <small>+{usd(activity.cash)} sold</small>}</div>
-        {line?.type === "box" && ["paid", "processing"].includes(String(order.status)) && <button className="lc-secondary" disabled={!!busy} onClick={() => onOpen(catalogFromOrderLine(line), String(order.id))}>Open</button>}
+        {["pack", "box"].includes(String(line?.type)) && ["paid", "processing"].includes(String(order.status)) && <button className="lc-secondary" disabled={!!busy} onClick={() => onOpen(catalogFromOrderLine(line), String(order.id))}>Open</button>}
       </div>
       {activity.pulls.length > 0 && <details className="lc-order-pulls">
         <summary><span className="lc-order-thumbnails" aria-hidden="true">{activity.pulls.slice(0, 3).map(pull => <Art key={pull.key} src={assetImage(pull.product)} name="" />)}</span><span><strong>{activity.pulls.length} {activity.pulls.length === 1 ? "pull" : "pulls"}</strong><small>{[activity.sold && `${activity.sold} sold`, activity.vaulted && `${activity.vaulted} vaulted`].filter(Boolean).join(" · ") || "View your pulls"}</small></span><ChevronDown size={16} /></summary>

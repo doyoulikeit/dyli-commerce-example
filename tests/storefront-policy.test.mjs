@@ -26,11 +26,11 @@ test('named fee env selects per-box flat OR subtotal percentage and preserves ze
 test('all entry points enforce selected boxes and only server config supplies quote fees', () => {
   const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
   const checkout = read('src/app/api/checkout/route.ts');
-  assert.match(checkout, /boxIsIncluded\(item.box_id\)/);
+  assert.match(checkout, /boxIsIncluded\(packId\)/);
   assert.match(checkout, /storefrontPolicy\(\).feeRules/);
   assert.doesNotMatch(checkout, /body\.fee_rules|body\.feeRules/);
   assert.match(checkout, /pricing\.partner_fee_cents !== expectedFee/);
-  assert.match(read('src/app/api/boxes/[id]/route.ts'), /boxIsIncluded\(id\)/);
-  assert.match(read('src/lib/storefront-server.ts'), /loadStorefrontBoxes\(\)/);
-  assert.match(read('src/app/api/catalog/route.ts'), /loadStorefrontBoxes\(/);
+  assert.match(read('src/app/api/packs/[id]/route.ts'), /boxIsIncluded\(id\)/);
+  assert.match(read('src/lib/storefront-server.ts'), /loadStorefrontPacks\(\)/);
+  assert.match(read('src/app/api/catalog/route.ts'), /loadStorefrontPacks\(/);
 });

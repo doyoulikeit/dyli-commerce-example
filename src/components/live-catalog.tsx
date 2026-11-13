@@ -119,7 +119,7 @@ export function LiveProductCard({
       </span>
       {boxItem(item) && (
         <span className="lc-box-cta">
-          Open box <span>↗</span>
+          Open pack <span>↗</span>
         </span>
       )}
     </button>
@@ -140,7 +140,7 @@ export function LiveProductDetail({
   useEffect(() => {
     if (!boxItem(item)) return;
     const controller = new AbortController();
-    void fetch(`/api/boxes/${item.id}`, { signal: controller.signal })
+    void fetch(`/api/packs/${item.id}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok)
           throw new Error("Pull details are temporarily unavailable");
@@ -151,7 +151,8 @@ export function LiveProductDetail({
       });
     return () => controller.abort();
   }, [item]);
-  const box = { ...item.raw, ...asRecord(detail.box) };
+  const box = { ...item.raw, ...asRecord(detail.pack || detail.box) };
+  const isPack = boxItem(item);
   const odds = asRows(box.odds_buckets).reduce((groups, bucket) => {
     const name = String(bucket.tier || "Pull")
       .trim()
@@ -162,29 +163,36 @@ export function LiveProductDetail({
     );
     return groups;
   }, new Map<string, number>());
+  const colors: Record<string, string> = { common: "#94a3b8", uncommon: "#10b981", rare: "#0ea5e9", epic: "#6366f1", legendary: "#f59e0b", mythical: "#e11d74", mythic: "#e11d74", jackpot: "#d89b12" };
+  const tiers = [...odds].map(([name, percent], index) => ({ name, percent, color: colors[name] || ["#94a3b8", "#10b981", "#0ea5e9", "#6366f1", "#f59e0b", "#e11d74"][index % 6] }));
   return (
     <LiveModal
-      title={boxItem(item) ? "Box details" : "Collectible"}
+      title={boxItem(item) ? "Pack details" : "Collectible"}
       onClose={onClose}
       wide
-      className={boxItem(item) ? "lc-box-detail-modal" : ""}
+      className={isPack ? "lc-pack-detail-modal" : ""}
     >
-      <div className={`lc-detail ${boxItem(item) ? "lc-box-detail" : ""}`}>
+      <div className={isPack ? "lc-pack-detail-scroll" : undefined}>
+      <div className={`lc-detail ${isPack ? "lc-pack-detail" : ""}`}>
         <Art src={item.image} name={item.name} priority />
         <div className="lc-detail-copy">
           <div className="lc-detail-overview">
+          {isPack && <span className="lc-pack-eyebrow">{item.brand || "Collectible pack"}</span>}
           <h1>{item.name}</h1>
           <p className="lc-price">{usd(item.price)}</p>
           {error && <p role="alert">{error}</p>}
           {boxItem(item) && <>
+              <div className="lc-pack-stats">
               {(box.expected_value_usd ?? box.ev_usd) != null && (
                 <p className="lc-stat">
                   Expected value{" "}
                   <strong>{usd(box.expected_value_usd ?? box.ev_usd)}</strong>
                 </p>
               )}
+              <p className="lc-stat">Available<strong>{new Intl.NumberFormat("en-US").format(item.availability ?? 0)}</strong></p>
+              </div>
               <div className="lc-detail-open">
-                <button className="lc-primary" disabled={!item.purchase.supported} onClick={onCheckout}>Open box<ArrowRight size={19} /></button>
+                <button className="lc-primary" disabled={!item.purchase.supported} onClick={onCheckout}>Open pack<ArrowRight size={19} /></button>
                 <small>{new Intl.NumberFormat("en-US").format(item.availability ?? 0)} available</small>
               </div>
           </>}
@@ -193,7 +201,7 @@ export function LiveProductDetail({
             <>
               {asRows(box.top_chase_cards).length > 0 && (
                 <section className="lc-detail-pulls">
-                  <h3>Top pulls</h3>
+                  <h3>Top hits</h3>
                   <div className="lc-chases">
                     {asRows(box.top_chase_cards)
                       .slice(0, 6)
@@ -213,9 +221,11 @@ export function LiveProductDetail({
               {odds.size > 0 && (
                 <section className="lc-detail-odds">
                   <h3>Pull odds</h3>
-                  {[...odds].map(([name, percent]) => (
+                  <p className="lc-pack-odds-note">Your chance of pulling each rarity.</p>
+                  <div className="lc-pack-odds-bar" aria-hidden="true">{tiers.map(tier => <i key={tier.name} style={{ flexGrow: tier.percent, background: tier.color }} />)}</div>
+                  {tiers.map(({name, percent, color}) => (
                     <p className="lc-stat" key={name}>
-                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                      <span><i className="lc-pack-tier-dot" style={{ background: color }} />{name.charAt(0).toUpperCase() + name.slice(1)}</span>
                       <strong>
                         {new Intl.NumberFormat("en-US", {
                           maximumFractionDigits: 4,
@@ -237,19 +247,25 @@ export function LiveProductDetail({
           )}
         </div>
       </div>
+      </div>
       <footer>
-        {boxItem(item) && <div className="lc-detail-footer-product">
+        {isPack ? <div className="lc-pack-footer-inner">
+        <div className="lc-detail-footer-product">
           <Art src={item.image} name={item.name} />
           <div><strong>{item.name}</strong><span>{usd(item.price)}</span></div>
-        </div>}
+        </div>
+        <small>{item.availability ?? 0} available</small>
+        <button className="lc-primary" disabled={!item.purchase.supported} onClick={onCheckout}>Open pack<ArrowRight size={17} /></button>
+        </div> : <>
         <small>{item.availability ?? 0} available</small>
         <button
           className="lc-primary"
           disabled={!item.purchase.supported}
           onClick={onCheckout}
         >
-          {boxItem(item) ? "Open box" : "Buy"}
+          Buy
         </button>
+        </>}
       </footer>
     </LiveModal>
   );

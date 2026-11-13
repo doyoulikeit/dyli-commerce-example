@@ -24,24 +24,26 @@ export async function POST(request: Request) {
     if (action === "quote") {
       const item = body.quoteItem as ApiRecord | undefined;
       const quantity = Number(item?.quantity);
+      const isPack = item?.type === "pack" || item?.type === "box";
+      const packId = item?.pack_id ?? item?.box_id;
       if (
         !item ||
         !Number.isSafeInteger(quantity) ||
         quantity < 1 ||
-        quantity > (item.type === "box" ? 10 : 1)
+        quantity > (isPack ? 10 : 1)
       ) {
-        throw new AuthError(400, "Choose 1–10 boxes or one collectible");
+        throw new AuthError(400, "Choose 1–10 packs or one collectible");
       }
       // Only references/quantity go upstream; DYLI checks the partner allowlist,
       // resolves inventory and prices, and calculates fees (including zero).
       const quoteItem =
-        item.type === "box"
-          ? { type: "box", box_id: item.box_id, quantity }
+        isPack
+          ? { type: "pack", pack_id: packId, quantity }
           : { type: "listing", listing_id: item.listing_id, quantity };
-      if (item.type === "box" && !boxIsIncluded(item.box_id)) {
-        throw new AuthError(404, "This box is not available in this storefront");
+      if (isPack && !boxIsIncluded(packId)) {
+        throw new AuthError(404, "This pack is not available in this storefront");
       }
-      const feeRules = item.type === "box" ? storefrontPolicy().feeRules : undefined;
+      const feeRules = isPack ? storefrontPolicy().feeRules : undefined;
       await commerce(
         `/customers/${encodeURIComponent(identity.externalCustomerId)}`,
         { method: "PUT", body: JSON.stringify(customer) },

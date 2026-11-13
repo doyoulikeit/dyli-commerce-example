@@ -1,8 +1,8 @@
-# Run your Box storefront
+# Run your Pack storefront
 
 Choose your [login and wallet setup](WALLETS.md) first. You can keep existing Base wallets, add a provider behind your login, or use Privy for both. These options are self service.
 
-This path uses the [full storefront example](https://github.com/doyoulikeit/dyli-commerce-example), your own Privy login, and embedded card checkout plus a Base USDC balance. Commerce v1 includes boxes, vaulting, sell-backs and redemptions.
+This path uses the [full storefront example](https://github.com/doyoulikeit/dyli-commerce-example), your own Privy login, and embedded card checkout plus a Base USDC balance. Commerce v1 includes packs, vaulting, sell-backs and redemptions.
 
 ## 1. Register your app
 
@@ -62,22 +62,22 @@ Open [localhost:3000](http://localhost:3000). Doctor only makes GET requests. Al
 
 Allow localhost in Privy to test locally. **Card checkout returns to the page you started from**, including localhost or 127.0.0.1. Remote return domains must be registered with DYLI. Localhost still uses real production payments and inventory by default.
 
-## 4. Choose your Boxes
+## 4. Choose your Packs
 
-For a storefront dedicated to your own boxes, add this optional server setting:
+For a storefront dedicated to your own packs, add this optional server setting:
 
 ```dotenv
 INCLUDED_IDS=12997,12998
 ```
 
-Use real box IDs, separated by commas. Omit it to show all boxes permitted for
-your app. The home page, Boxes catalog, detail route and new quotes respect it.
-It never grants access to a box excluded by DYLI's app-level allowlist.
+Use real pack IDs, separated by commas. Omit it to show all packs permitted for
+your app. The home page, Packs catalog, detail route and new quotes respect it.
+It never grants access to a pack excluded by DYLI's app-level allowlist.
 
 ### Earnings and your fee
 
-Every Commerce app earns **10% of its settled box profit** automatically. Profit
-means base box sales minus cash buybacks and the cost of items customers keep.
+Every Commerce app earns **10% of its settled pack profit** automatically. Profit
+means base pack sales minus cash buybacks and the cost of items customers keep.
 A bought-back item is not also charged as an item cost.
 Losses offset gains; unfinished or test purchases earn nothing.
 Your DYLI profile → Storefront → **Commerce** shows orders, quantities, buybacks,
@@ -91,9 +91,9 @@ FLAT_FEE=2
 # OR: PERCENT_FEE=5
 ```
 
-`FLAT_FEE=2` adds $2 **per box**: two $35 boxes show Items $70, **Platform fee
+`FLAT_FEE=2` adds $2 **per pack**: two $35 packs show Items $70, **Platform fee
 $2 × 2 = $4**, total $74 before any card-processing charge. `PERCENT_FEE=5`
-adds 5% of the box subtotal instead. Both Balance and Card collect the complete
+adds 5% of the pack subtotal instead. Both Balance and Card collect the complete
 server-priced total. Your fee is recorded separately and paid out through DYLI
 earnings; no separate Stripe account is required. Set one value to `0` for no
 added fee. Leave both unset to inherit the app's saved fees (zero by default).
@@ -103,14 +103,14 @@ to start a payment if DYLI does not confirm the configured fee.
 
 ### App-wide configuration (advanced)
 
-The app's saved config controls branding, box access and fees. For marketplace and P2P, [configure community settings](MARKETPLACE-AND-TRADING.md). To preview a box-focused setup with zero partner fee:
+The app's saved config controls branding, pack access and fees. For marketplace and P2P, [configure community settings](MARKETPLACE-AND-TRADING.md). To preview a pack-focused setup with zero partner fee:
 
 ```sh
-npm run pilot:configure -- --name="My Box Shop" --box-id=YOUR_BOX_ID
+npm run pilot:configure -- --name="My Pack Shop" --pack-id=YOUR_PACK_ID
 ```
 
-Replace the ID with a real positive integer from the catalog. Repeat `--box-id` for more Boxes. This is a dry run; add `--apply` only after reviewing the target environment and preview. An empty API allowlist means all Boxes, not none.
+Replace the ID with a real positive integer from the catalog. Repeat `--pack-id` for more Packs. This is a dry run; add `--apply` only after reviewing the target environment and preview. An empty API allowlist means all Packs, not none.
 
-A zero partner fee does not remove the Box price, card processing or shipping. Your own wallets need Base ETH for gas or your own sponsorship. Approved managed wallets can use sponsored pack openings when bootstrap reports availability. Pack sponsorship does not cover transfers, marketplace actions or shipping. Card checkout does not fund gas.
+A zero partner fee does not remove the Pack price, card processing or shipping. Your own wallets need Base ETH for gas or your own sponsorship. Approved managed wallets can use sponsored pack openings when bootstrap reports availability. Pack sponsorship does not cover transfers, marketplace actions or shipping. Card checkout does not fund gas.
 
 **Next: [test before launch](PILOT-LAUNCH.md).** A successful doctor check is not an end-to-end payment test.

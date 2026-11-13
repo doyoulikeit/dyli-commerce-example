@@ -10,6 +10,8 @@ export function createCommerceClient(options: ClientOptions): {
   quote(body: JsonObject, key: string): Promise<JsonObject>;
   stripeCheckout(quoteId: string, body: JsonObject, key: string): Promise<JsonObject>;
   createOrder(body: JsonObject, key: string): Promise<JsonObject>;
+  openPack(orderId: string, key: string): Promise<JsonObject>;
+  /** @deprecated Use openPack. */
   openBox(orderId: string, key: string): Promise<JsonObject>;
   communitySettings(): Promise<JsonObject>;
   market(query?: Record<string, string>): Promise<JsonObject>;

@@ -1,5 +1,7 @@
 import type { CatalogItem, CatalogSurface } from "@/lib/types";
 
+const packsOnly = (process.env.NEXT_PUBLIC_PACKS_ONLY ?? process.env.NEXT_PUBLIC_BOXES_ONLY) === "true";
+
 type SurfaceConfig = { id: CatalogSurface; label: string; enabled: boolean };
 
 export const storefrontConfig = {
@@ -15,14 +17,14 @@ export const storefrontConfig = {
     storageKey: "vaulted-demo-session-v1",
   },
   navigation: {
-    boxesOnly: process.env.NEXT_PUBLIC_BOXES_ONLY === "true",
+    boxesOnly: packsOnly,
     showActivity: true,
     showCollection: true,
   },
   checkout: {
     // Manual queue is a temporary pilot mode. Only item types that complete
     // through a customer action should be purchasable until an executor is live.
-    manualQueuePurchaseTypes: ["box"] as string[],
+    manualQueuePurchaseTypes: ["pack", "box"] as string[],
   },
   transactions: {
     sponsored: false, // Pack sponsorship is discovered from Commerce bootstrap.
@@ -30,8 +32,8 @@ export const storefrontConfig = {
   catalog: {
     surfaces: [
       { id: "explore", label: "Featured", enabled: false },
-      { id: "listings", label: "Shop", enabled: process.env.NEXT_PUBLIC_BOXES_ONLY !== "true" },
-      { id: "boxes", label: "Boxes", enabled: true },
+      { id: "listings", label: "Shop", enabled: !packsOnly },
+      { id: "packs", label: "Packs", enabled: true },
       { id: "ebay", label: "eBay", enabled: false },
       { id: "collections", label: "Collections", enabled: false },
       { id: "fair-drops", label: "Drops", enabled: false },

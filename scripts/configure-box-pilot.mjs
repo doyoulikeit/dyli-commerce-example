@@ -1,9 +1,9 @@
 import { createCommerceClient } from '../sdk/commerce-client.mjs';
 
 const args = process.argv.slice(2);
-const ids = args.filter(arg => arg.startsWith('--box-id=')).map(arg => Number(arg.slice(9)));
+const ids = args.filter(arg => arg.startsWith('--pack-id=') || arg.startsWith('--box-id=')).map(arg => Number(arg.slice(arg.indexOf('=') + 1)));
 if (!ids.length || ids.some(id => !Number.isSafeInteger(id) || id <= 0)) {
-  console.error('Supply at least one real --box-id=123. Empty allowlists would expose all Boxes and are rejected.');
+  console.error('Supply at least one real --pack-id=123. Empty allowlists would expose all Packs and are rejected.');
   process.exit(1);
 }
 const name = args.find(arg => arg.startsWith('--name='))?.slice(7).trim();
@@ -26,7 +26,7 @@ if (!args.includes('--apply')) {
     const result = await client.request('/config', { method: 'PATCH', body: patch });
     const saved = result.partner;
     if (JSON.stringify(saved?.catalog_rules?.allowed_box_ids) !== JSON.stringify(patch.catalog_rules.allowed_box_ids) || saved?.fee_rules?.enabled !== false) throw Error('Configuration verification failed');
-    console.log('Partner Box allowlist and zero partner fee saved. Run doctor, then complete the payment and fulfillment acceptance checks.');
+    console.log('Partner Pack allowlist and zero partner fee saved. Run doctor, then complete the payment and fulfillment acceptance checks.');
   } catch (error) {
     console.error(error?.status ? `Configuration returned HTTP ${error.status}; check credentials, scope and target environment.` : 'Configuration failed; check setup and retrieve /config before retrying.');
     process.exitCode = 1;

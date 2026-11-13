@@ -1,15 +1,15 @@
 # Optional UI demo
 
-A session-based collectibles storefront powered by live DYLI data. The catalog, marketplace inventory, box artwork, box contents, published odds, prices, and buyback values come from DYLI; identity, checkout, Collection, and Activity stay in the browser session.
+A session-based collectibles storefront powered by live DYLI data. The catalog, marketplace inventory, pack artwork, pack contents, published odds, prices, and buyback values come from DYLI; identity, checkout, Collection, and Activity stay in the browser session.
 
 ## Demo features
 
-- Live graded and sealed Shop limited to Pokémon and One Piece, with packs, boxes, and bundles
-- Live, in-stock Boxes that are not marked for restocking
-- Live Box details, chase artwork, inventory, and published odds
+- Live graded and sealed Shop limited to Pokémon and One Piece, with packs, packs, and bundles
+- Live, in-stock Packs that are not marked for restocking
+- Live Pack details, chase artwork, inventory, and published odds
 - Two-step welcome flow that asks for a name and grants `$500.00`
 - Card or Balance checkout simulation with multi-quantity controls
-- Immediate Box opening with live range inventory used for each draw
+- Immediate Pack opening with live range inventory used for each draw
 - Keep-to-Collection and sell-to-Balance decisions
 - Session Collection, value, and Activity
 - Responsive desktop and mobile layouts
@@ -44,11 +44,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Data boundaries
 
-- `src/lib/storefront-server.ts` composes the live commerce catalog and public box metadata.
-- `src/app/api/boxes/[id]` loads a Box, its published ranges, and the items currently in those ranges.
-- `src/components/storefront.tsx` owns the welcome profile, temporary checkout, balance, Box draw, Collection, and Activity for the current browser session.
+- `src/lib/storefront-server.ts` composes the live commerce catalog and public pack metadata.
+- `src/app/api/packs/[id]` loads a Pack, its published ranges, and the items currently in those ranges.
+- `src/components/storefront.tsx` owns the welcome profile, temporary checkout, balance, Pack draw, Collection, and Activity for the current browser session.
 
-The Box simulator first selects a live published odds bucket and then selects from that bucket's current DYLI inventory, weighted by the quantity in the Box. It does not use a local prize list.
+The Pack simulator first selects a live published odds bucket and then selects from that bucket's current DYLI inventory, weighted by the quantity in the Pack. It does not use a local prize list.
 
 ## Verify
 
@@ -58,4 +58,4 @@ npm test
 npm run build
 ```
 
-See the [DYLI Commerce documentation](https://www.dyli.io/docs/api/commerce) and [Box API documentation](https://www.dyli.io/docs/api/boxes).
+See the [DYLI Commerce documentation](https://www.dyli.io/docs/api/commerce) and [Pack API documentation](https://www.dyli.io/docs/api/packs).

@@ -6,7 +6,7 @@ Run your own collectibles storefront with DYLI's live inventory, checkout, marke
 
 ## Available in v1
 
-Commerce includes boxes, vaulting, sell-backs, shipping, secondary marketplace and P2P trading. Open 1-10 of a box, buy or list collectibles, make offers, trade items and ship from the vault.
+Commerce includes packs, vaulting, sell-backs, shipping, secondary marketplace and P2P trading. Open 1-10 of a pack, buy or list collectibles, make offers, trade items and ship from the vault.
 
 When the connected API reports `capabilities.post_vault_offers.ready`, opening an
 item in **Vault** also shows its available DYLI buyback amount, expiration and
@@ -26,7 +26,7 @@ Base network settings. Withdrawals need Base ETH for gas. This is a transfer
 on Base, not a bank cash-out or cross-chain bridge. Pending withdrawals are
 saved per wallet and checked against on-chain receipts before another send.
 
-The homepage shows Marketplace below Boxes, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Base USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for boxes, not peer transactions.
+The homepage shows Marketplace below Packs, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Base USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for packs, not peer transactions.
 
 ## Quick setup
 
@@ -46,7 +46,7 @@ The key discovers your app; **no slug or API URL setting is needed** for product
 
 Want your own wallet RPC? Set the optional `NEXT_PUBLIC_ALCHEMY_API_KEY` to your own Base-enabled Alchemy app key. The example builds the URL for you; otherwise it uses Base's public RPC. See the [quickstart](docs/PARTNER-QUICKSTART.md#2-set-up-the-repo) for browser-key restrictions.
 
-Optional server settings: `INCLUDED_IDS` selects your boxes; `FLAT_FEE` or `PERCENT_FEE` adds your customer fee (including zero). Commerce earns a 10% settled profit share, with your added fee reported separately in DYLI → Storefront → Commerce. See [boxes, fees and earnings](docs/PARTNER-QUICKSTART.md#4-choose-your-boxes).
+Optional server settings: `INCLUDED_IDS` selects your packs; `FLAT_FEE` or `PERCENT_FEE` adds your customer fee (including zero). Commerce earns a 10% settled profit share, with your added fee reported separately in DYLI → Storefront → Commerce. See [packs, fees and earnings](docs/PARTNER-QUICKSTART.md#4-choose-your-packs).
 
 ## Live or demo?
 
@@ -70,7 +70,7 @@ and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 For managed login, domain changes, payments or testing, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support). Sign in to send a request. DYLI emails you a copy, and you can see the status and date in your request history. DYLI-managed setup needs activation. Your own login and wallets, including your own Privy app, are self service. See [login and wallets](docs/WALLETS.md).
 
 - [Before launch](docs/PILOT-LAUNCH.md)
-- [Display boxes and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)
+- [Display packs and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)
 - [Security and private vulnerability reports](SECURITY.md)
 - [Keep your existing login](docs/EXISTING-AUTH.md)
 - [Own payment processor or app balance](docs/PAYMENT-OWNERSHIP.md)

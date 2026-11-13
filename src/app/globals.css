@@ -22,7 +22,7 @@ body {
   min-height: 100dvh;
   margin: 0;
   background: #fff;
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--font-geist-sans, Arial), Arial, sans-serif;
 }
 button,
 input {
@@ -3466,3 +3466,6 @@ img.asset-boost {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Keep pack artwork inside its frame in the demo catalog too. */
+.box-card .box-art img { padding: 24px; transform: none; }

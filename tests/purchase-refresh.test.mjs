@@ -34,7 +34,7 @@ function fixture({ failRefresh = false, failOpening = false, recovery = saved, b
       if (path.startsWith('/api/session')) return sessionResponse ? sessionResponse(path) : failRefresh ? Response.json({ error: 'temporary limit failure' }, { status: 503 })
         : Response.json({ identity: { walletAddress: wallet }, balance: { amount: '65', chain_id: 8453 }, orders: [] });
       if (path === '/api/checkout') return Response.json({ order: { id: 'paid-order', items: [] } });
-      if (path === '/api/box-plays') return failOpening ? Response.json({ error: 'Opening unavailable; purchase saved' }, { status: 503 })
+      if (path === '/api/pack-plays') return failOpening ? Response.json({ error: 'Opening unavailable; purchase saved' }, { status: 503 })
         : Response.json(boxResponse ? boxResponse(body) : { box_play: { id: 'saved-play', status: 'authorized', opening_reference: 'opening', rewards: [] } });
       throw Error(`Unexpected request ${path}`);
     }, require(name) {

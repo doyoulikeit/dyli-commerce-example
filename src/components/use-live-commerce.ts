@@ -308,7 +308,7 @@ export function useLiveCommerce() {
     };
     if (!next.item) throw new Error("Open this purchase from your activity");
     save({ ...next, orderId });
-    const payload = await api<{ box_play: BoxPlay }>("/api/box-plays", {
+    const payload = await api<{ box_play: BoxPlay }>("/api/pack-plays", {
       action: "create",
       orderId,
     });
@@ -580,7 +580,7 @@ export function useLiveCommerce() {
   });
 
   const openBoxes = () =>
-    run("Opening your boxes…", async () => {
+    run("Opening your packs…", async () => {
       const next = flowRef.current;
       if (!next?.orderId) throw new Error("A paid order is required");
       const fresh = { box_play: await beginBox(next.orderId) };
@@ -613,7 +613,7 @@ export function useLiveCommerce() {
           ready: boolean;
           restart: boolean;
           retry_after_ms: number;
-        }>("/api/box-plays", {
+        }>("/api/pack-plays", {
           action: "results",
           playId: fresh.box_play.id,
           txHash: hash,
@@ -627,7 +627,7 @@ export function useLiveCommerce() {
             decisions: undefined,
           });
           throw new Error(
-            "The opening was safely reset. Continue to reopen your paid boxes.",
+            "The opening was safely reset. Continue to reopen your paid packs.",
           );
         }
         if (result.box_play.status === "completed") {
@@ -662,7 +662,7 @@ export function useLiveCommerce() {
           ready: boolean;
           restart: boolean;
           finalize_tx_hash?: string;
-        }>("/api/box-plays", {
+        }>("/api/pack-plays", {
           action: "decision",
           playId: next.playId,
           decisions: next.decisions,
@@ -697,7 +697,7 @@ export function useLiveCommerce() {
         if (!hash) throw new Error("Settlement is not ready yet");
         save({ ...next, finalizeHash: hash });
       }
-      await retryConfirmation(() => api("/api/box-plays", {
+      await retryConfirmation(() => api("/api/pack-plays", {
         action: "finalize",
         playId: next.playId,
         txHash: hash,

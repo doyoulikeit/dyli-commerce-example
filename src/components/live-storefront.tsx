@@ -62,7 +62,7 @@ const allNavigation = (
   [
     { id: "home", label: "Home", Icon: House },
     { id: "shop", label: "Shop", Icon: ShoppingBag },
-    { id: "boxes", label: "Boxes", Icon: Box },
+    { id: "packs", label: "Packs", Icon: Box },
     { id: "collection", label: "Vault", Icon: Archive },
     { id: "trades", label: "Trades", Icon: ArrowLeftRight },
     { id: "activity", label: "Activity", Icon: Activity },
@@ -129,7 +129,7 @@ export function LiveStorefront({
   const finishVaultSale = async () => {
     setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection", false);
   };
-  const boxes = storefront?.boxes || [];
+  const boxes = storefront?.packs || storefront?.boxes || [];
   const products = boxesOnly
     ? []
     : storefront?.catalog || [];
@@ -217,8 +217,8 @@ export function LiveStorefront({
       <Archive />
       <h2>{title}</h2>
       <p>{caption}</p>
-      <button className="lc-secondary" onClick={() => navigate("boxes")}>
-        Explore boxes
+      <button className="lc-secondary" onClick={() => navigate("packs")}>
+        Explore packs
       </button>
     </div>
   );
@@ -389,24 +389,24 @@ export function LiveStorefront({
                 <span>
                   {session
                     ? `${holdings.length} collectibles in your vault`
-                    : "Open a box. Find something worth keeping."}
+                    : "Open a pack. Find something worth keeping."}
                 </span>
               </div>
               <button
                 className="lc-primary"
                 onClick={() =>
                   document
-                    .getElementById("live-boxes")
+                    .getElementById("live-packs")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
               >
-                Explore boxes <ArrowUpRight />
+                Explore packs <ArrowUpRight />
               </button>
             </section>
-            <section id="live-boxes">
+            <section id="live-packs">
               <div className="lc-section-title">
-                <h2>Boxes</h2>
-                <button onClick={() => navigate("boxes")}>
+                <h2>Packs</h2>
+                <button onClick={() => navigate("packs")}>
                   View all <ArrowUpRight />
                 </button>
               </div>
@@ -462,12 +462,12 @@ export function LiveStorefront({
             </footer>
           </>
         )}
-        {tab === "boxes" && (
+        {tab === "packs" && (
           <>
-            <h1>Boxes</h1>
+            <h1>Packs</h1>
             {boxes.length
               ? cards(boxes, undefined, true)
-              : empty("No live boxes", "Check back for the next opening.")}
+              : empty("No live packs", "Check back for the next opening.")}
           </>
         )}
         {tab === "shop" && marketplace.ready !== true && (

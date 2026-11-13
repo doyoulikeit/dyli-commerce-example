@@ -28,8 +28,8 @@ const result = await dyli.quote({
 }, `quote:${operationId}`);
 ```
 
-The item must come from the allowed catalog. The API computes price/fees and validates availability. A Box quantity may be 1–10; other live product types currently require one. For cards use `stripeCheckout(quoteId, body, key)`; for verified USDC use payer authorization then `createOrder(body, key)`. `openBox(orderId, key)` starts or resumes an already-paid Box order; it does not sign wallet transactions or create payment evidence.
+The item must come from the allowed catalog. The API computes price/fees and validates availability. A Pack quantity may be 1–10; other live product types currently require one. For cards use `stripeCheckout(quoteId, body, key)`; for verified USDC use payer authorization then `createOrder(body, key)`. `openPack(orderId, key)` starts or resumes an already-paid Pack order; it does not sign wallet transactions or create payment evidence.
 
-Use `request('/box-plays/...')` for the documented buy/results/decision/finalize states. Always preserve transaction hashes and idempotency keys. A timeout is not proof of failure. Errors expose HTTP status and DYLI's request ID for support; secrets never belong in logs.
+Use `request('/pack-plays/...')` for the documented buy/results/decision/finalize states. Always preserve transaction hashes and idempotency keys. A timeout is not proof of failure. Errors expose HTTP status and DYLI's request ID for support; secrets never belong in logs.
 
 See the authoritative [Commerce API](https://www.dyli.io/docs/api/commerce) and its OpenAPI document. The SDK intentionally does not invent a second payment state machine, silently retry money movements, or wrap third-party receipts into a paid flag.
