@@ -103,23 +103,23 @@ test("fresh quotes must be open, unexpired, correctly identified and integer-pri
 });
 test("opaque instructions are bound to the customer and network, and have zero ETH value", () => {
   const tx = {
-    chain: "abstract",
-    chain_id: 11124,
+    chain: "base",
+    chain_id: 84532,
     from: wallet,
     to: `0x${"b".repeat(40)}`,
     data: "0x1234",
     value: "0",
   };
-  assert.equal(validateTransaction(tx, wallet, 11124), tx);
+  assert.equal(validateTransaction(tx, wallet, 84532), tx);
   for (const patch of [
     { from: tx.to },
-    { chain_id: 2741 },
+    { chain_id: 8453 },
     { value: "1" },
     { to: "invalid" },
     { data: "0x0" },
   ]) {
     assert.throws(() =>
-      validateTransaction({ ...tx, ...patch }, wallet, 11124),
+      validateTransaction({ ...tx, ...patch }, wallet, 84532),
     );
   }
 });

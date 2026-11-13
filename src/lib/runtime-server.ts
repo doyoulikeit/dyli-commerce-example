@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { commerce } from "@/lib/dyli";
-import { parseCommerceRuntime, parseAbstractPaymaster, type CommerceRuntime } from "@/lib/commerce-runtime";
+import { parseCommerceRuntime, type CommerceRuntime } from "@/lib/commerce-runtime";
 import type { ApiRecord } from "@/lib/types";
 
 export const loadCommerceRuntime = cache(async (): Promise<CommerceRuntime> => {
@@ -10,7 +10,7 @@ export const loadCommerceRuntime = cache(async (): Promise<CommerceRuntime> => {
   if (authMode === "partner" || authMode === "privy") {
     const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
     const chainId = Number((payload.wallet as ApiRecord | undefined)?.chain_id);
-    if (!appId || !process.env.PRIVY_SECRET_KEY?.trim() || ![2741, 11124].includes(chainId)) {
+    if (!appId || !process.env.PRIVY_SECRET_KEY?.trim() || ![8453, 84532].includes(chainId)) {
       throw new Error("Partner auth requires your Privy app ID, server secret and a supported DYLI network");
     }
     const storefront = payload.storefront as ApiRecord | undefined;
@@ -18,11 +18,12 @@ export const loadCommerceRuntime = cache(async (): Promise<CommerceRuntime> => {
     const origin = typeof auth?.storefront_origin === "string" ? auth.storefront_origin : null;
     if (!origin) throw new Error("Register your storefront origin with DYLI before checkout");
     return {
-      authMode: "partner", appId, chainId: chainId as 2741 | 11124,
+      authMode: "partner", appId, chainId: chainId as 8453 | 84532,
       allowedOrigins: Array.isArray(auth?.allowed_origins) ? auth.allowed_origins.filter((value): value is string => typeof value === "string") : [origin],
       storefrontOrigin: origin,
       sponsorTransactions: false,
-      paymaster: parseAbstractPaymaster(payload.wallet as ApiRecord | undefined),
+      packSponsorship: null,
+      walletRegistration: ((payload.wallet as ApiRecord | undefined)?.registration as ApiRecord | undefined)?.ready === true,
       name: process.env.NEXT_PUBLIC_STOREFRONT_NAME || String(storefront?.name || "Vaulted"),
       boxesOnly: process.env.NEXT_PUBLIC_BOXES_ONLY === "true" || storefront?.boxes_only === true,
     };

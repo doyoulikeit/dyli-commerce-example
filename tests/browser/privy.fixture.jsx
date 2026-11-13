@@ -27,3 +27,6 @@ export const useWallets = () => ({ wallets: [wallet] });
 export const useSendTransaction = () => ({ sendTransaction });
 export const useSignMessage = () => ({ signMessage });
 export const useModalStatus = () => ({ isOpen: false });
+
+export const useSign7702Authorization = () => ({ signAuthorization: async () => { throw Error("No live authorization in fixtures"); } });
+export const toViemAccount = async () => { throw Error("No live signer in fixtures"); };

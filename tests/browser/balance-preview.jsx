@@ -8,7 +8,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const token = "0x84A71ccD554Cc1b02749b35d22F684CC8ec987e1";
 const hash = `0x${"ab".repeat(32)}`;
 const params = new URLSearchParams(location.search);
-const balance = { amount: "10.123456", currency: "USDC", token, chain_id: 2741 };
+const balance = { amount: "10.123456", currency: "USDC", token, chain_id: 8453 };
 const session = { identity: { walletAddress: wallet, name: "Preview" }, balance };
 
 export function BalancePreview() {

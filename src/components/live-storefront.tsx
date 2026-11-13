@@ -232,9 +232,12 @@ export function LiveStorefront({
         </div>
         {error ? (
           <div className="lc-account-loading-message" role="alert">
-            <h1>Couldn’t load your account</h1>
+            <h1>{commerce.needsWalletRegistration ? "Connect your collection" : "Couldn’t load your account"}</h1>
             <p>{error}</p>
-            <button className="lc-secondary" onClick={() => window.location.reload()}>Try again</button>
+            {commerce.needsWalletRegistration ? <>
+              <p>Sign a message to link this wallet to your collection. This does not make a payment.</p>
+              <button className="lc-secondary" disabled={!!busy} onClick={() => void commerce.registerWallet()}>{busy || "Connect wallet"}</button>
+            </> : <button className="lc-secondary" onClick={() => window.location.reload()}>Try again</button>}
           </div>
         ) : (
           <div className="lc-account-loading-message" role="status">

@@ -46,6 +46,7 @@ export function useLiveCommerce() {
   const [cardCheckout, setCardCheckout] = useState<Extract<CardCheckout, { mode: "embedded" }> | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [needsWalletRegistration, setNeedsWalletRegistration] = useState(false);
   const flowRef = useRef<PurchaseRecovery | null>(null);
   const busyRef = useRef(false);
   const sessionRequest = useRef<{ api: typeof api; fresh: boolean; promise: Promise<SessionResponse> } | null>(null);
@@ -140,6 +141,7 @@ export function useLiveCommerce() {
     const load = async () => {
       setCardCheckout(null);
       if (!authenticated || !address) {
+        setNeedsWalletRegistration(false);
         setSession(null);
         setFlow(null);
         flowRef.current = null;
@@ -156,6 +158,8 @@ export function useLiveCommerce() {
         const next = await loadSession();
         if (active) setSession(next);
       } catch (failure) {
+        if (active && asRecord(failure).code === "base_customer_wallet_required" && runtime?.walletRegistration)
+          setNeedsWalletRegistration(true);
         if (active)
           setError(
             failure instanceof Error
@@ -168,7 +172,7 @@ export function useLiveCommerce() {
     return () => {
       active = false;
     };
-  }, [authenticated, address, loadSession]);
+  }, [authenticated, address, loadSession, runtime?.walletRegistration]);
 
   const run = useCallback(
     async (label: string, action: () => Promise<void>) => {
@@ -213,7 +217,7 @@ export function useLiveCommerce() {
   );
 
   const send = useCallback(
-    async (tx: TransactionInstruction, expiresAt?: string) => {
+    async (tx: TransactionInstruction, expiresAt?: string, pack?: BoxPlay) => {
       try {
         if (!session) throw new Error("Wait for your wallet to load");
         validateTransaction(tx, address, session.balance.chain_id);
@@ -231,15 +235,38 @@ export function useLiveCommerce() {
         {
           address,
           sponsor: false,
-          paymaster: runtime?.paymaster,
+          pack, externalCustomerId: session.identity.externalCustomerId,
           expiresAt,
           uiOptions: { showWalletUIs: true },
         },
       );
       return result.hash;
     },
-    [address, session, sendTransaction, wallet, runtime?.paymaster],
+    [address, session, sendTransaction, wallet],
   );
+
+  const registerWallet = () => run("Connecting your wallet…", async () => {
+    const key = `dyli-wallet-registration:${runtime?.chainId}:${address}`;
+    const saved = asRecord(JSON.parse(localStorage.getItem(key) || "{}"));
+    const idempotencyKey = typeof saved.idempotencyKey === "string" && Number(saved.expiresAt) > Date.now()
+      ? saved.idempotencyKey : crypto.randomUUID();
+    const expiresAt = idempotencyKey === saved.idempotencyKey ? saved.expiresAt : Date.now() + 9 * 60000;
+    localStorage.setItem(key, JSON.stringify({ idempotencyKey, expiresAt }));
+    const prepared = await api<ApiRecord>("/api/wallet/registration", { action: "prepare", idempotencyKey });
+    const authorization = asRecord(prepared.authorization);
+    if (String(authorization.wallet_address).toLowerCase() !== address ||
+        authorization.chain_id !== runtime?.chainId || typeof authorization.message !== "string")
+      throw Error("Wallet registration did not match this account");
+    const { signature } = await signMessage({ message: authorization.message }, {
+      address, uiOptions: { showWalletUIs: true },
+    });
+    await retryConfirmation(() => api("/api/wallet/registration", {
+      action: "confirm", authorizationId: authorization.id, signature,
+    }));
+    localStorage.removeItem(key);
+    await refresh();
+    setNeedsWalletRegistration(false);
+  });
 
   const prepareQuote = (item: CatalogItem, quantity: number, openingPreferences?: OpeningPreferences) =>
     run("Preparing checkout…", async () => {
@@ -369,8 +396,6 @@ export function useLiveCommerce() {
       if (!next?.quote || !session)
         throw new Error("Get a current quote first");
       if (!next.paymentHash) {
-        if (!runtime?.paymaster)
-          throw new Error("DYLI gas sponsorship is not configured yet. No payment was sent.");
         if (next.stripeSessionId || next.orderId)
           throw new Error("Continue your existing purchase");
         if (next.paymentAttempted)
@@ -396,8 +421,8 @@ export function useLiveCommerce() {
           throw new Error(
             "Your balance is too low. Use Card or fund your wallet.",
           );
-        const token = String(asRecord(next.payment?.tokens).abstract);
-        const recipient = String(asRecord(next.payment?.recipients).abstract);
+        const token = String(asRecord(next.payment?.tokens).base);
+        const recipient = String(asRecord(next.payment?.recipients).base);
         if (
           !isAddress(token) ||
           !isAddress(recipient) ||
@@ -412,7 +437,7 @@ export function useLiveCommerce() {
         try {
           setBusy("Processing payment…");
           const hash = await send({
-            chain: "abstract",
+            chain: "base",
             chain_id: session.balance.chain_id,
             from: address as `0x${string}`,
             to: token,
@@ -439,8 +464,6 @@ export function useLiveCommerce() {
     });
 
   const loadCard = async () => {
-      if (!runtime?.paymaster)
-        throw new Error("DYLI gas sponsorship must be configured before opening boxes. No card checkout was created.");
       const next = flowRef.current;
       if (
         !next?.quote ||
@@ -567,7 +590,7 @@ export function useLiveCommerce() {
       }
       let hash = flowRef.current?.buyHash || fresh.box_play.buy_tx_hash;
       if (!hash && fresh.box_play.transaction) {
-        try { hash = await send(fresh.box_play.transaction); }
+        try { hash = await send(fresh.box_play.transaction, undefined, fresh.box_play); }
         catch (failure) {
           const pending = asRecord(failure).transactionHash;
           if (typeof pending === "string" && /^0x[\da-f]{64}$/i.test(pending))
@@ -607,6 +630,12 @@ export function useLiveCommerce() {
             "The opening was safely reset. Continue to reopen your paid boxes.",
           );
         }
+        if (result.box_play.status === "completed") {
+          save(null);
+          await refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
+          setPlay(null);
+          return;
+        }
         if (result.ready) return;
         await delay(Math.max(2500, result.retry_after_ms || 0));
       }
@@ -644,6 +673,12 @@ export function useLiveCommerce() {
           save({ ...next, buyHash: undefined, finalizeHash: undefined, decisions: undefined });
           throw new Error("Continue to reopen your saved purchase.");
         }
+        if (result.box_play.status === "completed") {
+          save(null);
+          await refreshAfterPurchase("Your choices are confirmed. Reload to refresh your vault and balance.");
+          setPlay(null);
+          return;
+        }
         if (!result.ready)
           throw new Error(
             "Your choices are being prepared. Your pulls are saved—continue shortly.",
@@ -651,7 +686,7 @@ export function useLiveCommerce() {
         try { hash =
           result.finalize_tx_hash ||
           (result.box_play.transaction
-            ? await send(result.box_play.transaction)
+            ? await send(result.box_play.transaction, undefined, result.box_play)
             : undefined);
         } catch (failure) {
           const pending = asRecord(failure).transactionHash;
@@ -705,6 +740,8 @@ export function useLiveCommerce() {
   };
   return {
     ready,
+    needsWalletRegistration,
+    registerWallet,
     authenticated,
     login,
     signOut,

@@ -15,7 +15,7 @@ let redemption = { id: "fixture-shipment", status: "prepared", items: [item],
   expires_at: new Date(Date.now() + 3600000).toISOString(),
   address: { name: "Fixture Buyer", city: "New York", country_alpha2: "US" },
   pricing: { amount: 5 }, payment: { token_address: token, spender: contract, amount_cents: 500 },
-  transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: contract, data: "0x1234", value: "0" } };
+  transaction: { chain: "base", chain_id: 8453, from: wallet, to: contract, data: "0x1234", value: "0" } };
 if (params.has("tracking")) redemption = { ...redemption, status: "completed", result: { orders: [
   { id: 1, shipment_id: "ESUS360467167", shipment_status: "in_transit", tracking_number: null,
     tracking_updated_at: "2026-09-22T15:00:00Z" },
@@ -55,7 +55,7 @@ function Preview() {
   }, []);
   return <main><h1>Shipping preview</h1><p>No real payments or shipments.</p><p>Account refreshed: {String(refreshed)}</p>
     {refreshed && <LiveShipmentActivity shipments={[redemption]} onView={() => {}} />}
-    {open && <LiveRedemption holdings={[item]} initialTokenId="123" session={{ identity: { walletAddress: wallet, email: "fixture@example.test" }, balance: { chain_id: 2741 } }}
+    {open && <LiveRedemption holdings={[item]} initialTokenId="123" session={{ identity: { walletAddress: wallet, email: "fixture@example.test" }, balance: { chain_id: 8453 } }}
       api={api} onClose={() => setOpen(false)} onComplete={async () => setOpen(false)} onSettled={onSettled}
       send={async tx => {
         const approval = tx.to === token;

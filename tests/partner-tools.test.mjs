@@ -22,7 +22,7 @@ test('doctor discovers the application with only a key, even when an obsolete sl
       assert.equal(init.method, 'GET');
       return Response.json(url.endsWith('/bootstrap') ? {
         bootstrap_version: 1, integration: {application_id: 'app'}, partner: {slug: 'discovered-store'},
-        auth: {mode: 'privy'}, wallet: {chain_id: 11124},
+        auth: {mode: 'privy'}, wallet: {chain_id: 84532},
       } : {
         environment: 'lab', capabilities: {box_play: {contract_version: 'gacha', max_quantity: 10, ready: true}, writes: {enabled: true}, payments: ['stripe_card']},
       });

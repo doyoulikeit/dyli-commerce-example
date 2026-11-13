@@ -1,6 +1,6 @@
 # Before you launch
 
-Start with a narrow launch: one partner, explicit Box allowlist, batches of 1–10, card/balance, Vault/Sell, and a fixed set of approved domains. Keep unavailable Shop/listing/offer APIs out of the live pitch.
+Start with a narrow launch: one partner, explicit Box allowlist, batches of 1-10, card/balance, Vault/Sell, and a fixed set of approved domains. Keep unavailable Shop/listing/offer APIs out of the live pitch.
 
 ## Handoff package
 

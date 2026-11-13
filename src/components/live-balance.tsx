@@ -37,7 +37,7 @@ export function LiveBalance({ session, readWallet, send, onClose, onSignOut }: P
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   const checkingRef = useRef(false);
-  const network = snapshot.balance.chain_id === 11124 ? "Abstract testnet" : "Abstract";
+  const network = snapshot.balance.chain_id === 84532 ? "Base testnet" : "Base";
   const unresolved = pendingWithdrawal(record);
 
   const save = useCallback((next: Withdrawal | null) => {

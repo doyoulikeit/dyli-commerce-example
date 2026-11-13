@@ -7,7 +7,7 @@ const wallet = '0x1111111111111111111111111111111111111111';
 const recipient = '0x2222222222222222222222222222222222222222';
 const token = '0x84A71ccD554Cc1b02749b35d22F684CC8ec987e1';
 const hash = `0x${'ab'.repeat(32)}`;
-const snapshot = { wallet, balance: { amount: '10.123456', currency: 'USDC', token, chain_id: 2741 } };
+const snapshot = { wallet, balance: { amount: '10.123456', currency: 'USDC', token, chain_id: 8453 } };
 const draft = () => makeWithdrawal(recipient, '3.123456', snapshot, wallet);
 
 test('withdrawals use exact six-decimal amounts and reject unsafe recipients or networks', () => {
@@ -22,7 +22,7 @@ test('withdrawals use exact six-decimal amounts and reject unsafe recipients or 
   assert.throws(() => makeWithdrawal(recipient, '1', { ...snapshot, balance: { ...snapshot.balance, currency: 'ETH' } }, wallet));
 });
 
-test('a confirmed review rechecks balance, persists before send, and transfers only native Abstract USDC', async () => {
+test('a confirmed review rechecks balance, persists before send, and transfers only native Base USDC', async () => {
   const events = [];
   let saved = null;
   const record = await submitWithdrawal(draft(), {
@@ -31,7 +31,7 @@ test('a confirmed review rechecks balance, persists before send, and transfers o
     send: async tx => {
       events.push('send');
       assert.equal(saved.status, 'submitting');
-      assert.equal(tx.chain_id, 2741);
+      assert.equal(tx.chain_id, 8453);
       assert.equal(tx.from, wallet);
       assert.equal(tx.to, token);
       assert.equal(tx.value, '0');
@@ -55,7 +55,7 @@ test('pending/corrupt recovery, insufficient fresh funds, network changes and bl
   await assert.rejects(submitWithdrawal(draft(), { ...dependencies, load: draft }), /pending transfer/);
   await assert.rejects(submitWithdrawal(draft(), { ...dependencies, load: () => parseWithdrawal('{', wallet) }), /could not be read/);
   await assert.rejects(submitWithdrawal(draft(), { ...dependencies, read: async () => ({ ...snapshot, balance: { ...snapshot.balance, amount: '1' } }) }), /exceeds/);
-  await assert.rejects(submitWithdrawal(draft(), { ...dependencies, read: async () => ({ ...snapshot, balance: { ...snapshot.balance, chain_id: 11124 } }) }), /network changed/);
+  await assert.rejects(submitWithdrawal(draft(), { ...dependencies, read: async () => ({ ...snapshot, balance: { ...snapshot.balance, chain_id: 84532 } }) }), /network changed/);
   await assert.rejects(submitWithdrawal(draft(), { ...dependencies, save() { throw Error('Storage blocked'); } }), /Storage blocked/);
   assert.equal(sends, 0);
 });

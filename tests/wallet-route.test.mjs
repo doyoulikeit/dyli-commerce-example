@@ -13,7 +13,7 @@ const units = 3123456n;
 function routeFixture(options = {}) {
   const calls = [];
   class AuthError extends Error { constructor(status, message) { super(message); this.status = status; } }
-  const context = { token, chainId: 2741, client: {
+  const context = { token, chainId: 8453, client: {
     getTransactionReceipt: async () => {
       calls.push('receipt');
       if (options.pending) throw new viem.TransactionReceiptNotFoundError({ hash });
@@ -38,7 +38,7 @@ function routeFixture(options = {}) {
       return { identity: { walletAddress: wallet }, readiness: {} };
     } };
     if (name === '@/lib/wallet-server') return { walletReadContext: () => context, readWalletBalance: async (_context, address) => {
-      assert.equal(address, wallet); calls.push('balance'); return { amount: '7', currency: 'USDC', token, chain_id: 2741 };
+      assert.equal(address, wallet); calls.push('balance'); return { amount: '7', currency: 'USDC', token, chain_id: 8453 };
     } };
     if (name === '@/lib/privy-server') return { AuthError, authErrorResponse: error => error instanceof AuthError ? Response.json({ error: error.message }, { status: error.status }) : null };
     if (name === '@/lib/dyli') return { apiErrorResponse: error => Response.json({ error: error.message }, { status: 503 }) };

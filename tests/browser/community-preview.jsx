@@ -57,7 +57,7 @@ function Preview() {
   const [view, setView] = useState(params.get("view") || "shop");
   const [intent, setIntent] = useState(null);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
-  const [session, setSession] = useState({ identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 2741 }, holdings: { items } });
+  const [session, setSession] = useState({ identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 8453 }, holdings: { items } });
   const api = useCallback(async (_path, body) => {
     window.fixtureAudit.push({ type: "api", action: body.action });
     if (body.action === "market") {
@@ -81,7 +81,7 @@ function Preview() {
         const trade = trades.find(trade => trade.id === input.trade_id);
         input.preview = { give: trade.to_items, receive: trade.from_items }; input.give_usdc = String(trade.to_usdc * 1e6); input.receive_usdc = String(trade.from_usdc * 1e6);
       }
-      action = { id: crypto.randomUUID(), input, kind: input.kind, wallet_address: wallet, external_customer_id: "fixture", status: "prepared", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 600000).toISOString(), approvals: [], transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: market, data: "0x1234", value: "0" } };
+      action = { id: crypto.randomUUID(), input, kind: input.kind, wallet_address: wallet, external_customer_id: "fixture", status: "prepared", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 600000).toISOString(), approvals: [], transaction: { chain: "base", chain_id: 8453, from: wallet, to: market, data: "0x1234", value: "0" } };
       sessionStorage.setItem("community-fixture-action", JSON.stringify(action));
       return { action: structuredClone(action) };
     }

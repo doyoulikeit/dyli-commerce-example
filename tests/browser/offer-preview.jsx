@@ -12,7 +12,7 @@ const hash = `0x${"a".repeat(64)}`, approvalHash = `0x${"b".repeat(64)}`;
 const params = new URLSearchParams(location.search);
 const id = "11111111-1111-4111-8111-111111111111";
 const item = { token_id: "123", name: "Togekiss AR - M2a: High Class Pack: MEGA Dream ex", image_url: "https://tcgplayer-cdn.tcgplayer.com/product/665874_400w.jpg", balance: 1, estimated_unit_value_usd: 1.77 };
-const session = { identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 2741 } };
+const session = { identity: { walletAddress: wallet, externalCustomerId: "fixture" }, balance: { chain_id: 8453 } };
 const expires = Math.floor(Date.now() / 1000) + (params.has("expired") ? -100 : params.has("rollover") ? 12 : 48 * 3600);
 const offer = { id: "77", token_id: "123", price: 1.5, amount: "1500000", currency: "USDC", standing_offer_price: 1.18,
   expiration: expires, expires_at: new Date(expires * 1000).toISOString(), type: "claim_buyback", quantity: 1 };
@@ -67,8 +67,8 @@ function Preview() {
       if (body.offerId !== quoted.id || body.expectedAmount !== quoted.amount) throw Error("Offer changed");
       sale ||= { id, offer: quoted, token_id: "123", offer_id: quoted.id, wallet_address: wallet, external_customer_id: "fixture",
         status: params.has("expired") ? "expired" : "prepared", expires_at: quoted.expires_at,
-        transaction: { chain: "abstract", chain_id: 2741, from: wallet, to: market, data: "0x1234", value: "0" },
-        approval_transaction: params.has("approval") ? { chain: "abstract", chain_id: 2741, from: wallet, to: collection, data: "0xabcd", value: "0" } : null };
+        transaction: { chain: "base", chain_id: 8453, from: wallet, to: market, data: "0x1234", value: "0" },
+        approval_transaction: params.has("approval") ? { chain: "base", chain_id: 8453, from: wallet, to: collection, data: "0xabcd", value: "0" } : null };
       sessionStorage.setItem("fixture-sale", JSON.stringify(sale));
     }
     if (body.action === "confirm") {

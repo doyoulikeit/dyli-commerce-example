@@ -8,11 +8,11 @@ import {
   http,
   isAddress,
 } from "viem";
-import { abstract, abstractTestnet } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import { suggestedShippingAddress } from "@/lib/shipping-address";
-import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
+import { baseRpcUrl } from "@/lib/base-rpc.mjs";
 import { isShippingQuoteError, parseShipmentRecovery, redemptionDraft, redemptionNeedsRefresh, shipmentMayHaveBeenSent, shippingOptionReference, sendShipmentTransaction, type ShipmentRecovery } from "@/lib/redemption-recovery";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { CommerceProgress } from "@/components/commerce-progress";
@@ -355,9 +355,9 @@ export function LiveRedemption({
           const amount = BigInt(amountCents) * BigInt(10000);
           const client = createPublicClient({
             chain:
-              session.balance.chain_id === 2741 ? abstract : abstractTestnet,
-            transport: http(abstractRpcUrl(session.balance.chain_id, {
-              url: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL,
+              session.balance.chain_id === 8453 ? base : baseSepolia,
+            transport: http(baseRpcUrl(session.balance.chain_id, {
+              url: process.env.NEXT_PUBLIC_BASE_RPC_URL,
               alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
             }), { timeout: 15000 }),
           });
@@ -371,7 +371,7 @@ export function LiveRedemption({
           if (allowance < amount) {
             const approval = await sendShipmentTransaction({ recovery: saved || { id: redemption.id }, approval: true, send, save: persist,
               expiresAt: fresh.redemption.expires_at, transaction: {
-              chain: "abstract",
+              chain: "base",
               chain_id: session.balance.chain_id,
               from: owner,
               to: token,

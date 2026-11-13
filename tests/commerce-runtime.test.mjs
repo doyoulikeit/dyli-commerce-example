@@ -1,26 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCommerceRuntime, parseAbstractPaymaster, registeredCheckoutOrigin, checkoutReturnUrls, shopEnabled } from '../src/lib/commerce-runtime.ts';
-import { getGeneralPaymasterInput } from 'viem/zksync';
+import { parseCommerceRuntime, parsePackSponsorship, registeredCheckoutOrigin, checkoutReturnUrls, shopEnabled } from '../src/lib/commerce-runtime.ts';
 
 const bootstrap = {
   bootstrap_version: 1,
   auth: { mode: 'dyli_managed', available: true, app_id: 'public-app', app_secret: 'must-not-escape', allowed_origins: ['https://shop.example', 'http://localhost:3000'], storefront_origin: 'https://shop.example', sponsor_transactions: true },
-  wallet: { chain_id: 11124 }, storefront: { name: 'Partner', boxes_only: true },
+  wallet: { chain_id: 84532 }, storefront: { name: 'Partner', boxes_only: true },
 };
-test('native paymaster is discovered from the key and only safe public parameters cross to the client', () => {
-  const gas = { available: true, provider: 'abstract_paymaster', chain_id: 11124, paymaster: `0x${'b'.repeat(40)}`, paymaster_input: getGeneralPaymasterInput({ innerInput: '0x' }), secret: 'never-expose' };
-  const wallet = { chain_id: 11124, gas_sponsorship: gas };
-  const runtime = parseCommerceRuntime({ ...bootstrap, wallet });
-  assert.equal(runtime.paymaster.address, gas.paymaster);
-  assert.equal(runtime.paymaster.input, gas.paymaster_input);
-  assert.equal(runtime.sponsorTransactions, false, 'never enable unrelated Privy sponsorship');
-  assert.ok(!JSON.stringify(runtime).includes('never-expose'));
-  for (const patch of [{ chain_id: 2741 }, { provider: 'other' }, { paymaster: `0x${'0'.repeat(40)}` }, { paymaster_input: '0x1234' }]) {
-    assert.throws(() => parseAbstractPaymaster({ ...wallet, gas_sponsorship: { ...gas, ...patch } }));
-  }
-  assert.equal(parseAbstractPaymaster(undefined), null);
-  assert.equal(parseAbstractPaymaster({ ...wallet, gas_sponsorship: { ...gas, available: false } }), null);
+test('managed Base pack sponsorship exposes only public capability metadata', () => {
+ const gas = { available: true, provider: 'alchemy_gas_manager', chain_id: 84532, account_mode: 'eip7702', scope: 'paid_pack_openings', requires_dyli_login: false, secret: 'never-expose' };
+ const wallet = { chain_id: 84532, registration: { ready: true }, gas_sponsorship: gas };
+ const runtime = parseCommerceRuntime({ ...bootstrap, wallet });
+ assert.deepEqual(runtime.packSponsorship, { chainId: 84532, provider: gas.provider, scope: gas.scope });
+ assert.equal(runtime.walletRegistration, true);
+ assert.equal(runtime.sponsorTransactions, false);
+ assert.ok(!JSON.stringify(runtime).includes('never-expose'));
+ for (const patch of [{ chain_id: 8453 }, { provider: 'other' }, { account_mode: 'other' }, { scope: 'all_transactions' }, { requires_dyli_login: true }])
+   assert.throws(() => parsePackSponsorship({ ...wallet, gas_sponsorship: { ...gas, ...patch } }));
+ assert.equal(parsePackSponsorship(undefined), null);
+ assert.equal(parsePackSponsorship({ ...wallet, gas_sponsorship: { available: false } }), null);
 });
 test('existing auth discovers a registered origin without Privy, provider secrets or sponsorship', () => {
   const runtime = parseCommerceRuntime({ ...bootstrap, auth: { mode: 'existing', available: true, provider: 'custom', storefront_origin: 'https://shop.example', secret: 'must-not-escape' } });

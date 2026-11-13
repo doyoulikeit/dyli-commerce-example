@@ -2,11 +2,11 @@
 
 Run your own collectibles storefront with DYLI's live inventory, checkout, marketplace and trading.
 
-**[Start here: setup and run](docs/PARTNER-QUICKSTART.md)** · [Commerce overview](https://www.dyli.io/docs/api/commerce)
+**[Choose login and wallets](docs/WALLETS.md) | [Setup and run](docs/PARTNER-QUICKSTART.md)** · [Commerce overview](https://www.dyli.io/docs/api/commerce)
 
 ## Available in v1
 
-Commerce includes boxes, vaulting, sell-backs, shipping, secondary marketplace and P2P trading. Open 1–10 of a box, buy or list collectibles, make offers, trade items and ship from the vault.
+Commerce includes boxes, vaulting, sell-backs, shipping, secondary marketplace and P2P trading. Open 1-10 of a box, buy or list collectibles, make offers, trade items and ship from the vault.
 
 When the connected API reports `capabilities.post_vault_offers.ready`, opening an
 item in **Vault** also shows its available DYLI buyback amount, expiration and
@@ -15,18 +15,18 @@ Initial eligible buybacks keep the original price and 48-hour deadline; later
 offers keep DYLI's normal rules. Sale IDs/hashes are saved for recovery, and
 Activity can resume confirmation even after an item leaves the vault.
 
-Card and Abstract USDC balance payments are built in. A custom checkout can accept
-other crypto through a swap or bridge, then settle the exact quote in Abstract USDC
+Card and Base USDC balance payments are built in. A custom checkout can accept
+other crypto through a swap or bridge, then settle the exact quote in Base USDC
 with payer authorization. See [custom payments](docs/PAYMENT-OWNERSHIP.md).
 
-The balance popup also supports direct **Abstract USDC deposits and withdrawals**:
+The balance popup also supports direct **Base USDC deposits and withdrawals**:
 copy/scan the wallet address to deposit, or enter a recipient and amount, review,
 then confirm a withdrawal. It reuses the key-discovered token/network and existing
-paymaster configuration with no additional environment variables. This is a transfer
-on Abstract, not a bank cash-out or cross-chain bridge. Pending withdrawals are
+Base network settings. Withdrawals need Base ETH for gas. This is a transfer
+on Base, not a bank cash-out or cross-chain bridge. Pending withdrawals are
 saved per wallet and checked against on-chain receipts before another send.
 
-The homepage shows Marketplace below Boxes, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Abstract USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for boxes, not peer transactions.
+The homepage shows Marketplace below Boxes, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Base USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for boxes, not peer transactions.
 
 ## Quick setup
 
@@ -44,7 +44,7 @@ If an env file already exists, edit it instead of overwriting it. Open [localhos
 
 The key discovers your app; **no slug or API URL setting is needed** for production. Your own Privy login also needs its app ID, server secret and registered HTTPS storefront origin. Existing-login adapters and optional managed login are covered in the [quickstart](docs/PARTNER-QUICKSTART.md).
 
-Want your own wallet RPC? Set the optional `NEXT_PUBLIC_ALCHEMY_API_KEY` to your own Abstract-enabled Alchemy app key. The example builds the URL for you; otherwise it uses Abstract's public RPC. See the [quickstart](docs/PARTNER-QUICKSTART.md#2-set-up-the-repo) for browser-key restrictions.
+Want your own wallet RPC? Set the optional `NEXT_PUBLIC_ALCHEMY_API_KEY` to your own Base-enabled Alchemy app key. The example builds the URL for you; otherwise it uses Base's public RPC. See the [quickstart](docs/PARTNER-QUICKSTART.md#2-set-up-the-repo) for browser-key restrictions.
 
 Optional server settings: `INCLUDED_IDS` selects your boxes; `FLAT_FEE` or `PERCENT_FEE` adds your customer fee (including zero). Commerce earns a 10% settled profit share, with your added fee reported separately in DYLI → Storefront → Commerce. See [boxes, fees and earnings](docs/PARTNER-QUICKSTART.md#4-choose-your-boxes).
 
@@ -67,7 +67,7 @@ and alerts using the [abuse-control guide](docs/ABUSE-CONTROLS.md).
 
 ## When you need more
 
-For managed login, domain changes, payments or testing, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support). Sign in to send a request. DYLI emails you a copy, and you can see the status and date in your request history. Managed login uses a separate Privy app for your storefront, not your customers' existing DYLI login.
+For managed login, domain changes, payments or testing, use the [Commerce support form](https://www.dyli.io/requestapi?inquiry=other#commerce-support). Sign in to send a request. DYLI emails you a copy, and you can see the status and date in your request history. DYLI-managed setup needs activation. Your own login and wallets, including your own Privy app, are self service. See [login and wallets](docs/WALLETS.md).
 
 - [Before launch](docs/PILOT-LAUNCH.md)
 - [Display boxes and pulls without cropping](https://www.dyli.io/docs/api/commerce-artwork)

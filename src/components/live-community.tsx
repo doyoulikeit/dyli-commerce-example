@@ -8,7 +8,7 @@ import {
   erc1155Abi,
   http,
 } from "viem";
-import { abstract, abstractTestnet } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { Check, LoaderCircle } from "lucide-react";
 import { LiveModal, Art } from "./live-catalog";
 import {
@@ -28,7 +28,7 @@ import {
   type CommunityAction,
   type CommunityRecovery,
 } from "@/lib/community";
-import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
+import { baseRpcUrl } from "@/lib/base-rpc.mjs";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import type {
   ApiRecord,
@@ -263,12 +263,12 @@ export function LiveCommunity({
       persist(recovery);
       setAction(current);
       const chain =
-        session.balance.chain_id === 2741 ? abstract : abstractTestnet;
+        session.balance.chain_id === 8453 ? base : baseSepolia;
       const client = createPublicClient({
         chain,
         transport: http(
-          abstractRpcUrl(chain.id, {
-            url: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL || "",
+          baseRpcUrl(chain.id, {
+            url: process.env.NEXT_PUBLIC_BASE_RPC_URL || "",
             alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || "",
           }),
         ),
@@ -477,7 +477,7 @@ export function LiveCommunity({
                       )}
                     </strong>
                     <small>
-                      {Number(action.input.quantity || 1)} item(s) · Abstract
+                      {Number(action.input.quantity || 1)} item(s) · Base
                       USDC
                     </small>
                   </div>

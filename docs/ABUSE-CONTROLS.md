@@ -49,7 +49,7 @@ Vercel's overwritten `x-vercel-forwarded-for` supplies the client IP. On another
 host, set `STOREFRONT_CLIENT_IP_HEADER` only to a header your trusted reverse proxy
 overwrites, and prevent direct access to the application server. Otherwise all
 unidentified clients safely share a bucket. Never trust a shopper-supplied
-`X-Forwarded-For`. Only keyed hashes—not raw IPs or customer IDs—go to the counter
+`X-Forwarded-For`. Only keyed hashes, not raw IPs or customer IDs, go to the counter
 endpoint. Expired subject counters are pruned as protection traffic continues.
 
 ## Monitoring and edge protection

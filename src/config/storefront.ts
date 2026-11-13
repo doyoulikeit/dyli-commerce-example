@@ -25,7 +25,7 @@ export const storefrontConfig = {
     manualQueuePurchaseTypes: ["box"] as string[],
   },
   transactions: {
-    sponsored: Boolean(process.env.NEXT_PUBLIC_ABSTRACT_PAYMASTER),
+    sponsored: false, // Pack sponsorship is discovered from Commerce bootstrap.
   },
   catalog: {
     surfaces: [

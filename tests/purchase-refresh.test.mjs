@@ -32,7 +32,7 @@ function fixture({ failRefresh = false, failOpening = false, recovery = saved, b
       const body = init.body ? JSON.parse(init.body) : null;
       calls.push({ path, body });
       if (path.startsWith('/api/session')) return sessionResponse ? sessionResponse(path) : failRefresh ? Response.json({ error: 'temporary limit failure' }, { status: 503 })
-        : Response.json({ identity: { walletAddress: wallet }, balance: { amount: '65', chain_id: 2741 }, orders: [] });
+        : Response.json({ identity: { walletAddress: wallet }, balance: { amount: '65', chain_id: 8453 }, orders: [] });
       if (path === '/api/checkout') return Response.json({ order: { id: 'paid-order', items: [] } });
       if (path === '/api/box-plays') return failOpening ? Response.json({ error: 'Opening unavailable; purchase saved' }, { status: 503 })
         : Response.json(boxResponse ? boxResponse(body) : { box_play: { id: 'saved-play', status: 'authorized', opening_reference: 'opening', rewards: [] } });
@@ -74,7 +74,7 @@ test('a failed account refresh cannot turn a paid, saved opening into a failed p
 });
 
 const reward = { index: 0, product: { name: 'Saved pull' }, buyback_amount: 36.46 };
-const transaction = { chain: 'abstract', chain_id: 2741, from: wallet, to: `0x${'c'.repeat(40)}`, value: '0', data: '0x12345678' };
+const transaction = { chain: 'base', chain_id: 8453, from: wallet, to: `0x${'c'.repeat(40)}`, value: '0', data: '0x12345678' };
 const paidRecovery = { ...saved, orderId: 'paid-order', playId: 'saved-play', openingReference: 'old-opening', buyHash: hash, decisions: ['sell_back'] };
 
 test('restarting a paid opening hides retained rewards and confirms the new buy before revealing', async () => {
@@ -127,6 +127,20 @@ test('uncertain settlement saves its exact transaction hash; retry checks its re
   assert.equal(f.render().flow, null);
 });
 
+test('claim-first keep completion refreshes the collection without sending another transaction', async () => {
+  const f = fixture({ recovery: paidRecovery, boxResponse: body => ({
+    box_play: { id: 'saved-play', status: body.action === 'decision' ? 'completed' : 'revealed',
+      opening_reference: 'old-opening', rewards: [reward], transaction: null },
+    ready: true,
+  }) });
+  f.render(); f.mount(); await flush(); await f.render().resume();
+  assert.equal(await f.render().settle(), true);
+  assert.equal(f.render().flow, null);
+  assert.equal(f.render().play, null);
+  assert.equal(f.calls.filter(call => call.body?.action === 'finalize').length, 0);
+  assert.equal(f.calls.filter(call => call.path === '/api/checkout').length, 0);
+});
+
 test('opening errors still surface and preserve the paid order for recovery', async () => {
   const f = fixture({ failOpening: true }); f.render(); f.mount(); await flush();
   assert.equal(await f.render().resume(), false);
@@ -157,7 +171,7 @@ test('post-sale refresh cannot reuse even a fresh request started before the sal
 });
 
 const accountSnapshot = (amount = '65', items = []) => ({
-  identity: { walletAddress: wallet }, balance: { amount, chain_id: 2741 }, holdings: { items }, orders: [],
+  identity: { walletAddress: wallet }, balance: { amount, chain_id: 8453 }, holdings: { items }, orders: [],
 });
 const settledPlay = body => ({ box_play: {
   id: 'saved-play', status: body.action === 'finalize' ? 'completed' : 'revealed',

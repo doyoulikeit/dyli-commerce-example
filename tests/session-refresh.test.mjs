@@ -23,7 +23,7 @@ function fixture({ rpcFailure = false, metadataFailure = false } = {}) {
     { token_id: '10', name: 'Sold card', balance: 1, estimated_unit_value_usd: 1.5, estimated_value_usd: 1.5 },
     { token_id: '11', name: 'Multiple copies', balance: 3, estimated_unit_value_usd: 2, estimated_value_usd: 6 },
   ] };
-  const rpc = { getChainId: async () => 2741, readContract: async request => {
+  const rpc = { getChainId: async () => 8453, readContract: async request => {
     calls.push({ action: request.functionName });
     if (request.functionName === 'balanceOf') return 101425000n;
     assert.equal(request.address, contract);
@@ -37,7 +37,7 @@ function fixture({ rpcFailure = false, metadataFailure = false } = {}) {
     if (name === 'server-only') return {};
     if (name === 'viem') return { ...viem, createPublicClient: () => rpc };
     if (name === 'viem/chains') return chains;
-    if (name === './abstract-rpc.mjs') return { abstractRpcUrl: () => undefined };
+    if (name === './base-rpc.mjs') return { baseRpcUrl: () => undefined };
     if (name === './live-commerce') return live;
     throw Error(name);
   } });
@@ -48,7 +48,7 @@ function fixture({ rpcFailure = false, metadataFailure = false } = {}) {
     if (name === '@/lib/live-commerce') return live;
     if (name === '@/lib/live-server') return { customerFor: () => ({}), requireLiveContext: async () => ({
       identity: { externalCustomerId: 'customer', walletAddress: wallet },
-      readiness: { capabilities: { box_play: { chain_id: 2741 }, post_vault_offers: { ready: true } }, payment: { crypto: { tokens: { abstract: usdc } } } },
+      readiness: { capabilities: { box_play: { chain_id: 8453 }, post_vault_offers: { ready: true } }, payment: { crypto: { tokens: { base: usdc } } } },
     }) };
     if (name === '@/lib/privy-server') return { authErrorResponse: () => null };
     if (name === '@/lib/dyli') return {

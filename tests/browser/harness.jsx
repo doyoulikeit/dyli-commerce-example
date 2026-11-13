@@ -11,7 +11,7 @@ const storefront = await (await originalFetch("/fixtures/catalog")).json();
 storefront.readiness.capabilities.box_play = {
   contract_version: "gacha",
   ready: true,
-  chain_id: 11124,
+  chain_id: 84532,
   max_quantity: 10,
 };
 storefront.readiness.capabilities.payments = ["usdc", "stripe_card"];
@@ -27,8 +27,8 @@ let balance = 500,
   redemptions = [],
   shipment;
 const tx = (phase) => ({
-  chain: "abstract",
-  chain_id: 11124,
+  chain: "base",
+  chain_id: 84532,
   from: address,
   to: `0x${"d".repeat(40)}`,
   value: "0",
@@ -57,7 +57,7 @@ const session = () => ({
     amount: String(balance),
     currency: "USDC",
     token,
-    chain_id: 11124,
+    chain_id: 84532,
   },
   holdings: { items: holdings },
   orders: order ? [order] : [],
@@ -65,8 +65,8 @@ const session = () => ({
   boxPlays: play ? [play] : [],
 });
 const payment = {
-  tokens: { abstract: token },
-  recipients: { abstract: `0x${"e".repeat(40)}` },
+  tokens: { base: token },
+  recipients: { base: `0x${"e".repeat(40)}` },
 };
 window.fetch = async (url, init) => {
   const target = new URL(String(url), location.origin);
@@ -242,5 +242,5 @@ window.fetch = async (url, init) => {
   return Response.json(result);
 };
 createRoot(document.getElementById("root")).render(
-  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 11124, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'Vaulted', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
+  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 84532, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'Vaulted', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
 );

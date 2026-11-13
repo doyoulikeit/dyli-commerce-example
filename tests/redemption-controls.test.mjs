@@ -37,7 +37,7 @@ function fixture({ expired = false, prepared = false, saved = {}, failure = '', 
     address: { name: 'Test Buyer', address_line_1: '123 Main St', address_line_2: 'Apt 2', city: 'New York', state: 'NY', postal_code: '10001', country_alpha2: 'US', phone: '5555555555' },
     shipping_options: { manual: [{ id: 'option_0', courier_id: 'usps', carrier: 'USPS', amount: 8 }] },
     pricing: { amount: 8 }, payment: { token_address: `0x${'3'.repeat(40)}`, spender: `0x${'4'.repeat(40)}`, amount_cents: 800 },
-    transaction: { chain: 'abstract', from: wallet, to: `0x${'4'.repeat(40)}`, data: '0x1234', value: '0' },
+    transaction: { chain: 'base', from: wallet, to: `0x${'4'.repeat(40)}`, data: '0x1234', value: '0' },
   };
   storage.set(storageKey, JSON.stringify({ id: record.id, ...saved }));
   class FakeDate extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
@@ -56,7 +56,7 @@ function fixture({ expired = false, prepared = false, saved = {}, failure = '', 
         useEffect: (effect, inputs) => { const index = cursor++; if (!deps[index] || inputs.some((value, i) => value !== deps[index][i])) { effects.push(effect); deps[index] = inputs; } },
       };
       if (name === 'viem') return { isAddress: value => /^0x[a-f\d]{40}$/i.test(value), erc20Abi: [], http: () => ({}), encodeFunctionData: () => '0xapproval', createPublicClient: () => ({ readContract: async () => allowance ? BigInt(1000000000) : BigInt(0), waitForTransactionReceipt: async () => { if (fail === 'after-approval') clock += 700000; return { status: 'success' }; } }) };
-      if (name === 'viem/chains') return { abstract: {}, abstractTestnet: {} };
+      if (name === 'viem/chains') return { base: {}, baseSepolia: {} };
       if (name === '@/components/live-catalog') return { LiveModal: 'modal', Art: 'art' };
       if (name === '@/components/commerce-progress') return { CommerceProgress: 'progress' };
       if (name === '@/components/use-settlement-refresh') {
@@ -64,14 +64,14 @@ function fixture({ expired = false, prepared = false, saved = {}, failure = '', 
       }
       if (name === '@/lib/live-commerce') return { asRecord: value => value && typeof value === 'object' ? value : {}, asRows: value => Array.isArray(value) ? value : [], assetImage: () => null, usd: value => `$${value}` };
       if (name === '@/lib/shipping-address') return { suggestedShippingAddress };
-      if (name === '@/lib/abstract-rpc.mjs') return { abstractRpcUrl: () => undefined };
+      if (name === '@/lib/base-rpc.mjs') return { baseRpcUrl: () => undefined };
       if (name === '@/lib/confirmation-retry.mjs') return { retryConfirmation };
       if (name === '@/lib/redemption-recovery') return { ...recovery, redemptionNeedsRefresh: (value, now = clock) => recovery.redemptionNeedsRefresh(value, now) };
       throw new Error(`Unexpected import: ${name}`);
     },
   };
   vm.runInNewContext(compiled, context);
-  const props = { holdings: [{ token_id: '123', balance: 3 }], session: { identity: { name: 'Test Buyer', walletAddress: wallet }, balance: { chain_id: 2741 } },
+  const props = { holdings: [{ token_id: '123', balance: 3 }], session: { identity: { name: 'Test Buyer', walletAddress: wallet }, balance: { chain_id: 8453 } },
     api: async (_path, body) => {
       calls.push(JSON.parse(JSON.stringify(body)));
       if (body.action === 'get') return { redemption: structuredClone(record) };

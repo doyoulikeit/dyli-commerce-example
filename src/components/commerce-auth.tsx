@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { AbstractPaymaster } from "@/lib/commerce-runtime";
+import type { BoxPlay } from "@/lib/types";
 
 // Provider-neutral boundary used by the storefront. Implement this with your
 // existing session and wallet SDK; the Commerce UI never needs Privy hooks.
@@ -14,9 +14,9 @@ export type CommerceAuth = {
   getAccessToken: () => Promise<string | null>;
   wallet?: { address: string; switchChain: (chain: number) => Promise<unknown> };
   sendTransaction: (transaction: { to: `0x${string}`; data: `0x${string}`; value: bigint; chainId: number }, options: {
-    address: string; sponsor: boolean; paymaster?: AbstractPaymaster | null; expiresAt?: string; uiOptions: { showWalletUIs: boolean };
+    address: string; sponsor: boolean; pack?: BoxPlay; externalCustomerId?: string; expiresAt?: string; uiOptions: { showWalletUIs: boolean };
   }) => Promise<{ hash: `0x${string}` }>;
-  signMessage: (message: { message: string }, options: { address: string }) => Promise<{ signature: string }>;
+  signMessage: (message: { message: string }, options: { address: string; uiOptions?: { showWalletUIs: boolean } }) => Promise<{ signature: string }>;
 };
 export const CommerceAuthContext = createContext<CommerceAuth | null>(null);
 export function useCommerceAuth() {

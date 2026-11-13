@@ -1,6 +1,8 @@
 # Run your Box storefront
 
-This path uses the [full storefront example](https://github.com/doyoulikeit/dyli-commerce-example), your own Privy login, and embedded card checkout plus an Abstract USDC balance. Commerce v1 includes boxes, vaulting, sell-backs and redemptions.
+Choose your [login and wallet setup](WALLETS.md) first. You can keep existing Base wallets, add a provider behind your login, or use Privy for both. These options are self service.
+
+This path uses the [full storefront example](https://github.com/doyoulikeit/dyli-commerce-example), your own Privy login, and embedded card checkout plus a Base USDC balance. Commerce v1 includes boxes, vaulting, sell-backs and redemptions.
 
 ## 1. Register your app
 
@@ -47,7 +49,7 @@ Replace the placeholders. Use the HTTPS origin registered with DYLI and Privy, w
 
 `false` is live integration with **real production money and inventory**. To explore the non-paying UI first, set `NEXT_PUBLIC_DEMO_MODE=true`; Privy is not used in that mode. The example still needs a Commerce key for its live catalog. For a custom UI, you can use mock data without credentials or the Public Read API with a free Read key; Read keys cannot call Commerce.
 
-**Optional: your own Alchemy RPC.** Create an [Alchemy app with Abstract enabled](https://www.alchemy.com/docs/docs/reference/abstract-api-quickstart), then uncomment `NEXT_PUBLIC_ALCHEMY_API_KEY=` in `.env.local` and paste your app's key. No RPC URL is needed; the wallet uses DYLI's network. Leave it unset to use Abstract's public RPC. This is a browser-visible key, so use a dedicated app and [restrict its allowed domains](https://www.alchemy.com/docs/docs/how-to-add-allowlists-to-your-apps-for-enhanced-security), including localhost when testing. Never use an Alchemy admin access key. Server balance reads use the public RPC independently; `.env.example` has a separate advanced override for those. Gas sponsorship still comes from DYLI, not Alchemy.
+**Optional: your own Alchemy RPC.** Create an [Alchemy app with Base enabled](https://www.alchemy.com/docs/docs/reference/base-api-quickstart), then uncomment `NEXT_PUBLIC_ALCHEMY_API_KEY=` in `.env.local` and paste your app's key. No RPC URL is needed; the wallet uses DYLI's network. Leave it unset to use Base's public RPC. This is a browser-visible key, so use a dedicated app and [restrict its allowed domains](https://www.alchemy.com/docs/docs/how-to-add-allowlists-to-your-apps-for-enhanced-security), including localhost when testing. Never use an Alchemy admin access key. Server balance reads use the public RPC independently; `.env.example` has a separate advanced override for those. An RPC connection does not pay gas. Your own wallets need Base ETH or your own sponsorship.
 
 ## 3. Check and run
 
@@ -109,6 +111,6 @@ npm run pilot:configure -- --name="My Box Shop" --box-id=YOUR_BOX_ID
 
 Replace the ID with a real positive integer from the catalog. Repeat `--box-id` for more Boxes. This is a dry run; add `--apply` only after reviewing the target environment and preview. An empty API allowlist means all Boxes, not none.
 
-A zero partner fee does not remove the Box price, card processing or shipping. Gas sponsorship is discovered from DYLI's bootstrap; this starter requires it before checkout. Paying by card does not fund gas automatically.
+A zero partner fee does not remove the Box price, card processing or shipping. Your own wallets need Base ETH for gas or your own sponsorship. Approved managed wallets can use sponsored pack openings when bootstrap reports availability. Pack sponsorship does not cover transfers, marketplace actions or shipping. Card checkout does not fund gas.
 
 **Next: [test before launch](PILOT-LAUNCH.md).** A successful doctor check is not an end-to-end payment test.

@@ -10,6 +10,8 @@ try {
   const [root, bootstrap] = await Promise.all([client.readiness(), client.bootstrap()]);
   const capability = root.capabilities || {};
   check(bootstrap.bootstrap_version === 1, 'Bootstrap v1 available');
+  check([8453, 84532].includes(bootstrap.wallet?.chain_id), 'Base wallet network configured');
+  check(bootstrap.wallet?.chain_id !== 84532 || root.environment === 'lab', 'Base Sepolia is limited to a separate test lab');
   check(Boolean(bootstrap.integration?.application_id && bootstrap.partner?.slug), 'Application discovered from the Commerce key');
   check(capability.box_play?.contract_version === 'gacha' && capability.box_play?.max_quantity === 10, 'Bulk gacha protocol (1–10)');
   check(capability.writes?.enabled === true && capability.box_play?.ready === true, 'Box writes configured (not an end-to-end certification)');

@@ -337,7 +337,7 @@ function MarketDetail({
           </p>
           <strong className="cm-big-price">{usd(Number(item.price))}</strong>
           <small>
-            Abstract USDC · {isOffer ? "Offer per item" : "Price per item"}
+            Base USDC · {isOffer ? "Offer per item" : "Price per item"}
           </small>
           {!owned && !isOffer && Number(item.quantity) > 1 && (
             <label>

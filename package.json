@@ -19,6 +19,8 @@
     "community:configure": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/configure-community.mjs"
   },
   "dependencies": {
+    "@alchemy/aa-infra": "5.3.0",
+    "@alchemy/smart-accounts": "5.3.0",
     "@privy-io/react-auth": "3.37.4",
     "@privy-io/server-auth": "^1.32.5",
     "@stripe/react-stripe-js": "^6.8.2",

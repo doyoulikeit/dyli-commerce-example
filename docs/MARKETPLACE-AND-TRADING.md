@@ -6,7 +6,7 @@ Activity shows your marketplace and trade actions with item images, quantities a
 
 Desktop filters sit beside the listings. On mobile, **Filters** opens a bottom sheet. Choose your filters and tap **Show results** to apply them, or close the sheet to keep your current results.
 
-These are real transactions, not demo balances. Both use DYLI's existing Abstract contracts. Customers sign with their own wallet. Marketplace payments and optional trade cash are Abstract USDC. Card checkout remains available for boxes, not these peer transactions.
+These are real transactions, not demo balances. Both use DYLI's existing Base contracts. Customers sign with their own wallet. Marketplace payments and optional trade cash are Base USDC. Card checkout remains available for boxes, not these peer transactions.
 
 ## Choose your community
 

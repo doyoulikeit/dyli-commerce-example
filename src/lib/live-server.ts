@@ -31,7 +31,7 @@ export function customerFor(identity: Identity) {
   return {
     external_customer_id: identity.externalCustomerId,
     wallet_address: identity.walletAddress,
-    wallet_chain: "abstract",
+    wallet_chain: "base",
     email: identity.email || undefined,
     name: identity.name || undefined,
     partner_auth: { provider: "privy", subject: identity.userId },

@@ -1,30 +1,29 @@
 import type { ApiRecord } from "./types";
 
-export type AbstractPaymaster = { chainId: 2741 | 11124; address: `0x${string}`; input: `0x${string}` };
+export type PackSponsorship = { chainId: 8453 | 84532; provider: "alchemy_gas_manager"; scope: "paid_pack_openings" };
 
-export function parseAbstractPaymaster(wallet: ApiRecord | undefined): AbstractPaymaster | null {
+export function parsePackSponsorship(wallet: ApiRecord | undefined): PackSponsorship | null {
   const gas = wallet?.gas_sponsorship as ApiRecord | undefined;
   if (!gas || gas.available !== true) return null;
   const chainId = Number(wallet?.chain_id);
-  const address = String(gas.paymaster || "").toLowerCase();
-  const input = String(gas.paymaster_input || "");
-  if (gas.provider !== "abstract_paymaster" || ![2741, 11124].includes(chainId) ||
-      gas.chain_id !== chainId || !/^0x[a-f\d]{40}$/.test(address) || /^0x0{40}$/.test(address) ||
-      input !== `0x8c5a3445${"20".padStart(64, "0")}${"0".repeat(64)}`) {
-    throw new Error("DYLI returned invalid gas sponsorship settings");
+  if (gas.provider !== "alchemy_gas_manager" || ![8453, 84532].includes(chainId) ||
+      gas.chain_id !== chainId || gas.account_mode !== "eip7702" || gas.scope !== "paid_pack_openings" || gas.requires_dyli_login !== false) {
+    throw new Error("DYLI returned invalid Base pack sponsorship settings");
   }
-  return { chainId: chainId as 2741 | 11124, address: address as `0x${string}`, input: input as `0x${string}` };
+  return { chainId: chainId as 8453 | 84532, provider: "alchemy_gas_manager", scope: "paid_pack_openings" };
 }
 
 // Explicit public allowlist: never serialize an upstream response or env wholesale.
 export type CommerceRuntime = {
   authMode: "dyli_managed" | "partner" | "existing";
   appId: string;
-  chainId: 2741 | 11124;
+  chainId: 8453 | 84532;
   allowedOrigins: string[];
   storefrontOrigin: string | null;
   sponsorTransactions: boolean;
-  paymaster?: AbstractPaymaster | null;
+  packSponsorship?: PackSponsorship | null;
+  walletRegistration?: boolean;
+  clientId?: string;
   name: string;
   boxesOnly: boolean;
 };
@@ -40,16 +39,17 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
   const auth = payload.auth as ApiRecord | undefined;
   const wallet = payload.wallet as ApiRecord | undefined;
   const storefront = payload.storefront as ApiRecord | undefined;
-  if (payload.bootstrap_version !== 1 || ![2741, 11124].includes(Number(wallet?.chain_id))) {
+  if (payload.bootstrap_version !== 1 || ![8453, 84532].includes(Number(wallet?.chain_id))) {
     throw new Error("Connect a DYLI environment with Commerce bootstrap v1 enabled");
   }
   if (auth?.mode === "existing" && auth.available === true) {
     const origin = typeof auth.storefront_origin === "string" ? auth.storefront_origin : null;
     if (!origin || new URL(origin).protocol !== "https:") throw new Error("Register a storefront origin with DYLI");
     return {
-      authMode: "existing", appId: "", chainId: Number(wallet?.chain_id) as 2741 | 11124,
+      authMode: "existing", appId: "", chainId: Number(wallet?.chain_id) as 8453 | 84532,
       allowedOrigins: [origin], storefrontOrigin: origin, sponsorTransactions: false,
-      paymaster: parseAbstractPaymaster(wallet),
+      packSponsorship: parsePackSponsorship(wallet),
+    walletRegistration: (wallet?.registration as ApiRecord | undefined)?.ready === true,
       name: typeof storefront?.name === "string" ? storefront.name : "Vaulted",
       boxesOnly: storefront?.boxes_only === true,
     };
@@ -62,10 +62,12 @@ export function parseCommerceRuntime(payload: ApiRecord): CommerceRuntime {
   if (!origin || !origins.includes(origin)) throw new Error("DYLI must register a storefront origin before checkout");
   return {
     authMode: "dyli_managed", appId: auth.app_id,
-    chainId: Number(wallet?.chain_id) as 2741 | 11124,
+    clientId: typeof auth.client_id === "string" ? auth.client_id : undefined,
+    chainId: Number(wallet?.chain_id) as 8453 | 84532,
     allowedOrigins: origins, storefrontOrigin: origin,
     sponsorTransactions: false,
-    paymaster: parseAbstractPaymaster(wallet),
+    packSponsorship: parsePackSponsorship(wallet),
+      walletRegistration: (wallet?.registration as ApiRecord | undefined)?.ready === true,
     name: typeof storefront?.name === "string" ? storefront.name : "Vaulted",
     boxesOnly: storefront?.boxes_only === true,
   };

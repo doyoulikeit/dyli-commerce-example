@@ -1,21 +1,21 @@
 import "server-only";
 import { createPublicClient, erc20Abi, erc1155Abi, formatUnits, http, isAddress } from "viem";
-import { abstract, abstractTestnet } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import type { ApiRecord } from "./types";
-import { abstractRpcUrl } from "./abstract-rpc.mjs";
+import { baseRpcUrl } from "./base-rpc.mjs";
 import { asRecord, asRows } from "./live-commerce";
 
 export function walletReadContext(readiness: ApiRecord) {
   const capabilities = readiness.capabilities as ApiRecord;
   const chainId = Number((capabilities?.box_play as ApiRecord)?.chain_id);
   const crypto = (readiness.payment as ApiRecord)?.crypto as ApiRecord;
-  const token = (crypto?.tokens as ApiRecord)?.abstract;
-  if (![2741, 11124].includes(chainId) || typeof token !== "string" || !isAddress(token) || /^0x0{40}$/i.test(token))
+  const token = (crypto?.tokens as ApiRecord)?.base;
+  if (![8453, 84532].includes(chainId) || typeof token !== "string" || !isAddress(token) || /^0x0{40}$/i.test(token))
     throw new Error("DYLI balance configuration is unavailable");
   const client = createPublicClient({
-    chain: chainId === 2741 ? abstract : abstractTestnet,
-    transport: http(abstractRpcUrl(chainId, {
-      url: process.env.DYLI_ABSTRACT_RPC_URL || process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL,
+    chain: chainId === 8453 ? base : baseSepolia,
+    transport: http(baseRpcUrl(chainId, {
+      url: process.env.DYLI_BASE_RPC_URL || process.env.NEXT_PUBLIC_BASE_RPC_URL,
       alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
     }), { timeout: 12000 }),
   });

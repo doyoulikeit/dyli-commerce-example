@@ -32,8 +32,8 @@ export function usdcUnits(value: string) {
 
 export function makeWithdrawal(recipient: string, amount: string, snapshot: WalletSnapshot, wallet: string) {
   if (!isAddress(wallet) || snapshot.wallet.toLowerCase() !== wallet.toLowerCase() ||
-      ![2741, 11124].includes(snapshot.balance.chain_id) || snapshot.balance.currency !== "USDC" || !isAddress(snapshot.balance.token))
-    throw new Error("Wait for your Abstract balance to load.");
+      ![8453, 84532].includes(snapshot.balance.chain_id) || snapshot.balance.currency !== "USDC" || !isAddress(snapshot.balance.token))
+    throw new Error("Wait for your Base balance to load.");
   const destination = recipient.trim();
   if (!isAddress(destination) || /^0x0{40}$/i.test(destination) || /^0x0{36}dead$/i.test(destination) ||
       [wallet.toLowerCase(), snapshot.balance.token.toLowerCase()].includes(destination.toLowerCase()))
@@ -52,7 +52,7 @@ export function parseWithdrawal(raw: string | null, wallet: string): Withdrawal 
   try {
     const record = JSON.parse(raw) as Withdrawal;
     if (record.version !== 1 || record.wallet !== wallet.toLowerCase() || !isAddress(record.recipient) ||
-        !isAddress(record.token) || ![2741, 11124].includes(record.chainId) ||
+        !isAddress(record.token) || ![8453, 84532].includes(record.chainId) ||
         !Number.isFinite(record.createdAt) || record.createdAt <= 0 || usdcUnits(record.amount) <= BigInt(0) ||
         !["submitting", "pending", "confirmed", "failed"].includes(record.status) ||
         (record.hash && !validTransferHash(record.hash)) || (record.status !== "submitting" && !record.hash)) throw new Error();
@@ -76,7 +76,7 @@ export async function submitWithdrawal(record: Withdrawal, dependencies: {
   let hash: `0x${string}`;
   try {
     hash = await dependencies.send({
-      chain: "abstract", chain_id: fresh.chainId, from: fresh.wallet as `0x${string}`,
+      chain: "base", chain_id: fresh.chainId, from: fresh.wallet as `0x${string}`,
       to: fresh.token, value: "0",
       data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [fresh.recipient as `0x${string}`, usdcUnits(fresh.amount)] }),
     });
@@ -106,6 +106,6 @@ export function reconcileWithdrawal(record: Withdrawal, snapshot: WalletSnapshot
 }
 
 export function walletExplorer(chainId: number, wallet: string, hash?: string) {
-  const host = chainId === 11124 ? "https://sepolia.abscan.org" : "https://abscan.org";
+  const host = chainId === 84532 ? "https://sepolia.basescan.org" : "https://basescan.org";
   return hash && validTransferHash(hash) ? `${host}/tx/${hash}` : `${host}/address/${getAddress(wallet)}`;
 }

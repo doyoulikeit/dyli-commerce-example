@@ -115,9 +115,9 @@ export function validateTransaction(
   chainId: number,
 ) {
   if (
-    ![2741, 11124].includes(chainId) ||
+    ![8453, 84532].includes(chainId) ||
     tx.chain_id !== chainId ||
-    tx.chain !== "abstract" ||
+    tx.chain !== "base" ||
     tx.from.toLowerCase() !== wallet.toLowerCase() ||
     !/^0x[\da-f]{40}$/i.test(tx.to) ||
     !/^0x(?:[\da-f]{2})+$/i.test(tx.data) ||

@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     if (!/^0x[\da-f]{64}$/i.test(txHash))
       throw new AuthError(400, "A payment transaction hash is required");
     const payment = {
-      chain: "abstract",
+      chain: "base",
       tx_hash: txHash,
       payer: identity.walletAddress,
       payer_signature: body.signature,

@@ -12,11 +12,11 @@ test('embedded wallet still signs authorization, without a second confirmation p
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   vm.runInNewContext(source, { exports, require: (name) => {
-    if (name === 'react') return { createContext: value => ({ Provider: 'provider', value }) };
+    if (name === 'react') return { createContext: value => ({ Provider: 'provider', value }), useContext: () => null };
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === '@privy-io/react-auth') return {
       usePrivy: () => ({ ready: true, authenticated: true }), useWallets: () => ({ wallets: [] }),
-      useModalStatus: () => ({ isOpen: false }),
+      useModalStatus: () => ({ isOpen: false }), useSign7702Authorization: () => ({ signAuthorization() {} }),
       useSignMessage: () => ({ signMessage: async (...args) => { calls.push(args); return { signature: 'real-signature-result' }; } }),
     };
     if (name === './commerce-auth') return { CommerceAuthContext: { Provider: 'auth' } };

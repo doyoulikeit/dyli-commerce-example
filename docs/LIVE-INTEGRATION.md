@@ -4,7 +4,7 @@ Use `NEXT_PUBLIC_DEMO_MODE=true` to explore the UI without payments. That mode r
 
 ## Run locally
 
-Use Node 24+, `npm ci`, and the [partner quickstart](PARTNER-QUICKSTART.md). The recommended new-storefront setup uses your own Privy app; existing-login adapters and separately activated DYLI-managed login are alternatives. The Commerce key identifies the registered app without a slug setting. Bootstrap provides public network, sponsorship and presentation settings. Private credentials stay on their owning backend. DYLI's Abstract paymaster is discovered automatically; the starter blocks new checkout if it is unavailable.
+Use Node 24+, `npm ci`, and the [partner quickstart](PARTNER-QUICKSTART.md). The recommended new-storefront setup uses your own Privy app; existing-login adapters and separately activated DYLI-managed login are alternatives. The Commerce key identifies the registered app without a slug setting. Bootstrap provides public network, sponsorship and presentation settings. Private credentials stay on their owning backend. Your own wallets use ordinary Base transactions and need ETH for gas. Approved managed wallets can use the separate pack sponsorship service when bootstrap reports availability.
 
 Card checkout returns to the page that initiated checkout, preserving its path and query. The server validates remote origins against DYLI registration; localhost, 127.0.0.1 and IPv6 loopback are also allowed for development. This changes navigation only, not payment mode. Register local URLs with your login provider as well. `STOREFRONT_ORIGIN` is a fallback for clients that omit a return URL. The API never trusts a request Host header to authorize redirects.
 
@@ -60,7 +60,7 @@ share base; incomplete and non-paying test purchases are excluded.
 
 DYLI-managed Stripe is embedded by default; eligible devices may use Apple Pay. The completion callback or redirect is not proof of payment: the server resolves/validates the Checkout Session and confirms the DYLI order. DYLI independently verifies its webhook.
 
-Balance means the customer's real Abstract USDC. This starter sends the exact quote total once, then signs DYLI's payer-bound intent. Do not substitute a fake balance or `paid` flag. For a native app using your own Apple Pay or ledger, verify/debit it on your backend and settle DYLI from your treasury using Commerce's USDC flow. The treasury payer and the customer's delivery wallet may differ. Your backend owns your processor's refunds/disputes/reconciliation; arbitrary third-party receipts are not DYLI settlement.
+Balance means the customer's real Base USDC. This starter sends the exact quote total once, then signs DYLI's payer-bound intent. Do not substitute a fake balance or `paid` flag. For a native app using your own Apple Pay or ledger, verify/debit it on your backend and settle DYLI from your treasury using Commerce's USDC flow. The treasury payer and the customer's delivery wallet may differ. Your backend owns your processor's refunds/disputes/reconciliation; arbitrary third-party receipts are not DYLI settlement.
 
 Claims and sell-back USDC settle to the registered customer wallet, not automatically to your treasury or app ledger. If you maintain a separate balance, reconcile the confirmed settlement before crediting it. A reveal or a selected Sell button is not a payout. This starter requires Web Locks support for new balance payments and shipments so another browser tab cannot race the same wallet operation.
 
@@ -97,7 +97,7 @@ Activity → Continue sale also works after the item leaves holdings. Confirmati
 can finish after expiry if the transaction was mined in time. No sale is marked
 complete based only on a wallet callback, and a recording error must not trigger
 a second sale. Browser fixtures simulate transactions; they do not certify live
-liquidity, paymaster permissions or production settlement.
+liquidity, sponsorship permissions or production settlement.
 
 ### Purchase recovery
 

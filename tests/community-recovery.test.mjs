@@ -4,7 +4,7 @@ import { communityRecovery, communityPending, mergeCommunityRecovery, settleComm
 
 const wallet = `0x${'a'.repeat(40)}`, hash = `0x${'b'.repeat(64)}`, permission = `0x${'c'.repeat(64)}`;
 const id = '11111111-1111-4111-8111-111111111111';
-const tx = { chain: 'abstract', chain_id: 2741, from: wallet, to: `0x${'d'.repeat(40)}`, data: '0x1234', value: '0' };
+const tx = { chain: 'base', chain_id: 8453, from: wallet, to: `0x${'d'.repeat(40)}`, data: '0x1234', value: '0' };
 function fixture({ approvals = false, expired = false, saved = {}, fail = '' } = {}) {
   let latest = { wallet, key: 'community-123', input: { kind: 'buy' }, id, ...saved }, approved = !approvals;
   const calls = [];

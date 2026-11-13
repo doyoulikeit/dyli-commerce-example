@@ -79,7 +79,7 @@ export type CheckoutResponse = {
 };
 
 export type TransactionInstruction = {
-  chain: "abstract";
+  chain: "base";
   chain_id?: number;
   from: `0x${string}`;
   to: `0x${string}`;
@@ -119,6 +119,7 @@ export type BoxPlay = ApiRecord & {
     currency?: string | null;
   }>;
   transaction?: TransactionInstruction | null;
+  approval_transaction?: TransactionInstruction | null;
 };
 
 export type RedemptionItemInput = {

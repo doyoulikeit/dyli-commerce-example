@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPublicClient, erc1155Abi, http } from "viem";
-import { abstract, abstractTestnet } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { Art, LiveModal } from "@/components/live-catalog";
 import { asRecord, assetImage, usd } from "@/lib/live-commerce";
-import { abstractRpcUrl } from "@/lib/abstract-rpc.mjs";
+import { baseRpcUrl } from "@/lib/base-rpc.mjs";
 import { loadVaultOfferSnapshot } from "@/lib/vault-offers";
 import { retryConfirmation } from "@/lib/confirmation-retry.mjs";
 import { useSettlementRefresh } from "@/components/use-settlement-refresh";
@@ -207,9 +207,9 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
     }
     const { acceptance: fresh } = await api<{ acceptance: OfferAcceptance }>("/api/offers", { action: "get", acceptanceId: sale.id });
     setSale(fresh);
-    const chain = session.balance.chain_id === 2741 ? abstract : abstractTestnet;
-    const client = createPublicClient({ chain, transport: http(abstractRpcUrl(chain.id, {
-      url: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL, alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+    const chain = session.balance.chain_id === 8453 ? base : baseSepolia;
+    const client = createPublicClient({ chain, transport: http(baseRpcUrl(chain.id, {
+      url: process.env.NEXT_PUBLIC_BASE_RPC_URL, alchemyKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
     })) });
     const result = await settleVaultOffer({ sale: fresh, recovery, save: writeRecovery, send, progress: setBusy,
       wait: hash => client.waitForTransactionReceipt({ hash, timeout: 60000 }),
@@ -261,7 +261,7 @@ export function LiveVaultSale({ item, session, api, send, onComplete, onSettled,
           <p>{saved?.receiptConfirmed ? "Your transaction is confirmed. We’re finishing the sale record."
             : knownHash ? "Your transaction reference is saved. Continue confirmation without sending it again."
               : "A transaction was started, but its reference wasn’t saved. Enter it from your wallet history to continue."}</p>
-          {knownHash ? <a href={`${(session.balance.chain_id === 2741 ? abstract : abstractTestnet).blockExplorers.default.url}/tx/${knownHash}`} target="_blank" rel="noreferrer">View transaction</a> : <label>Transaction hash from your wallet history
+          {knownHash ? <a href={`${(session.balance.chain_id === 8453 ? base : baseSepolia).blockExplorers.default.url}/tx/${knownHash}`} target="_blank" rel="noreferrer">View transaction</a> : <label>Transaction hash from your wallet history
             <input aria-label="Transaction hash" value={recoveryHash} onChange={event => setRecoveryHash(event.target.value)} placeholder={saved?.hash || sale.tx_hash || saved?.approvalHash || "0x…"} />
           </label>}
           <button className="lc-primary" onClick={sell}>Retry confirmation</button>

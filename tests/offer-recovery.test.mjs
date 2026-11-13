@@ -5,7 +5,7 @@ import { parseOfferRecovery, offerStorageKey, saleMayHaveBeenSent, settleVaultOf
 const wallet = `0x${'a'.repeat(40)}`, hash = `0x${'b'.repeat(64)}`, approvalHash = `0x${'c'.repeat(64)}`;
 const id = '11111111-1111-4111-8111-111111111111';
 const saved = { wallet, tokenId: '123', key: 'offer-key-123', offerId: '77', expectedAmount: '75000000', id };
-const tx = { chain: 'abstract', chain_id: 2741, from: wallet, to: `0x${'d'.repeat(40)}`, data: '0x1234', value: '0' };
+const tx = { chain: 'base', chain_id: 8453, from: wallet, to: `0x${'d'.repeat(40)}`, data: '0x1234', value: '0' };
 function fixture({ approval = false, approved = false, failure = '', recovery = {}, status = 'prepared', expired = false } = {}) {
   let latest = { ...saved, ...recovery }, approvalDone = approved;
   const calls = [], states = [];
