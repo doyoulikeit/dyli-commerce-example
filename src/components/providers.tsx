@@ -74,6 +74,7 @@ function PrivyAdapter({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ action, ...body, walletAddress: wallet.address }),
           });
           const result = await response.json();
+          if (action === "rpc" && (response.status === 409 && result.retryWith === "alchemy" || typeof result.error?.code === "number")) return result;
           if (!response.ok) throw Error(result.message || result.error || "Wallet request failed");
           return result;
         },

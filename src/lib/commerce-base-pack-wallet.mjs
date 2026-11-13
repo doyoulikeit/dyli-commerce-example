@@ -1,7 +1,7 @@
 import { createPublicClient, custom, http, keccak256, toHex } from 'viem';
 import { base } from 'viem/chains';
 import { createBundlerClient, createPaymasterClient } from 'viem/account-abstraction';
-import { signAuthorization as signAccountAuthorization } from 'viem/actions';
+import { CoinbaseFailoverError, sendSponsoredUserOperation } from './commerce-sponsored-user-operation.mjs';
 import { recoverAuthorizationAddress } from 'viem/utils';
 import { toModularAccountV2, ModularAccountV2VersionRegistry } from '@alchemy/smart-accounts';
 import { estimateFeesPerGas } from '@alchemy/aa-infra';
@@ -88,17 +88,22 @@ function createCommerceSender({ owner, externalCustomerId, request, chain = base
         if(result)return result;
         storage?.setItem(key,JSON.stringify(saved));
       }
-      const transport = custom({ request: async ({ method, params }) => {
-        const result = await request('rpc', { ...scope, intent: saved.token, method, params });
-        if (result.error) throw Error(result.error.message || result.error);
+      const makeTransport = provider => custom({ request: async ({ method, params }) => {
+        const result = await request('rpc', { ...scope, intent: saved.token, method, params, ...(provider ? { provider } : {}) });
+        if (provider === 'coinbase' && result.retryWith === 'alchemy')
+          throw new CoinbaseFailoverError(result.message || 'Switching gas sponsorship to Alchemy.');
+        if (result.error) throw Object.assign(Error(result.error.message || result.error),
+          typeof result.error.code === 'number' ? { code: result.error.code } : {});
         return result.result;
-      } });
+      } }, { retryCount: provider === 'coinbase' ? 0 : 3 });
+      const transport = makeTransport();
       const bundler = makeBundler({ account: smart, chain, client, transport, pollingInterval: 1500,
         paymaster: makePaymaster({ transport }), userOperation: { estimateFeesPerGas } });
+      const coinbaseTransport = saved.sponsorshipProviders?.[0] === 'coinbase' ? makeTransport('coinbase') : null;
+      const preferredBundler = coinbaseTransport ? makeBundler({ account: smart, chain, client,
+        transport: coinbaseTransport, paymaster: makePaymaster({ transport: coinbaseTransport }) }) : undefined;
       try {
-        const authorization = smart.authorization && !(await smart.isDeployed())
-          ? await signAccountAuthorization(client, smart.authorization) : undefined;
-        const hash = await bundler.sendUserOperation({ calls, ...(authorization ? { authorization } : {}) });
+        const hash = await sendSponsoredUserOperation({ bundler, preferredBundler, smart, client, calls });
         const receipt = await bundler.waitForUserOperationReceipt({ hash });
         if (!receipt.success) { storage?.removeItem(key); throw Error('The pack transaction reverted.'); }
         storage?.removeItem(key);

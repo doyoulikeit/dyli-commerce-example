@@ -7,8 +7,9 @@ import ts from 'typescript';
 const wallet = `0x${'a'.repeat(40)}`;
 const identity = { externalCustomerId: 'customer-a', walletAddress: wallet };
 class AuthError extends Error { constructor(status, message) { super(message); this.status = status; } }
+class DyliApiError extends Error { constructor(status, payload) { super('upstream'); this.status = status; this.payload = payload; } }
 const reply = error => Response.json({ error: error.message }, { status: error.status || 500 });
-function fixture(kind, { foreignPlay = false, foreignWallet = false } = {}) {
+function fixture(kind, { foreignPlay = false, foreignWallet = false, upstreamError } = {}) {
   const calls = [], exports = {};
   const source = ts.transpileModule(readFileSync(new URL(`../src/app/api/wallet/${kind}/route.ts`, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -21,10 +22,11 @@ function fixture(kind, { foreignPlay = false, foreignWallet = false } = {}) {
     }, requestKey: key => key };
     if (name === '@/lib/runtime-server') return { loadCommerceRuntime: async () => ({ walletRegistration: true,
       authMode: 'dyli_managed', packSponsorship: { chainId: 8453 }, actionSponsorship: ['marketplace', 'shipping', 'usdc_transfers'] }) };
-    if (name === '@/lib/dyli') return { apiErrorResponse: reply, commerce: async (path, options) => {
+    if (name === '@/lib/dyli') return { DyliApiError, apiErrorResponse: reply, commerce: async (path, options) => {
       calls.push({ path, options });
       if (!options) return { box_play: { id: 'play-a', external_customer_id: foreignPlay ? 'customer-b' : 'customer-a',
         wallet_address: foreignWallet ? `0x${'b'.repeat(40)}` : wallet } };
+      if (upstreamError) throw new DyliApiError(upstreamError.status, upstreamError.payload);
       return { ok: true };
     } };
     throw Error(name);
@@ -46,6 +48,16 @@ test('wallet registration derives customer and wallet from the verified server i
   const rejected = await f.post({ action: 'prepare', walletAddress: `0x${'b'.repeat(40)}` });
   assert.equal(rejected.status, 403);
   assert.equal(f.calls.length, 1);
+});
+
+test('the wallet backend preserves only the trusted fallback signal and numeric execution errors', async () => {
+  const body = { action: 'rpc', external_customer_id: 'customer-a', box_play_id: 'play-a', intent: 'intent-a', method: 'eth_sendUserOperation', params: [] };
+  const f = fixture('sponsorship', { upstreamError: { status: 409, payload: { retryWith: 'alchemy', secret: 'not-public' } } });
+  const response = await f.post(body), result = await response.json();
+  assert.equal(response.status, 409); assert.equal(result.retryWith, 'alchemy'); assert.equal(result.secret, undefined);
+  const execution = fixture('sponsorship', { upstreamError: { status: 502, payload: { message: 'Execution reverted', details: { rpc_code: -32521, secret: 'hidden' } } } });
+  const rejected = await execution.post(body);
+  assert.equal(rejected.status, 502); assert.deepEqual(await rejected.json(), { error: { code: -32521, message: 'Execution reverted' } });
 });
 
 test('wallet confirmation cannot choose another customer or skip authorization validation', async () => {
@@ -75,13 +87,13 @@ test('sponsorship rejects foreign customers, plays, wallets and unsupported scop
 test('sponsored RPC forwards the current provider token and only the allowed scoped fields', async () => {
   const f = fixture('sponsorship');
   const result = await f.post({ action: 'rpc', external_customer_id: 'customer-a', box_play_id: 'play-a',
-    intent: 'intent-a', method: 'eth_sendUserOperation', params: [], ignored: 'not-forwarded' });
+    intent: 'intent-a', method: 'eth_sendUserOperation', params: [], provider: 'coinbase', ignored: 'not-forwarded' });
   assert.equal(result.status, 200);
   const sent = f.calls.find(call => call.options);
   assert.equal(sent.path, '/wallet/rpc');
   assert.equal(sent.options.headers['x-customer-access-token'], 'customer-wallet-token');
   assert.deepEqual(JSON.parse(sent.options.body), { external_customer_id: 'customer-a', box_play_id: 'play-a',
-    intent: 'intent-a', method: 'eth_sendUserOperation', params: [] });
+    intent: 'intent-a', method: 'eth_sendUserOperation', params: [], provider: 'coinbase' });
 });
 
 test('action sponsorship forwards one customer-bound scope and drops injected wallet fields', async () => {

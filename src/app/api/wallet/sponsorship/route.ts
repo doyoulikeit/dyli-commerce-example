@@ -1,4 +1,4 @@
-import { apiErrorResponse, commerce } from "@/lib/dyli";
+import { apiErrorResponse, commerce, DyliApiError } from "@/lib/dyli";
 import { AuthError, authErrorResponse } from "@/lib/privy-server";
 import { requireLiveIdentity } from "@/lib/live-server";
 import { loadCommerceRuntime } from "@/lib/runtime-server";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         throw new AuthError(403, "This pack does not belong to the signed-in wallet");
     }
     const fields = action === "intent" ? ["calls", "callData"]
-      : action === "rpc" ? ["intent", "method", "params"] : ["intent", "id", "resubmit"];
+      : action === "rpc" ? ["intent", "method", "params", "provider"] : ["intent", "id", "resubmit"];
     const input: ApiRecord = { external_customer_id: identity.externalCustomerId, [selected[0]]: body[selected[0]] };
     for (const field of fields) if (body[field] !== undefined) input[field] = body[field];
     return Response.json(await commerce(`/wallet/${action}`, {
@@ -36,5 +36,14 @@ export async function POST(request: Request) {
       headers: { "x-customer-access-token": request.headers.get("authorization")!.slice(7).trim() },
       body: JSON.stringify(input),
     }), { headers: { "Cache-Control": "private, no-store" } });
-  } catch (error) { return authErrorResponse(error) || apiErrorResponse(error); }
+  } catch (error) {
+    if (error instanceof DyliApiError && error.status === 409 && error.payload.retryWith === "alchemy")
+      return Response.json({ retryWith: "alchemy", message: "Switching gas sponsorship to Alchemy." },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } });
+    const details = error instanceof DyliApiError ? error.payload.details as ApiRecord | undefined : undefined;
+    if (error instanceof DyliApiError && typeof details?.rpc_code === "number")
+      return Response.json({ error: { code: details.rpc_code, message: String(error.payload.message || "The wallet action could not be completed.") } },
+        { status: error.status, headers: { "Cache-Control": "private, no-store" } });
+    return authErrorResponse(error) || apiErrorResponse(error);
+  }
 }

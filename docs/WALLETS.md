@@ -45,4 +45,4 @@ With your own wallets, arrange sponsorship with your wallet provider or fund Bas
 
 The example uses Base mainnet, chain ID `8453`. Base Sepolia, `84532`, is only for a separately supplied test lab. Demo mode simulates the UI and does not create a lab.
 
-[Full wallet registration API](https://www.dyli.io/docs/api/commerce-reference#customer-wallet-registration) | [Managed pack sponsorship](https://www.dyli.io/docs/api/commerce-wallet-sponsorship)
+[Wallet registration API](https://www.dyli.io/docs/api/commerce-reference#customer-wallet-registration) | [Gas fees](https://www.dyli.io/docs/api/commerce-wallet-sponsorship)
