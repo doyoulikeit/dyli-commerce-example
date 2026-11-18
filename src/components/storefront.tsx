@@ -37,6 +37,10 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApiRecord, CatalogItem, StorefrontResponse } from "@/lib/types";
+import { PackBrowser, PackCard, PackHero } from "@/components/pack-catalog";
+import { PackArtwork, type PackArtworkHandle } from "@/components/pack-artwork";
+import { CommerceLogo, ThemeSwitch } from "@/components/brand-identity";
+import { storefrontConfig } from "@/config/storefront";
 
 type Tab = "home" | "market" | "packs" | "collection" | "activity";
 type PaymentMethod = "balance" | "card";
@@ -832,7 +836,7 @@ export function Storefront({
   return (
     <div className="store-app">
       <Header
-        brand={text(process.env.NEXT_PUBLIC_STOREFRONT_NAME || "Vaulted")}
+        brand={storefrontConfig.brand.name}
         active={tab}
         balance={demo.balance}
         balanceSignal={balanceSignal}
@@ -852,8 +856,6 @@ export function Storefront({
       <main className="store-main">
         {tab === "home" ? (
           <HomeView
-            balance={demo.balance}
-            collectionValue={collectionValue}
             holdings={holdings}
             boxes={boxes}
             shop={catalog}
@@ -1055,23 +1057,13 @@ function StoreFooter() {
           unoptimized
         />
       </a>
-      <small>© {new Date().getFullYear()} Vaulted</small>
+      <small>© {new Date().getFullYear()} {storefrontConfig.brand.name}</small>
     </footer>
   );
 }
 
 function Logo({ brand }: { brand: string }) {
-  return (
-    <span className="brand-lockup">
-      <i aria-hidden="true">
-        <svg viewBox="0 0 40 40">
-          <path d="M4.5 6h9.2L20 26.1 26.3 6h9.2L24.8 34h-9.6L4.5 6Z" />
-        </svg>
-      </i>
-      <strong>{brand}</strong>
-      <small>Demo</small>
-    </span>
-  );
+  return <CommerceLogo name={brand} />;
 }
 
 function Header({
@@ -1108,6 +1100,7 @@ function Header({
         ))}
       </nav>
       <div className="header-account">
+        <ThemeSwitch />
         <span
           className={`balance-chip ${balanceSignal ? (balanceSignal.delta > 0 ? "balance-up" : "balance-down") : ""}`}
           aria-live="polite"
@@ -1197,7 +1190,7 @@ function WelcomeModal({ onComplete }: { onComplete: (name: string) => void }) {
         className="welcome-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Welcome to Vaulted"
+        aria-label={`Welcome to ${storefrontConfig.brand.name}`}
       >
         {name ? (
           <div className="welcome-credit">
@@ -1211,7 +1204,7 @@ function WelcomeModal({ onComplete }: { onComplete: (name: string) => void }) {
           </div>
         ) : (
           <form onSubmit={submitName}>
-            <Logo brand="Vaulted" />
+            <Logo brand={storefrontConfig.brand.name} />
             <div>
               <h1>What’s your name?</h1>
               <p>Let’s start your collection.</p>
@@ -1239,8 +1232,6 @@ function WelcomeModal({ onComplete }: { onComplete: (name: string) => void }) {
 }
 
 function HomeView({
-  balance,
-  collectionValue,
   holdings,
   boxes,
   shop,
@@ -1249,8 +1240,6 @@ function HomeView({
   onSelectHolding,
   onBuy,
 }: {
-  balance: number;
-  collectionValue: number;
   holdings: Holding[];
   boxes: CatalogItem[];
   shop: CatalogItem[];
@@ -1259,40 +1248,10 @@ function HomeView({
   onSelectHolding: (holding: Holding) => void;
   onBuy: (item: CatalogItem) => void;
 }) {
-  const total = balance + collectionValue;
   const shopPreview = balancedPreview(shop, 4);
-  const scrollToBuy = () =>
-    document
-      .getElementById("home-buy")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (
     <div className="page-in">
-      <section className="portfolio-hero">
-        <div className="portfolio-head">
-          <span>Portfolio</span>
-          <strong>{money(total)}</strong>
-          <small>
-            {holdings.reduce((sum, item) => sum + item.quantity, 0)}{" "}
-            collectibles
-          </small>
-        </div>
-        <div className="portfolio-actions">
-          <button onClick={scrollToBuy}>Buy</button>
-          <button onClick={() => onNavigate("collection")}>
-            View collection
-          </button>
-        </div>
-        <div className="balance-grid">
-          <div>
-            <span>Cash balance</span>
-            <strong>{money(balance)}</strong>
-          </div>
-          <div>
-            <span>Collectibles</span>
-            <strong>{money(collectionValue)}</strong>
-          </div>
-        </div>
-      </section>
+      <PackHero items={boxes} onSelect={onSelect} onExplore={() => onNavigate("packs")} demo />
       {holdings.length ? (
         <section className="asset-section">
           <SectionTitle
@@ -1554,18 +1513,7 @@ function BoxesView({
   error: string;
   onSelect: (item: CatalogItem) => void;
 }) {
-  return (
-    <div className="page-in">
-      <PageTitle title="Packs" count={items.length} />
-      {loading ? <BoxSkeleton /> : null}
-      {error ? <Empty message={error} /> : null}
-      <div className="packs-grid">
-        {items.map((item) => (
-          <BoxCard key={item.key} item={item} onSelect={() => onSelect(item)} />
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="page-in"><PackBrowser items={items} loading={loading} error={error} onSelect={onSelect} onRetry={() => window.location.reload()} /></div>;
 }
 
 function BoxCard({
@@ -1575,38 +1523,7 @@ function BoxCard({
   item: CatalogItem;
   onSelect: () => void;
 }) {
-  const raw = record(item.raw);
-  return (
-    <article className="pack-card">
-      <button
-        className="cover-button"
-        onClick={onSelect}
-        aria-label={`View ${item.name}`}
-      />
-      <div className="pack-art">
-        <ProductImage
-          src={item.image}
-          alt={item.name}
-          sizes="(max-width: 700px) 86vw, 360px"
-          boost={false}
-        />
-      </div>
-      <div className="pack-copy">
-        <small>
-          {item.brand} · {"Pack"}
-        </small>
-        <strong>{item.name}</strong>
-        <p>
-          <b>{money(item.price || 0)}</b>
-          <span>
-            {compact(Number(raw.inventory_count || item.availability || 0))}{" "}
-            left
-          </span>
-        </p>
-        <button onClick={onSelect}>Open pack</button>
-      </div>
-    </article>
-  );
+  return <PackCard item={item} onSelect={onSelect} />;
 }
 
 function ShipmentCard({ shipment }: { shipment: Shipment }) {
@@ -2868,7 +2785,7 @@ function Checkout({
                 <b>{money(subtotal)}</b>
               </p>
               <p>
-                <span>Vaulted fee</span>
+                <span>Storefront fee</span>
                 <b>{money(PLATFORM_FEE)}</b>
               </p>
             </div>
@@ -2902,6 +2819,7 @@ function BoxReveal({
 }) {
   useModal(onClose);
   const reduceMotion = useReducedMotion();
+  const rip = useRef<PackArtworkHandle>(null);
   useEffect(() => {
     if (run.stage !== "complete") return;
     const timer = window.setTimeout(onCollection, reduceMotion ? 40 : 260);
@@ -2958,31 +2876,14 @@ function BoxReveal({
             exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.96 }}
             transition={enter}
           >
-            <motion.div
-              animate={
-                reduceMotion ? undefined : { y: [0, -9, 0], rotate: [0, 1, 0] }
-              }
-              transition={{
-                duration: 3.2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              <ProductImage
-                src={run.item.image}
-                alt={run.item.name}
-                sizes="(max-width: 700px) 72vw, 380px"
-                priority
-                boost={false}
-              />
-            </motion.div>
+            <PackArtwork ref={rip} item={run.item} mode="rip" onComplete={onReveal} priority />
             <strong>{run.item.name}</strong>
             <small>
               {run.total > 1
                 ? `${run.total - run.opened} packs remaining`
                 : "Ready when you are"}
             </small>
-            <button onClick={onReveal}>Open pack</button>
+            <button onClick={() => rip.current?.open()}>Open pack</button>
           </motion.section>
         ) : null}
         {run.stage === "suspense" ? (
@@ -3236,18 +3137,6 @@ function CardSkeleton() {
           <span />
           <i />
           <b />
-        </div>
-      ))}
-    </div>
-  );
-}
-function BoxSkeleton() {
-  return (
-    <div className="packs-grid">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div className="pack-skeleton" key={index}>
-          <span />
-          <i />
         </div>
       ))}
     </div>

@@ -22,6 +22,8 @@ import {
   LiveProductDetail,
 } from "@/components/live-catalog";
 import { LiveReveal } from "@/components/live-reveal";
+import { PackBrowser, PackHero } from "@/components/pack-catalog";
+import { CommerceLogo, ThemeSwitch } from "@/components/brand-identity";
 import { RevealModeSelector } from "@/components/reveal-mode";
 import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences } from "@/lib/opening-preferences";
@@ -82,6 +84,9 @@ export function LiveStorefront({
   const { session, flow, play, busy, error, refresh: refreshAccount, setError: setCommerceError } = commerce;
   const [tab, setTab] = useState<Tab>("home");
   const [storefront, setStorefront] = useState(initialStorefront);
+  const [catalogLoading, setCatalogLoading] = useState(!initialStorefront);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<CatalogItem | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -106,18 +111,30 @@ export function LiveStorefront({
 
   useEffect(() => {
     const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+      setCatalogLoading(false);
+      setCatalogError("Inventory is taking longer than usual to load. Please try again.");
+    }, 25000);
     void fetch("/api/storefront", { signal: controller.signal })
       .then(async (response) => {
-        if (response.ok) setStorefront(await response.json());
+        if (!response.ok) throw new Error("Catalog unavailable");
+        const next = await response.json();
+        if (!controller.signal.aborted) { setStorefront(next);setCatalogError(""); }
       })
-      .catch(() => {});
+      .catch(() => { if (!controller.signal.aborted) setCatalogError("Inventory couldn’t refresh. Please try again."); })
+      .finally(() => { clearTimeout(timeout);if (!controller.signal.aborted) setCatalogLoading(false); });
     queueMicrotask(() =>
       setCheckoutReturn(
         new URLSearchParams(window.location.search).has("session_id"),
       ),
     );
-    return () => controller.abort();
-  }, []);
+    return () => { clearTimeout(timeout);controller.abort(); };
+  }, [catalogRevision]);
+
+  const retryCatalog = () => {
+    setCatalogLoading(!storefront);setCatalogError("");setCatalogRevision(value => value + 1);
+  };
 
   const navigate = (next: Tab, refresh = true) => {
     setTab(next);
@@ -135,14 +152,7 @@ export function LiveStorefront({
     : storefront?.catalog || [];
   const holdings = asRows(session?.holdings.items);
   const pricing = asRecord(flow?.quote?.price_breakdown);
-  const collectibleValue = holdings.reduce(
-    (sum, item) => sum + Number(item.estimated_value_usd || 0),
-    0,
-  );
   const checkoutReady = !!flow?.quote && flow.item.id === checkoutItem?.id;
-  const greeting = String(
-    session?.identity.name || session?.identity.email?.split("@")[0] || "",
-  );
   const capabilities = asRecord(storefront?.readiness.capabilities);
   const community = asRecord(capabilities.community);
   const marketplace = asRecord(community.marketplace), trading = asRecord(community.trading);
@@ -160,19 +170,21 @@ export function LiveStorefront({
       item.name.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const startCheckout = () => {
+  const startCheckout = (current?: CatalogItem) => {
     if (!commerce.authenticated) {
       commerce.login();
       return;
     }
-    if (!session || !selected) return;
+    const item = current || selected;
+    if (!session || !item) return;
     if (!liveReady) {
       commerce.setError(
         "This storefront is waiting for the upgraded Commerce environment.",
       );
       return;
     }
-    setCheckoutItem(selected);
+    commerce.setError("");
+    setCheckoutItem(item);
     setQuantity(1);
     setSelected(null);
   };
@@ -226,10 +238,7 @@ export function LiveStorefront({
   if (waitingForAccount(commerce.ready, commerce.authenticated, commerce.address, session?.identity.walletAddress)) {
     return (
       <main className="lc-account-loading" aria-busy={!error}>
-        <div className="brand-lockup" aria-label={brandName}>
-          <i><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 5h8l5 16 5-16h8L19 28h-6Z" /></svg></i>
-          <strong>{brandName}</strong>
-        </div>
+        <div className="brand-lockup" aria-label={brandName}><CommerceLogo name={brandName} /></div>
         {error ? (
           <div className="lc-account-loading-message" role="alert">
             <h1>{commerce.needsWalletRegistration ? "Connect your collection" : "Couldn’t load your account"}</h1>
@@ -256,12 +265,7 @@ export function LiveStorefront({
           onClick={() => navigate("home")}
           aria-label={`${brandName} home`}
         >
-          <i>
-            <svg viewBox="0 0 32 32" aria-hidden="true">
-              <path d="M3 5h8l5 16 5-16h8L19 28h-6Z" />
-            </svg>
-          </i>
-          <strong>{brandName}</strong>
+          <CommerceLogo name={brandName} />
         </button>
         <nav aria-label="Main navigation">
           {navigation.map(({ id, label }) => (
@@ -275,6 +279,7 @@ export function LiveStorefront({
           ))}
         </nav>
         <div className="lc-account">
+          <ThemeSwitch />
           <button className="lc-balance" aria-label="Your balance" disabled={!!busy} onClick={() => commerce.authenticated ? setProfile(true) : commerce.login()}>
             <Wallet />
             {session ? usd(session.balance.amount) : "—"}
@@ -371,41 +376,14 @@ export function LiveStorefront({
             </button>
           </form>
         )}
-        {!storefront && (
-          <div className="lc-notice">
-            The catalog is temporarily unavailable. Please refresh to try again.
-          </div>
-        )}
-        {tab === "home" && (
+        {catalogError && storefront && tab !== "packs" && <div className="dyli-inline-error" role="alert"><span>{catalogError}</span><button type="button" onClick={retryCatalog}>Try again</button></div>}
+        {!storefront && tab === "home" && <PackBrowser items={[]} onSelect={setSelected} loading={catalogLoading} error={catalogError} onRetry={retryCatalog} />}
+        {tab === "home" && storefront && (
           <>
-            <section className="lc-portfolio">
-              <div>
-                <p>
-                  {greeting ? `Welcome, ${greeting}` : "Your next great find."}
-                </p>
-                <h1>
-                  {session ? usd(collectibleValue) : "Start your collection."}
-                </h1>
-                <span>
-                  {session
-                    ? `${holdings.length} collectibles in your vault`
-                    : "Open a pack. Find something worth keeping."}
-                </span>
-              </div>
-              <button
-                className="lc-primary"
-                onClick={() =>
-                  document
-                    .getElementById("live-packs")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                Explore packs <ArrowUpRight />
-              </button>
-            </section>
+            <PackHero items={boxes} onSelect={setSelected} onExplore={() => navigate("packs")} />
             <section id="live-packs">
               <div className="lc-section-title">
-                <h2>Packs</h2>
+                <h2>Find your next favorite.</h2>
                 <button onClick={() => navigate("packs")}>
                   View all <ArrowUpRight />
                 </button>
@@ -462,14 +440,7 @@ export function LiveStorefront({
             </footer>
           </>
         )}
-        {tab === "packs" && (
-          <>
-            <h1>Packs</h1>
-            {boxes.length
-              ? cards(boxes, undefined, true)
-              : empty("No live packs", "Check back for the next opening.")}
-          </>
-        )}
+        {tab === "packs" && <PackBrowser items={boxes} onSelect={setSelected} loading={catalogLoading} error={catalogError} onRetry={retryCatalog} />}
         {tab === "shop" && marketplace.ready !== true && (
           <>
             <h1>Shop</h1>
@@ -618,6 +589,7 @@ export function LiveStorefront({
 
       {selected && (
         <LiveProductDetail
+          key={selected.key}
           item={selected}
           onClose={() => setSelected(null)}
           onCheckout={startCheckout}

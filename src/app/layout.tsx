@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import "./globals.css";
+import "@/components/commerce-theme.css";
+
+const siteName = process.env.NEXT_PUBLIC_STOREFRONT_NAME || "DYLI";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -12,23 +13,23 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Vaulted — Collect what you love",
-    template: "%s | Vaulted",
+    default: `${siteName} — Collect what you love`,
+    template: `%s | ${siteName}`,
   },
   description:
-    "Shop, vault, and ship authenticated collectibles.",
+    "Open packs. Discover collectibles. Vault, sell back, or ship your finds.",
   openGraph: {
-    title: "Vaulted — Collect what you love",
+    title: `${siteName} — Collect what you love`,
     description:
-      "Shop, vault, and ship authenticated collectibles.",
-    siteName: "Vaulted",
+      "Open packs. Discover collectibles. Vault, sell back, or ship your finds.",
+    siteName,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vaulted — Collect what you love",
+    title: `${siteName} — Collect what you love`,
     description:
-      "Shop, vault, and ship authenticated collectibles.",
+      "Open packs. Discover collectibles. Vault, sell back, or ship your finds.",
   },
 };
 
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body>{children}</body>
     </html>

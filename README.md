@@ -28,6 +28,12 @@ saved per wallet and checked against on-chain receipts before another send.
 
 The homepage shows Marketplace below Packs, with **View all** for search, filters, offers and your own listings. Shop and Trades use DYLI's existing contracts and the customer's Base USDC wallet. Choose whether to include outside DYLI listings and collectors with [community settings](docs/MARKETPLACE-AND-TRADING.md). The running server applies your explicit env settings automatically. Card checkout is available for packs, not peer transactions.
 
+## Pack experience
+
+The storefront includes DYLI branding, light/dark themes, searchable packs, live hits and odds, and a mobile pack sheet with a fixed checkout footer. Catalog cards stay lightweight; pack previews and openings reuse DYLI’s lazily loaded 3D renderer with reduced-motion and image fallbacks. Bulk review lets customers select vault or available buybacks before one explicit confirmation.
+
+The API now supplies optional public `artwork` metadata for the model, textures and poster. Reuse the renderer and React wrapper in your own app: [pack UI and asset guide](docs/PACK-EXPERIENCE.md).
+
 ## Quick setup
 
 Use Node 24+. Register a **Commerce** key at [dyli.io/requestapi](https://www.dyli.io/requestapi) with a DYLI Pro developer account.

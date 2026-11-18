@@ -5,13 +5,17 @@ import { LiveStorefront } from "../../src/components/live-storefront";
 import { Providers } from "../../src/components/providers";
 import { address } from "./privy.fixture";
 import "../../src/app/globals.css";
+import "../../src/components/commerce-theme.css";
 
 const originalFetch = window.fetch.bind(window);
+// Dedicated fixture origin only. Allows a new isolated run without carrying
+// over a simulated purchase from an earlier test; normal runs keep recovery.
+if (new URLSearchParams(location.search).has("fresh")) localStorage.clear();
 const storefront = await (await originalFetch("/fixtures/catalog")).json();
 storefront.readiness.capabilities.box_play = {
   contract_version: "gacha",
   ready: true,
-  chain_id: 84532,
+  chain_id: 8453,
   max_quantity: 10,
 };
 storefront.readiness.capabilities.payments = ["usdc", "stripe_card"];
@@ -28,7 +32,7 @@ let balance = 500,
   shipment;
 const tx = (phase) => ({
   chain: "base",
-  chain_id: 84532,
+  chain_id: 8453,
   from: address,
   to: `0x${"d".repeat(40)}`,
   value: "0",
@@ -36,7 +40,7 @@ const tx = (phase) => ({
   phase,
 });
 const itemLine = (item, quantity) => ({
-  type: item.surface === "boxes" ? "box" : "listing",
+  type: ["packs", "boxes"].includes(item.surface) ? "box" : "listing",
   box_id: Number(item.id),
   listing_id: item.id,
   quantity,
@@ -57,7 +61,7 @@ const session = () => ({
     amount: String(balance),
     currency: "USDC",
     token,
-    chain_id: 84532,
+    chain_id: 8453,
   },
   holdings: { items: holdings },
   orders: order ? [order] : [],
@@ -90,16 +94,18 @@ window.fetch = async (url, init) => {
   await new Promise((resolve) => setTimeout(resolve, 120));
   let result;
   if (path === "/api/storefront") result = storefront;
-  else if (path.startsWith("/api/boxes/"))
+  else if ((path.startsWith("/api/packs/") || path.startsWith("/api/boxes/")))
     result = await (
       await originalFetch("/fixtures/box/" + path.split("/").pop())
     ).json();
   else if (path === "/api/session") result = session();
+  else if (path === "/api/wallet") result = { wallet: address, balance: session().balance, receipt: null };
+  else if (path === "/api/community" && !init?.method) result = { listings: [], items: [], collectors: [], trades: [], actions: [], pagination: { total: 0 } };
   else if (path === "/api/checkout") {
     if (body.action === "quote") {
       const item = [...storefront.boxes, ...storefront.catalog].find(
         (i) =>
-          String(body.quoteItem.box_id || body.quoteItem.listing_id) === i.id,
+          String(body.quoteItem.pack_id || body.quoteItem.box_id || body.quoteItem.listing_id) === i.id,
       );
       const subtotal = Math.round(item.price * 100) * body.quoteItem.quantity;
       quote = {
@@ -117,6 +123,7 @@ window.fetch = async (url, init) => {
     } else if (body.action === "read") result = { quote, payment };
     else if (body.action === "authorize")
       result = {
+        payment_verified: true,
         authorization: {
           message: "Offline fixture authorization — not a real payment",
         },
@@ -141,7 +148,7 @@ window.fetch = async (url, init) => {
         },
         { status: 409 },
       );
-  } else if (path === "/api/box-plays") {
+  } else if (["/api/pack-plays", "/api/box-plays"].includes(path)) {
     if (body.action === "create") {
       play ||= {
         id: "33333333-3333-4333-8333-333333333333",
@@ -236,11 +243,11 @@ window.fetch = async (url, init) => {
     result = { redemption: shipment };
   } else
     return Response.json(
-      { error: "Unexpected fixture endpoint" },
+      { error: `Unexpected fixture endpoint: ${path} (${body.action || "read"})` },
       { status: 500 },
     );
   return Response.json(result);
 };
 createRoot(document.getElementById("root")).render(
-  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 84532, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'Vaulted', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
+  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 8453, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'DYLI', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
 );

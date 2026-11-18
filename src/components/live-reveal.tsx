@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Check, LoaderCircle, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { Art, LiveModal } from "@/components/live-catalog";
+import { PackArtwork } from "@/components/pack-artwork";
 import { pendingAutoSellIndices, shouldAutoSellPull, shouldSkipOpening, type OpeningPreferences } from "@/lib/opening-preferences";
 import { assetImage, usd, settlementSummary } from "@/lib/live-commerce";
 import { rarityAccent, rarityTone, revealClues, revealStages } from "@/lib/reveal";
@@ -74,10 +75,11 @@ export function LiveReveal({ play, item, decisions, busy, error, preferences, on
       {error && <p className="lc-error vr-error" role="alert">{error}</p>}
       {!play.rewards.length ? <div className="vr-pending">
         <button className="vr-idle-box" aria-label={play.quantity > 1 ? `Open ${play.quantity} packs` : "Open pack"} disabled={!!busy} onClick={() => { void sound.unlock(); setOpened(true); onOpen(); }}>
-          <Art src={item.image} name={item.name} priority />
+          <PackArtwork item={item} controls={false} priority />
         </button>
         <span className="vr-open-hint" role="status">{busy ? <><LoaderCircle className="vr-spinner" size={14} />{busy}</> : "Click to open the pack"}</span>
       </div> : review ? <div className="vr-review">
+        <div className="vr-bulk-choices"><span>{play.quantity} {play.quantity === 1 ? 'pull' : 'pulls'} · {selectedCount} selected</span><div><button type="button" disabled={!!busy} onClick={() => { sound.interaction('vault');play.rewards.forEach((_, index) => onChoose(index, 'claim')); }}><Check size={15} />Vault all</button>{play.rewards.some(pull => pull.buyback_amount > 0) && <button type="button" disabled={!!busy} onClick={() => { sound.interaction('sell');play.rewards.forEach((pull, index) => { if (pull.buyback_amount > 0) onChoose(index, 'sell_back'); }); }}>Sell available</button>}</div></div>
         <div className="vr-review-grid">
           {play.rewards.map((pull, index) => <motion.article className="vr-review-card" key={pull.index} initial={reduced ? false : { opacity: 0, y: 16, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .28, delay: Math.min(index * .055, .4) }} data-decision={decisions[index]} style={{ "--rarity": rarityAccent(pull.rarity) } as CSSProperties}>
             <button className="vr-review-image" aria-label={`Inspect ${String(pull.product.name || "pull")}`} onClick={() => { scroller.current?.scrollTo({ top: 0 }); setCursor(index); setView("pull"); }} disabled={!!busy}><Art src={assetImage(pull.product)} name={String(pull.product.name || "Your pull")} /><span className="vr-rarity-tag">{pull.rarity || "Pull"}</span></button>
@@ -132,7 +134,7 @@ function RewardReveal({ reward, item, fast, decision, busy, autoSell, onChoose, 
   }, [stamp, reduced, autoSelected, busy]);
   useEffect(() => {
     started.current = performance.now();
-    if (!current || busy) return;
+    if (!current || busy || current.kind === "box") return;
     const timer = setTimeout(() => setStage(index => index + 1), reduced ? 30 : current.duration);
     return () => clearTimeout(timer);
   }, [stage, current, busy, reduced]);
@@ -160,15 +162,15 @@ function RewardReveal({ reward, item, fast, decision, busy, autoSell, onChoose, 
   return <div className={`vr-reward ${shown ? "vr-reward-ready" : ""}`} style={{ "--rarity": rarityAccent(reward.rarity) } as CSSProperties}>
     <div className="vr-stage" data-stage={current?.kind || (shown ? "result" : "idle")}>
       <div className={`vr-aura ${shown ? "vr-aura-open" : ""}`} aria-hidden="true" />
-      {stage < 0 ? <button className="vr-idle-box" aria-label="Open this pack" disabled={!!busy} onClick={() => { void sound.unlock(); setStage(0); }}><Art src={item.image} name={item.name} /></button>
+      {stage < 0 ? <div className="vr-reveal-rip"><PackArtwork item={item} mode="rip" active={!busy} onStart={() => { void sound.unlock(); }} onComplete={() => setStage(stages[0]?.kind === 'box' ? 1 : 0)} priority /><p className="vr-rip-help">Tap or drag across the top to reveal</p></div>
         : !shown ? <div key={stage} className="vr-sequence" aria-live="polite">
-          {current.kind === "box" ? <div className="vr-box vr-box-opening"><Art src={item.image} name={item.name} /></div>
+          {current.kind === "box" ? <PackArtwork item={item} mode="rip" interactive={false} autoOpen active={!busy} onComplete={() => setStage(index => index + 1)} priority />
             : current.kind === "rarity" ? <div className="vr-rarity-reveal"><div className="vr-rarity-ring" aria-hidden="true" /><strong>{reward.rarity}</strong></div>
             : <div className="vr-clue"><small>{current.detail?.label}</small><strong>{current.detail?.value}</strong></div>}
         </div> : <motion.div className="vr-product-art" initial={reduced ? false : { opacity: 0, y: 12, scale: .92 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .7 }}><Art src={assetImage(reward.product)} name={String(reward.product.name || "Your pull")} priority /></motion.div>}
       <AnimatePresence>{stamp && <motion.div className={`vr-stamp ${stamp === "sell_back" ? "vr-stamp-sell" : ""}`} role="status" initial={reduced ? false : { scale: 1.6, opacity: 0, rotate: -9 }} animate={{ scale: 1, opacity: 1, rotate: -5 }} exit={{ opacity: 0 }}><Check size={22} /><strong>{stamp === "sell_back" ? `+${usd(reward.buyback_amount)}` : "To your vault"}</strong></motion.div>}</AnimatePresence>
     </div>
-    {stage < 0 && <span className="vr-open-hint">Click to open the pack</span>}
+
     {shown && <div className="vr-reward-details">
       <motion.div initial={reduced ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <span className="vr-rarity-tag">{reward.rarity || "Your pull"}</span>

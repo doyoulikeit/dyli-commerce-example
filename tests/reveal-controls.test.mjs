@@ -115,3 +115,25 @@ test('Auto Skip starts multi-pulls in review, selects only opted-in rarities, an
   const back = render(props);
   assert.equal(nodes(back, node => node.props?.className === 'vr-review-card').length, 0, 'Back can inspect the reveal without being auto-skipped again');
 });
+
+test('bulk choices select eligible pulls but require an explicit final confirmation', () => {
+  const render = previewComponent();
+  const calls = [];
+  const props = {
+    play: { id: 'bulk', quantity: 3, rewards: [12, 0, 8].map((buyback_amount, index) => ({ index, product: { name: `Pull ${index}` }, buyback_amount })) },
+    item: { name: 'Pack' }, decisions: [], busy: '', error: '', preferences: preferences.normalizeOpeningPreferences(),
+    onOpen() {}, onChoose(index, choice) { calls.push([index, choice]); }, onSettle() { calls.push('settle'); }, onClose() {},
+  };
+  nodes(render(props), node => node.props?.className === 'vr-skip')[0].props.onClick();
+  const review = render(props);
+  const bulk = nodes(review, node => node.props?.className === 'vr-bulk-choices')[0];
+  const buttons = nodes(bulk, node => node.type === 'button');
+  buttons[0].props.onClick();
+  assert.deepEqual(calls, [[0,'claim'],[1,'claim'],[2,'claim']]);
+  calls.length = 0;
+  buttons[1].props.onClick();
+  assert.deepEqual(calls, [[0,'sell_back'],[2,'sell_back']], 'a pull without an available offer cannot be sold');
+  assert.ok(!calls.includes('settle'));
+  const locked = nodes(render({ ...props, busy: 'Confirming…' }), node => node.props?.className === 'vr-bulk-choices')[0];
+  assert.ok(nodes(locked, node => node.type === 'button').every(node => node.props.disabled));
+});

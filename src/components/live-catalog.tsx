@@ -4,11 +4,12 @@ import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useWalletPrompt } from "@/components/providers";
 import { acquireModalScroll } from "@/lib/modal-scroll";
-import { ArrowRight, X } from "lucide-react";
+import { X } from "lucide-react";
+import { PackCard } from "@/components/pack-catalog";
+import { PackDetailContent } from "@/components/pack-detail";
+import { currentPackItem } from "@/lib/pack-artwork";
 import {
   asRecord,
-  asRows,
-  assetImage,
   boxItem,
   usd,
 } from "@/lib/live-commerce";
@@ -107,6 +108,7 @@ export function LiveProductCard({
   onClick: () => void;
   priority?: boolean;
 }) {
+  if (boxItem(item)) return <PackCard item={item} onSelect={onClick} priority={priority} />;
   return (
     <button
       className={`lc-product ${boxItem(item) ? "lc-box" : ""}`}
@@ -126,147 +128,32 @@ export function LiveProductCard({
   );
 }
 
-export function LiveProductDetail({
-  item,
-  onClose,
-  onCheckout,
-}: {
-  item: CatalogItem;
-  onClose: () => void;
-  onCheckout: () => void;
-}) {
+export function LiveProductDetail({ item, onClose, onCheckout }: { item: CatalogItem; onClose: () => void; onCheckout: (item: CatalogItem) => void }) {
   const [detail, setDetail] = useState<ApiRecord>({});
   const [error, setError] = useState("");
-  useEffect(() => {
-    if (!boxItem(item)) return;
-    const controller = new AbortController();
-    void fetch(`/api/packs/${item.id}`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new Error("Pull details are temporarily unavailable");
-        setDetail(asRecord(await response.json()));
-      })
-      .catch((failure) => {
-        if (!controller.signal.aborted) setError(failure.message);
-      });
-    return () => controller.abort();
-  }, [item]);
-  const box = { ...item.raw, ...asRecord(detail.pack || detail.box) };
+  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
   const isPack = boxItem(item);
-  const odds = asRows(box.odds_buckets).reduce((groups, bucket) => {
-    const name = String(bucket.tier || "Pull")
-      .trim()
-      .toLowerCase();
-    groups.set(
-      name,
-      (groups.get(name) || 0) + Number(bucket.percent ?? bucket.rarity ?? 0),
-    );
-    return groups;
-  }, new Map<string, number>());
-  const colors: Record<string, string> = { common: "#94a3b8", uncommon: "#10b981", rare: "#0ea5e9", epic: "#6366f1", legendary: "#f59e0b", mythical: "#e11d74", mythic: "#e11d74", jackpot: "#d89b12" };
-  const tiers = [...odds].map(([name, percent], index) => ({ name, percent, color: colors[name] || ["#94a3b8", "#10b981", "#0ea5e9", "#6366f1", "#f59e0b", "#e11d74"][index % 6] }));
-  return (
-    <LiveModal
-      title={boxItem(item) ? "Pack details" : "Collectible"}
-      onClose={onClose}
-      wide
-      className={isPack ? "lc-pack-detail-modal" : ""}
-    >
-      <div className={isPack ? "lc-pack-detail-scroll" : undefined}>
-      <div className={`lc-detail ${isPack ? "lc-pack-detail" : ""}`}>
-        <Art src={item.image} name={item.name} priority />
-        <div className="lc-detail-copy">
-          <div className="lc-detail-overview">
-          {isPack && <span className="lc-pack-eyebrow">{item.brand || "Collectible pack"}</span>}
-          <h1>{item.name}</h1>
-          <p className="lc-price">{usd(item.price)}</p>
-          {error && <p role="alert">{error}</p>}
-          {boxItem(item) && <>
-              <div className="lc-pack-stats">
-              {(box.expected_value_usd ?? box.ev_usd) != null && (
-                <p className="lc-stat">
-                  Expected value{" "}
-                  <strong>{usd(box.expected_value_usd ?? box.ev_usd)}</strong>
-                </p>
-              )}
-              <p className="lc-stat">Available<strong>{new Intl.NumberFormat("en-US").format(item.availability ?? 0)}</strong></p>
-              </div>
-              <div className="lc-detail-open">
-                <button className="lc-primary" disabled={!item.purchase.supported} onClick={onCheckout}>Open pack<ArrowRight size={19} /></button>
-                <small>{new Intl.NumberFormat("en-US").format(item.availability ?? 0)} available</small>
-              </div>
-          </>}
-          </div>
-          {boxItem(item) && (
-            <>
-              {asRows(box.top_chase_cards).length > 0 && (
-                <section className="lc-detail-pulls">
-                  <h3>Top hits</h3>
-                  <div className="lc-chases">
-                    {asRows(box.top_chase_cards)
-                      .slice(0, 6)
-                      .map((card, index) => (
-                        <div key={String(card.token_id || index)}>
-                          <Art
-                            src={assetImage(card)}
-                            name={String(card.name || "Possible pull")}
-                          />
-                          <small>{String(card.name || "")}</small>
-                          <strong>{usd(card.fmv_usd || card.box_price)}</strong>
-                        </div>
-                      ))}
-                  </div>
-                </section>
-              )}
-              {odds.size > 0 && (
-                <section className="lc-detail-odds">
-                  <h3>Pull odds</h3>
-                  <p className="lc-pack-odds-note">Your chance of pulling each rarity.</p>
-                  <div className="lc-pack-odds-bar" aria-hidden="true">{tiers.map(tier => <i key={tier.name} style={{ flexGrow: tier.percent, background: tier.color }} />)}</div>
-                  {tiers.map(({name, percent, color}) => (
-                    <p className="lc-stat" key={name}>
-                      <span><i className="lc-pack-tier-dot" style={{ background: color }} />{name.charAt(0).toUpperCase() + name.slice(1)}</span>
-                      <strong>
-                        {new Intl.NumberFormat("en-US", {
-                          maximumFractionDigits: 4,
-                        }).format(percent)}
-                        %
-                      </strong>
-                    </p>
-                  ))}
-                </section>
-              )}
-            </>
-          )}
-          {!boxItem(item) && (
-            <div className="lc-facts">
-              {[item.brand, item.subcategory].filter(Boolean).map((value) => (
-                <p key={value}>{value}</p>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      </div>
-      <footer>
-        {isPack ? <div className="lc-pack-footer-inner">
-        <div className="lc-detail-footer-product">
-          <Art src={item.image} name={item.name} />
-          <div><strong>{item.name}</strong><span>{usd(item.price)}</span></div>
-        </div>
-        <small>{item.availability ?? 0} available</small>
-        <button className="lc-primary" disabled={!item.purchase.supported} onClick={onCheckout}>Open pack<ArrowRight size={17} /></button>
-        </div> : <>
-        <small>{item.availability ?? 0} available</small>
-        <button
-          className="lc-primary"
-          disabled={!item.purchase.supported}
-          onClick={onCheckout}
-        >
-          Buy
-        </button>
-        </>}
-      </footer>
-    </LiveModal>
-  );
+  useEffect(() => {
+    if (!isPack) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => { controller.abort();setLoading(false);setError("The latest pack details took too long to load. Please try again."); }, 15000);
+    void fetch(`/api/packs/${encodeURIComponent(item.id)}`, { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("The latest pack details couldn’t load.");
+        const payload = asRecord(await response.json());
+        if (!controller.signal.aborted) setDetail(asRecord(payload.pack ?? payload.box));
+      })
+      .catch(() => { if (!controller.signal.aborted) setError("The latest pack details couldn’t load. Your account hasn’t changed."); })
+      .finally(() => { clearTimeout(timeout);if (!controller.signal.aborted) setLoading(false); });
+    return () => { clearTimeout(timeout);controller.abort(); };
+  }, [item.id, isPack, revision]);
+  const current = isPack ? currentPackItem(item, detail) : item;
+  if (isPack) return <LiveModal title={`${item.name} pack details`} onClose={onClose} wide header={null} className="dyli-pack-detail-modal">
+    <PackDetailContent item={current} detail={detail} loading={loading} error={error} onRetry={() => { setLoading(true);setError("");setRevision(value => value + 1); }} onClose={onClose} onCheckout={() => onCheckout(current)} />
+  </LiveModal>;
+  return <LiveModal title="Collectible" onClose={onClose} wide>
+    <div className="lc-detail"><Art src={item.image} name={item.name} priority /><div className="lc-detail-copy"><h1>{item.name}</h1><p className="lc-price">{usd(item.price)}</p><div className="lc-facts">{[item.brand,item.subcategory].filter(Boolean).map(value => <p key={value}>{value}</p>)}</div></div></div>
+    <footer><small>{item.availability ?? 0} available</small><button className="lc-primary" disabled={!item.purchase.supported} onClick={() => onCheckout(item)}>Buy</button></footer>
+  </LiveModal>;
 }
