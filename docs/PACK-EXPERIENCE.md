@@ -40,7 +40,7 @@ Pass the API's complete `artwork` object through, including `materials`. The bod
 
 The supplied Privy adapter automatically signs the verified wallet-link message for its embedded wallet after login. `embeddedWallets.showWalletUIs: false` and per-call `showWalletUIs: false` hide routine wallet confirmation panels. Keep Privy's required recovery, MFA and security checks. Your app still asks the customer to confirm a purchase or sale. External wallets and custom login adapters keep their own authorization requirements; do not attempt to silently sign with them.
 
-A failed link shows Retry, Try demo and Log out. It keeps pending paid checkout recovery intact.
+A failed link shows Retry, Try demo and Log out. It keeps pending paid checkout recovery intact. A wallet with assets or an unfinished opening on Abstract requires recovery before Base registration; registration only links identity and never transfers or discards old assets. The connection screen explains this state and lets the customer check again or use another login.
 
 ## Payment and result boundaries
 

@@ -231,6 +231,7 @@ button span {
 .lc-app .lc-primary,
 .lc-modal .lc-primary,
 .dyli-pack-hero .lc-primary,
+.dyli-pack-gallery .lc-primary,
 .vr-shell .vr-primary {
   display: inline-flex;
   align-items: center;
@@ -252,6 +253,7 @@ button span {
 .lc-app .lc-primary:hover,
 .lc-modal .lc-primary:hover,
 .dyli-pack-hero .lc-primary:hover,
+.dyli-pack-gallery .lc-primary:hover,
 .vr-shell .vr-primary:hover {
   background: #f9c02f;
   color: #191a24;
@@ -3381,4 +3383,19 @@ button span {
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 2px 7px #0000000c;
+}
+
+.dyli-gallery-info .dyli-pack-stats {
+  display: flex;
+  gap: 0;
+  padding: 10px 4px;
+  background: #ffffff12;
+  border-color: #ffffff30;
+  border-radius: 999px;
+}
+.dyli-gallery-info .dyli-pack-stats > div {
+  padding: 0 18px;
+}
+.dyli-gallery-info .dyli-pack-stats > div + div {
+  border-color: #ffffff30;
 }

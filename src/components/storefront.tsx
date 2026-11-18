@@ -344,7 +344,7 @@ export function Storefront({
         ) {
           restoredDemo = {
             ...restored,
-            balance: SESSION_START_BALANCE,
+            balance: Number.isFinite(restored.balance) && restored.balance >= 0 ? restored.balance : SESSION_START_BALANCE,
             shipments: Array.isArray(restored.shipments)
               ? restored.shipments
               : [],
@@ -361,6 +361,7 @@ export function Storefront({
         removeDemoStorage(STORAGE_KEY);
       }
     }
+    previousBalance.current = restoredDemo.balance;
     const savedName = readDemoStorage(PROFILE_KEY) || "Collector";
     const frame = window.requestAnimationFrame(() => {
       setDemo(restoredDemo);
