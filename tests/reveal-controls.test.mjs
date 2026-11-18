@@ -170,3 +170,15 @@ test('Normal multi-pulls start sealed and picking a pack changes presentation wi
   assert.equal(nodes(opened, node => node.props?.className === 'vr-pack-grid').length, 0);
   assert.deepEqual(writes, []);
 });
+
+test('all ten paid pulls remain available in the sealed grid and review', () => {
+  const render = previewComponent();
+  const props = {
+    play: { id: 'ten', quantity: 10, rewards: Array.from({length:10}, (_,index) => ({ index, product:{name:`Pull ${index + 1}`}, buyback_amount:10 })) },
+    item:{name:'Pack'}, decisions:[], busy:'', error:'', preferences:preferences.normalizeOpeningPreferences(),
+    onOpen(){}, onChoose(){}, onSettle(){assert.fail('presentation must not settle')}, onClose(){},
+  };
+  assert.equal(nodes(render(props), node => node.props?.className === 'vr-grid-pack').length, 10);
+  nodes(render(props), node => node.props?.className === 'vr-skip')[0].props.onClick();
+  assert.equal(nodes(render(props), node => node.props?.className === 'vr-review-card').length, 10);
+});

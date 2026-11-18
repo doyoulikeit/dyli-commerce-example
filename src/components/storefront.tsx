@@ -224,7 +224,7 @@ const nameFor = (value: ApiRecord) => {
 };
 
 const maxQuantity = (item: CatalogItem) =>
-  Math.max(1, Math.min(8, item.availability ?? 1));
+  Math.max(1, Math.min(10, item.availability ?? 1));
 
 function groupOddsBuckets(buckets: ApiRecord[]) {
   const grouped = new Map<string, ApiRecord>();

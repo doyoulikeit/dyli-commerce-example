@@ -15,3 +15,11 @@ test('invalid quantities and missing public inventory cannot create demo purchas
  for(const quantity of [0,11,1.5,NaN])assert.throws(()=>drawDemoPulls(data,item,quantity),/1 and 10/);
  assert.throws(()=>drawDemoPulls({ranges:{ranges:[]}},item,1),/Try another pack/);
 });
+
+test('a ten-pack demo produces ten independently selectable rewards without changing live inventory', () => {
+  const snapshot = JSON.stringify(data);
+  const pulls = drawDemoPulls(data, item, 10, () => 0);
+  assert.equal(pulls.length, 10);
+  assert.ok(pulls.every(pull => pull.name === 'Common card'));
+  assert.equal(JSON.stringify(data), snapshot);
+});

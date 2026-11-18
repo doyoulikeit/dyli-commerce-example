@@ -736,7 +736,7 @@ function RewardReveal({
             <motion.div
               className={`vr-stamp ${stamp === "sell_back" ? "vr-stamp-sell" : ""}`}
               role="status"
-              initial={reduced ? false : { scale: 1.6, opacity: 0, rotate: -9 }}
+              initial={reduced ? false : { scale: 1.08, opacity: 0, rotate: -7 }}
               animate={{ scale: 1, opacity: 1, rotate: -5 }}
               exit={{ opacity: 0 }}
             >

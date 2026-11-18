@@ -10,8 +10,7 @@ import { useOpeningPreferences } from "../../src/components/use-opening-preferen
 import { normalizeOpeningPreferences } from "../../src/lib/opening-preferences";
 import { BalancePreview } from "./balance-preview";
 import "../../src/app/globals.css";
-import "../../src/components/live-storefront.css";
-import "../../src/components/live-reveal.css";
+import "../../src/components/commerce-styles.css";
 
 const source = await (await fetch("/fixtures/reveal")).json();
 const choices = source.ranges.filter(range => range.items?.length).map(range => ({
