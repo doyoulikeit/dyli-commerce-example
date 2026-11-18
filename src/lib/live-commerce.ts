@@ -2,6 +2,7 @@ import type {
   ApiRecord,
   BoxPlay,
   CatalogItem,
+  SessionResponse,
   TransactionInstruction,
 } from "./types.ts";
 import type { OpeningPreferences } from "./opening-preferences.ts";
@@ -18,6 +19,11 @@ export const usd = (value: unknown) =>
   );
 export const waitingForAccount = (ready: boolean, authenticated: boolean, wallet: string, sessionWallet?: string) =>
   !ready || (authenticated && (!wallet || wallet.toLowerCase() !== sessionWallet?.toLowerCase()));
+
+// Account data is never visible while signed out or switching wallets.
+export function currentWalletSession(session: SessionResponse | null, authenticated: boolean, wallet: string) {
+  return authenticated && wallet && session?.identity.walletAddress.toLowerCase() === wallet.toLowerCase() ? session : null;
+}
 
 export function settlementSummary(decisions: Array<"claim" | "sell_back">, rewards: Array<{ buyback_amount: number }>) {
   const sold = decisions.filter(choice => choice === "sell_back").length;

@@ -14,12 +14,12 @@ const hash = `0x${'b'.repeat(64)}`;
 const item = { id: '12997', surface: 'boxes', purchase: { quoteItem: { type: 'box', box_id: 12997 } } };
 const saved = { version: 1, wallet, key: 'fixture-key', item, quote: { id: 'quote' }, paymentHash: hash, paymentAttempted: true };
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function fixture({ failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction, signMessage, checkoutResponse, sessionResponse } = {}) {
+function fixture({ authReady = true, failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction, signMessage, checkoutResponse, sessionResponse } = {}) {
   const state = [], refs = [], callbacks = [];
   let index = 0, refIndex = 0, callbackIndex = 0, effect;
   const calls = [];
   const storage = new Map([[`dyli-live-purchase-v1:${wallet}`, JSON.stringify(recovery)]]);
-  const auth = { ready: true, authenticated: true, wallet: { address: wallet, switchChain: async () => {} }, getAccessToken: async () => 'fixture',
+  const auth = { ready: authReady, authenticated: true, wallet: { address: wallet, switchChain: async () => {} }, getAccessToken: async () => 'fixture',
     sendTransaction: sendTransaction || (async () => { throw Error('Recovery must never send another payment'); }),
     signMessage: signMessage || (async () => { throw Error('An existing order must not be authorized again'); }) };
   const exports = {};
@@ -273,4 +273,13 @@ test('an unavailable account refresh preserves confirmed settlement and never re
   assert.equal(f.calls.filter(call => call.body?.action === 'finalize').length, 1);
   assert.equal(f.render().flow, null);
   assert.match(f.render().error, /choices are confirmed/);
+});
+
+
+test('account reads wait for the auth provider instead of making premature failed requests', async () => {
+  const pending = fixture({authReady:false}); pending.render(); pending.mount(); await flush();
+  assert.equal(pending.calls.length,0);
+  assert.equal(pending.render().session,null);
+  const ready = fixture(); ready.render(); ready.mount(); await flush();
+  assert.equal(ready.calls.filter(call=>call.path.startsWith('/api/session')).length,1);
 });

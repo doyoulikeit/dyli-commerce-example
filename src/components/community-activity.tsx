@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Art } from "./live-catalog";
+import { AccountSkeleton } from "./account-skeleton";
 import { asRecord, asRows, assetImage, usd } from "@/lib/live-commerce";
 import type { CommunityAction } from "@/lib/community";
 import type { CommunityApi } from "./community-market";
@@ -33,7 +34,7 @@ export function CommunityActivity({ api, hasOtherActivity }: { api: CommunityApi
     void load();
     return () => { active = false; };
   }, [api, revision]);
-  if (loading) return <p className="cm-note" role="status">Loading marketplace and trade activity…</p>;
+  if (loading) return <AccountSkeleton />;
   if (error) return <div className="cm-resume" role="alert"><p>{error}</p><button className="lc-secondary" onClick={() => setRevision(value => value + 1)}>Try again</button></div>;
   if (!rows.length) return hasOtherActivity ? null : <div className="cm-empty"><h2>No activity yet</h2><p>Your purchases, listings, offers and trades will appear here.</p></div>;
   return <section className="lc-order-history" aria-label="Marketplace and trades"><h2>Marketplace &amp; trades</h2>{rows.map(row => {

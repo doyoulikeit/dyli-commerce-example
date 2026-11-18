@@ -9,6 +9,7 @@ import {
   checkoutOrigin,
   canClearBalanceRecovery,
   waitingForAccount,
+  currentWalletSession,
   settlementSummary,
 } from "../src/lib/live-commerce.ts";
 
@@ -130,4 +131,14 @@ test("quantity controls cap boxes at ten and collectibles at one", () => {
     quantityLimit({ surface: "listings", availability: 10, purchase: {} }),
     1,
   );
+});
+
+
+test("account data stays hidden during sign-out, wallet creation, and wallet switches", () => {
+  const session = {identity:{walletAddress:wallet},balance:{amount:"42"}};
+  assert.equal(currentWalletSession(session,true,wallet),session);
+  assert.equal(currentWalletSession(session,true,wallet.toUpperCase()),session);
+  assert.equal(currentWalletSession(session,false,wallet),null);
+  assert.equal(currentWalletSession(session,true,""),null);
+  assert.equal(currentWalletSession(session,true,`0x${"b".repeat(40)}`),null);
 });

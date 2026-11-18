@@ -98,7 +98,12 @@ window.fetch = async (url, init) => {
     result = await (
       await originalFetch("/fixtures/box/" + path.split("/").pop())
     ).json();
-  else if (path === "/api/session") result = session();
+  else if (path === "/api/session") {
+    const params = new URLSearchParams(location.search);
+    await new Promise(resolve => setTimeout(resolve, Math.min(30000, Math.max(0, Number(params.get("accountDelay")) || 0))));
+    if (params.get("accountError") === "legacy") return Response.json({error:"wallet_previous_balance_remaining",message:"This wallet still has assets on its previous network."},{status:409});
+    result = session();
+  }
   else if (path === "/api/wallet") result = { wallet: address, balance: session().balance, receipt: null };
   else if (path === "/api/community" && (!init?.method || body.action === "history")) result = { listings: [], items: [], collectors: [], trades: [], actions: [], pagination: { total: 0 } };
   else if (path === "/api/checkout") {
@@ -249,5 +254,5 @@ window.fetch = async (url, init) => {
   return Response.json(result);
 };
 createRoot(document.getElementById("root")).render(
-  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 8453, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'DYLI', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
+  <Providers runtime={{authMode: 'dyli_managed', appId: 'fixture', chainId: 8453, allowedOrigins: [], storefrontOrigin: null, sponsorTransactions: false, name: 'Vaulted', boxesOnly: false}}><LiveStorefront initialStorefront={storefront} /></Providers>,
 );

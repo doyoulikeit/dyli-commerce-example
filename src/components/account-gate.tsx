@@ -40,7 +40,6 @@ export function AccountGate({
     <main className="lc-account-loading" aria-busy={loading}>
       <CommerceLogo name={name} />
       <div className="lc-account-loading-message">
-        <h1>{loading ? "Connecting your collection" : heading}</h1>
         {loading ? (
           <>
             <LoaderCircle
@@ -51,6 +50,7 @@ export function AccountGate({
           </>
         ) : (
           <>
+            <h1>{heading}</h1>
             <p role="alert">{message}</p>
             <button
               className="lc-primary"
@@ -64,19 +64,21 @@ export function AccountGate({
             </button>
           </>
         )}
-        <div className="dyli-account-exit">
-          <Link prefetch={false} href="/?demo=1" className="lc-secondary">
-            Try demo
-          </Link>
-          <button
-            type="button"
-            className="dyli-text-button"
-            disabled={!!busy}
-            onClick={onSignOut}
-          >
-            Log out
-          </button>
-        </div>
+        {!loading && (
+          <div className="dyli-account-exit">
+            <Link prefetch={false} href="/?demo=1" className="lc-secondary">
+              Try demo
+            </Link>
+            <button
+              type="button"
+              className="dyli-text-button"
+              disabled={!!busy}
+              onClick={onSignOut}
+            >
+              Log out
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

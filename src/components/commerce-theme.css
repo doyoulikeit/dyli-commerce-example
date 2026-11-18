@@ -3711,3 +3711,94 @@ html {
     padding: 14px 16px;
   }
 }
+
+/* Account history never blocks browsing; match its eventual cards while loading. */
+.lc-account-skeleton {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.lc-skeleton-entry {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 76px;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.lc-skeleton-art,
+.lc-skeleton-copy > div,
+.lc-skeleton-amount,
+.lc-balance-skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--soft) 20%,
+    var(--line) 50%,
+    var(--soft) 80%
+  );
+  background-size: 200% 100%;
+  animation: dyli-skeleton 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+.lc-skeleton-art {
+  height: 72px;
+}
+.lc-skeleton-copy {
+  display: grid;
+  gap: 12px;
+}
+.lc-skeleton-copy > div {
+  height: 14px;
+  max-width: 360px;
+}
+.lc-skeleton-copy > div + div {
+  width: 65%;
+  height: 11px;
+}
+.lc-skeleton-amount {
+  height: 22px;
+}
+.lc-balance-skeleton {
+  display: inline-block;
+  width: 60px;
+  height: 14px;
+}
+.lc-skeleton-collection {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.lc-skeleton-collection .lc-skeleton-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 12px;
+}
+.lc-skeleton-collection .lc-skeleton-art {
+  height: auto;
+  aspect-ratio: 1 / 1.13;
+}
+.lc-skeleton-collection .lc-skeleton-amount {
+  width: 40%;
+}
+@media (max-width: 700px) {
+  .lc-skeleton-entry {
+    padding: 14px;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 12px;
+  }
+  .lc-skeleton-art {
+    height: 56px;
+  }
+  .lc-skeleton-collection {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-skeleton-art,
+  .lc-skeleton-copy > div,
+  .lc-skeleton-amount,
+  .lc-balance-skeleton {
+    animation: none;
+  }
+}

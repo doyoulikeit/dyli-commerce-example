@@ -139,6 +139,7 @@ export function useLiveCommerce() {
   useEffect(() => {
     let active = true;
     const load = async () => {
+      if (!ready) return;
       setCardCheckout(null);
       if (!authenticated || !address) {
         setNeedsWalletRegistration(false);
@@ -172,7 +173,7 @@ export function useLiveCommerce() {
     return () => {
       active = false;
     };
-  }, [authenticated, address, loadSession, runtime?.walletRegistration]);
+  }, [ready, authenticated, address, loadSession, runtime?.walletRegistration]);
 
   const run = useCallback(
     async (label: string, action: () => Promise<void>) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AccountSkeleton } from "./account-skeleton";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -56,6 +57,7 @@ import {
   assetImage,
   boxItem,
   canClearBalanceRecovery,
+  currentWalletSession,
   quantityLimit,
   receiptRequired,
   usd,
@@ -84,14 +86,29 @@ export function LiveStorefront({
   const brandName = runtime?.name || storefrontConfig.brand.name;
   const commerce = useLiveCommerce();
   const {
-    session,
-    flow,
-    play,
+    session: loadedSession,
+    flow: loadedFlow,
+    play: loadedPlay,
     busy,
     error,
     refresh: refreshAccount,
     setError: setCommerceError,
   } = commerce;
+  // Browse immediately after sign-in. Never display another wallet's snapshot
+  // while its replacement account request is still running.
+  const session = currentWalletSession(
+    loadedSession,
+    commerce.authenticated,
+    commerce.address,
+  );
+  const accountLoading = waitingForAccount(
+    commerce.ready,
+    commerce.authenticated,
+    commerce.address,
+    session?.identity.walletAddress,
+  );
+  const flow = session ? loadedFlow : null;
+  const play = session ? loadedPlay : null;
   const [tab, setTab] = useState<Tab>("home");
   const [storefront, setStorefront] = useState(initialStorefront);
   const [catalogLoading, setCatalogLoading] = useState(!initialStorefront);
@@ -147,6 +164,14 @@ export function LiveStorefront({
   }, [refreshAccount]);
 
   useEffect(() => {
+    queueMicrotask(() =>
+      setCheckoutReturn(
+        new URLSearchParams(window.location.search).has("session_id"),
+      ),
+    );
+    // The server already supplied this catalog. Avoid a duplicate cold-start
+    // inventory request while sign-in and account reads are running.
+    if (initialStorefront && catalogRevision === 0) return;
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
@@ -172,16 +197,11 @@ export function LiveStorefront({
         clearTimeout(timeout);
         if (!controller.signal.aborted) setCatalogLoading(false);
       });
-    queueMicrotask(() =>
-      setCheckoutReturn(
-        new URLSearchParams(window.location.search).has("session_id"),
-      ),
-    );
     return () => {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [catalogRevision]);
+  }, [catalogRevision, initialStorefront]);
 
   const retryCatalog = () => {
     setCatalogLoading(!storefront);
@@ -358,12 +378,8 @@ export function LiveStorefront({
   );
 
   if (
-    waitingForAccount(
-      commerce.ready,
-      commerce.authenticated,
-      commerce.address,
-      session?.identity.walletAddress,
-    )
+    !commerce.ready ||
+    (accountLoading && (pendingCheckout || (error && !busy)))
   ) {
     return (
       <AccountGate
@@ -404,14 +420,21 @@ export function LiveStorefront({
           {commerce.authenticated ? (
             <button
               className="lc-balance"
-              aria-label="Your balance"
-              disabled={!!busy}
+              aria-label={
+                accountLoading ? "Loading your balance" : "Your balance"
+              }
+              aria-busy={accountLoading}
+              disabled={!!busy || !session}
               onClick={() =>
                 commerce.authenticated ? setProfile(true) : commerce.login()
               }
             >
               <Wallet />
-              {session ? usd(session.balance.amount) : "—"}
+              {session ? (
+                usd(session.balance.amount)
+              ) : (
+                <span className="lc-balance-skeleton" aria-hidden="true" />
+              )}
             </button>
           ) : (
             <Link
@@ -429,6 +452,7 @@ export function LiveStorefront({
             onClick={() =>
               commerce.authenticated ? setProfile(true) : commerce.login()
             }
+            disabled={commerce.authenticated && !session}
             aria-label={commerce.authenticated ? "Your account" : "Sign in"}
           >
             {commerce.authenticated ? <CircleUserRound /> : "Sign in"}
@@ -712,7 +736,9 @@ export function LiveStorefront({
                 </button>
               </div>
             </div>
-            {!session ? (
+            {accountLoading ? (
+              <AccountSkeleton variant={shipped ? "activity" : "collection"} />
+            ) : !session ? (
               empty("Your vault awaits", "Sign in to see your collectibles.")
             ) : shipped ? (
               <>
@@ -785,6 +811,7 @@ export function LiveStorefront({
         {tab === "activity" && (
           <>
             <h1>Activity</h1>
+            {accountLoading && <AccountSkeleton />}
             {session && (marketplace.ready || trading.ready) && (
               <CommunityActivity
                 api={commerce.api}
@@ -820,7 +847,8 @@ export function LiveStorefront({
                 busy={busy}
                 onOpen={(item, orderId) => void showResume(item, orderId)}
               />
-            ) : !session?.offerAcceptances?.length &&
+            ) : !accountLoading &&
+              !session?.offerAcceptances?.length &&
               !session?.redemptions.length &&
               !(session && (marketplace.ready || trading.ready)) ? (
               empty("No activity yet", "Your purchases will appear here.")
