@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
@@ -7,12 +6,12 @@ import {
   ArrowRight,
   ArrowUpRight,
   Archive,
+  Info,
+  Flame,
   ChevronLeft,
+  ChevronDown,
   ChevronRight,
   Search,
-  ShieldCheck,
-  Sparkles,
-  Truck,
 } from "lucide-react";
 import { PackArtwork } from "@/components/pack-artwork";
 import { asRecord, usd } from "@/lib/live-commerce";
@@ -139,163 +138,26 @@ export function PackCard({
   );
 }
 
-export function PackHero({
-  items,
-  onSelect,
-  onExplore,
-  demo = false,
-}: {
-  items: CatalogItem[];
-  onSelect: (item: CatalogItem) => void;
-  onExplore: () => void;
-  demo?: boolean;
-}) {
-  const [index, setIndex] = useState(0);
-  const featured = items.slice(0, 5),
-    item = featured[index % Math.max(1, featured.length)];
-  return (
-    <section className="dyli-pack-hero" aria-label="Discover packs">
-      <div className="dyli-hero-copy">
-        <h1>Open a pack.</h1>
-        <p>
-          Collect cards, sealed packs and more.
-          <br className="dyli-desktop-break" /> Vault it, sell it back, or get
-          it shipped.
-        </p>
-        <div className="dyli-hero-actions">
-          <button
-            type="button"
-            className="lc-primary"
-            onClick={() => (item ? onSelect(item) : onExplore())}
-          >
-            Explore packs
-            <ArrowRight size={19} />
-          </button>
-          {demo ? (
-            <span className="dyli-demo-note">No real purchases.</span>
-          ) : (
-            <Link
-              prefetch={false}
-              href="/?demo=1"
-              className="lc-secondary dyli-demo-link"
-            >
-              Try demo
-            </Link>
-          )}
-        </div>
-        <div className="dyli-hero-benefits">
-          <span>
-            <ShieldCheck size={16} />
-            Authenticated collectibles
-          </span>
-          <span>
-            <Archive size={16} />
-            Stored in your vault
-          </span>
-          <span>
-            <Truck size={16} />
-            Ship when you’re ready
-          </span>
-        </div>
-      </div>
-      <div className="dyli-hero-showcase">
-        <div className="dyli-hero-orbit" aria-hidden="true" />
-        <span
-          className="dyli-hero-spark dyli-hero-spark-one"
-          aria-hidden="true"
-        >
-          ✦
-        </span>
-        <span
-          className="dyli-hero-spark dyli-hero-spark-two"
-          aria-hidden="true"
-        >
-          ✦
-        </span>
-        {item ? (
-          <>
-            <PackArtwork
-              key={item.id}
-              item={item}
-              priority
-              className="dyli-hero-pack"
-            />
-            <button
-              type="button"
-              className="dyli-hero-pack-label"
-              onClick={() => onSelect(item)}
-            >
-              <span>
-                <small>{packBrand(item.brand)}</small>
-                <strong>{item.name}</strong>
-              </span>
-              <b>{usd(item.price).replace(/\.00$/, "")}</b>
-              <ArrowUpRight size={20} />
-            </button>
-            {featured.length > 1 && (
-              <div className="dyli-hero-picker">
-                <button
-                  type="button"
-                  aria-label="Previous featured pack"
-                  onClick={() =>
-                    setIndex(
-                      (value) =>
-                        (value + featured.length - 1) % featured.length,
-                    )
-                  }
-                >
-                  <ChevronLeft size={17} />
-                </button>
-                <div>
-                  {featured.map((pack, i) => (
-                    <button
-                      type="button"
-                      key={pack.id}
-                      className={
-                        i === index % featured.length ? "is-selected" : ""
-                      }
-                      aria-label={`Show ${pack.name}`}
-                      aria-pressed={i === index % featured.length}
-                      onClick={() => setIndex(i)}
-                    />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Next featured pack"
-                  onClick={() =>
-                    setIndex((value) => (value + 1) % featured.length)
-                  }
-                >
-                  <ChevronRight size={17} />
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="dyli-hero-placeholder">
-            <Sparkles size={70} />
-            <strong>No packs available.</strong>
-            <span>New packs will appear here.</span>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
 export function PackBrowser({
   items,
   onSelect,
   loading = false,
   error = "",
   onRetry,
+  home = false,
+  onRip,
 }: {
   items: CatalogItem[];
   onSelect: (item: CatalogItem) => void;
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
+  home?: boolean;
+  onRip?: (
+    item: CatalogItem,
+    quantity: number,
+    mode: "normal" | "turbo",
+  ) => void;
 }) {
   const [brand, setBrand] = useState("All packs"),
     [query, setQuery] = useState(""),
@@ -326,40 +188,48 @@ export function PackBrowser({
         );
   }, [items, brand, query, sort]);
   return (
-    <section className="dyli-pack-browser" aria-labelledby="pack-browser-title">
-      <div className="dyli-page-title">
-        <div>
-          <h1 id="pack-browser-title">Packs</h1>
-          <p>Choose a pack to view its contents and odds.</p>
+    <section
+      className={`dyli-pack-browser${home ? " dyli-pack-home" : ""}`}
+      aria-label={home ? "Open packs" : undefined}
+      aria-labelledby={home ? undefined : "pack-browser-title"}
+    >
+      {!home && (
+        <div className="dyli-page-title">
+          <div>
+            <h1 id="pack-browser-title">Packs</h1>
+            <p>Choose a pack to view its contents and odds.</p>
+          </div>
+          <span className="dyli-count">
+            {items.length} {items.length === 1 ? "pack" : "packs"}
+          </span>
         </div>
-        <span className="dyli-count">
-          {items.length} {items.length === 1 ? "pack" : "packs"}
-        </span>
-      </div>
-      <div className="dyli-pack-tools">
-        <label className="dyli-search">
-          <Search size={18} />
-          <input
-            type="search"
-            placeholder="Find a pack"
-            aria-label="Search packs"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-        <label className="dyli-pack-sort">
-          <span>Sort by</span>
-          <select
-            value={sort}
-            aria-label="Sort packs"
-            onChange={(event) => setSort(event.target.value)}
-          >
-            <option value="featured">Featured</option>
-            <option value="price-low">Price: low to high</option>
-            <option value="price-high">Price: high to low</option>
-          </select>
-        </label>
-      </div>
+      )}
+      {!home && (
+        <div className="dyli-pack-tools">
+          <label className="dyli-search">
+            <Search size={18} />
+            <input
+              type="search"
+              placeholder="Find a pack"
+              aria-label="Search packs"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <label className="dyli-pack-sort">
+            <span>Sort by</span>
+            <select
+              value={sort}
+              aria-label="Sort packs"
+              onChange={(event) => setSort(event.target.value)}
+            >
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+            </select>
+          </label>
+        </div>
+      )}
       <div className="dyli-brand-pills" aria-label="Filter packs by brand">
         {brands.map((value) => (
           <button
@@ -373,7 +243,7 @@ export function PackBrowser({
         ))}
       </div>
       {!loading && !error && filtered.length > 0 && (
-        <PackGallery items={filtered} onSelect={onSelect} />
+        <PackGallery items={filtered} onSelect={onSelect} onRip={onRip} />
       )}
       {error && (
         <div className="dyli-inline-error" role="alert">
@@ -398,8 +268,8 @@ export function PackBrowser({
           ))}
         </div>
       ) : filtered.length ? (
-        <div className="dyli-pack-grid">
-          {filtered.map((item, i) => (
+        <div className={`dyli-pack-grid${home ? " dyli-pack-grid-home" : ""}`}>
+          {(home ? filtered.slice(0, 4) : filtered).map((item, i) => (
             <PackCard
               key={item.key}
               item={item}
@@ -443,13 +313,21 @@ export function PackBrowser({
 
 // API-driven version of the /packs coverflow. Only the focused pack mounts a
 // renderer; neighboring packs use the native cached posters.
-function PackGallery({
+export function PackGallery({
   items,
   onSelect,
+  onRip,
 }: {
   items: CatalogItem[];
   onSelect: (item: CatalogItem) => void;
+  onRip?: (
+    item: CatalogItem,
+    quantity: number,
+    mode: "normal" | "turbo",
+  ) => void;
 }) {
+  const [quantity, setQuantity] = useState(1);
+  const [mode, setMode] = useState<"normal" | "turbo">("normal");
   const [selectedKey, setSelectedKey] = useState(items[0]?.key);
   const index = Math.max(
     0,
@@ -460,6 +338,8 @@ function PackGallery({
   const go = (delta: number) =>
     setSelectedKey(items[(index + delta + items.length) % items.length].key);
   const restocking = packIsRestocking(item);
+  const limit = Math.max(1, Math.min(10, Number(item.availability) || 10));
+  const selectedQuantity = Math.min(limit, quantity);
   const neighbor = (offset: number) =>
     items.length > Math.abs(offset)
       ? items[(index + offset + items.length) % items.length]
@@ -546,16 +426,56 @@ function PackGallery({
         <span className="dyli-pack-brand">{packBrand(item.brand)}</span>
         <h2>{item.name}</h2>
         <PackStats item={item} compact />
-        <button
-          type="button"
-          className="lc-primary"
-          onClick={() => onSelect(item)}
-        >
-          {restocking
-            ? "View pack · Restocking"
-            : `Rip · ${usd(item.price).replace(/\.00$/, "")}`}
-          <ArrowRight size={18} />
-        </button>
+        <div className="dyli-gallery-controls">
+          <label className="dyli-gallery-quantity">
+            <select
+              aria-label="Packs to open"
+              value={selectedQuantity}
+              onChange={(event) => setQuantity(Number(event.target.value))}
+            >
+              {Array.from({ length: limit }, (_, index) => (
+                <option key={index + 1} value={index + 1}>
+                  ×{index + 1}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} aria-hidden="true" />
+          </label>
+          <button
+            type="button"
+            className="dyli-gallery-details"
+            aria-label="View pack contents and odds"
+            onClick={() => onSelect(item)}
+          >
+            <Info size={19} />
+          </button>
+          <button
+            type="button"
+            className="lc-primary"
+            onClick={() =>
+              restocking || !onRip
+                ? onSelect(item)
+                : onRip(item, selectedQuantity, mode)
+            }
+          >
+            {restocking
+              ? "Restocking"
+              : `${mode === "turbo" ? "Blitz" : "Rip"} · ${usd(Number(item.price || 0) * selectedQuantity).replace(/\.00$/, "")}`}
+            <ArrowRight size={18} />
+          </button>
+          <button
+            type="button"
+            className="dyli-gallery-blitz"
+            aria-label="Blitz mode"
+            aria-pressed={mode === "turbo"}
+            title="Blitz mode"
+            onClick={() =>
+              setMode((value) => (value === "turbo" ? "normal" : "turbo"))
+            }
+          >
+            <Flame size={20} />
+          </button>
+        </div>
         <span className="dyli-gallery-position">
           {index + 1} / {items.length}
         </span>

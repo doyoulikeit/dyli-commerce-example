@@ -16,7 +16,7 @@ test('checkout leaves the top layer during wallet approval and restores after it
   }).outputText;
   vm.runInNewContext(source, { exports, document, require: (name) => {
     if (name === 'react') return { useRef: () => ({ current: dialog }), useLayoutEffect: fn => { effect = fn; } };
-    if (name === '@/components/providers') return { useWalletPrompt: () => walletPrompt };
+    if (name === '@/components/wallet-prompt') return { useWalletPrompt: () => walletPrompt };
     if (name === '@/lib/modal-scroll') return { acquireModalScroll };
     if (name === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null };
     return {};

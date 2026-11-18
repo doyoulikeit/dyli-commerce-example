@@ -8,6 +8,8 @@ import * as preferences from '../src/lib/opening-preferences.ts';
 function previewComponent() {
   const states = [];
   let cursor = 0;
+  const refs = [];
+  let refCursor = 0;
   let effects = [];
   const jsx = (type, props) => ({ type, props });
   const exports = {};
@@ -22,7 +24,10 @@ function previewComponent() {
         if (!(index in states)) states[index] = typeof initial === 'function' ? initial() : initial;
         return [states[index], value => { states[index] = typeof value === 'function' ? value(states[index]) : value; }];
       },
-      useRef: initial => ({ current: initial }), useEffect: effect => effects.push(effect),
+      useRef: initial => {
+        const index = refCursor++;
+        return refs[index] ||= { current: initial };
+      }, useEffect: effect => effects.push(effect),
     };
     if (name === 'motion/react') return { motion: { div: 'motion-div', article: 'motion-article' }, useReducedMotion: () => false };
     if (name === '@/components/use-reveal-sounds') return { useRevealSounds: () => ({ enabled: true, ready: false, interaction() {}, toggle() {}, unlock() {}, play() {} }) };
@@ -33,8 +38,9 @@ function previewComponent() {
     if (name === '@/lib/reveal') return { rarityAccent: () => '#888888' };
     return {};
   } });
-  const render = props => { cursor = 0; effects = []; return exports.LiveReveal(props); };
+  const render = props => { cursor = 0; refCursor = 0; effects = []; return exports.LiveReveal(props); };
   render.effects = () => effects[0](); // Choice-selection effect; artwork preload needs a browser.
+  render.openingEffect = () => effects[2]();
   return render;
 }
 
@@ -69,23 +75,31 @@ test('Skip opens review without choosing, selling, vaulting or finalizing any re
   assert.deepEqual(writes, ['settle']);
 });
 
-test('paid reveal never offers mode settings, and opening locks controls while busy', () => {
+test('paid reveal opens its existing order once, locks while pending and retries without settlement', () => {
   const render = previewComponent();
   const calls = [];
   const props = {
     play: { id: 'play', quantity: 1, rewards: [] }, item: { name: 'Box' }, decisions: [],
     busy: '', error: '', preferences: preferences.normalizeOpeningPreferences(),
-    onOpen: () => calls.push(['open']), onChoose() {}, onSettle() {}, onClose() {},
+    onOpen: () => calls.push('open'), onChoose() {}, onSettle: () => calls.push('settle'), onClose() {},
   };
   const tree = render(props);
   assert.equal(nodes(tree, node => node.props?.['aria-label'] === 'Opening mode').length, 0);
-  assert.doesNotMatch(readFileSync(new URL('../src/components/live-reveal.tsx', import.meta.url), 'utf8'), /RevealModeSelector|<small>Selected<\/small>/);
-  assert.deepEqual(calls, []);
-  nodes(tree, node => node.props?.['aria-label'] === 'Open pack')[0].props.onClick();
-  assert.deepEqual(calls, [['open']]);
+  assert.equal(nodes(tree, node => node.type === 'button' && node.props?.className === 'vr-idle-box').length, 0);
+  render.openingEffect();
+  render.openingEffect(); // React Strict Mode replays the same mounted effect.
+  render(props);
+  render.openingEffect(); // Parent callback identity changes cannot open twice.
+  assert.deepEqual(calls, ['open']);
   const loading = render({ ...props, busy: 'Opening…' });
-  assert.equal(nodes(loading, node => node.props?.['aria-label'] === 'Open pack')[0].props.disabled, true);
+  render.openingEffect();
   assert.equal(loading.props.dismissible, false);
+  assert.equal(nodes(loading, node => node.props?.className === 'vr-primary').length, 0);
+  const retry = render({ ...props, error: 'Connection interrupted' });
+  render.openingEffect();
+  assert.deepEqual(calls, ['open'], 'errors never automatically retry');
+  nodes(retry, node => node.props?.className === 'vr-primary')[0].props.onClick();
+  assert.deepEqual(calls, ['open', 'open'], 'retry resumes the existing order, without settlement');
 });
 
 test('Auto Skip starts multi-pulls in review, selects only opted-in rarities, and never settles', () => {

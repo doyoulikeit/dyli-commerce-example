@@ -1,6 +1,6 @@
 # Pack artwork and opening UI
 
-The example uses DYLI's fonts, colors and pack designs, with shared live/demo browsing and pack details. Your app name still comes from the registered Commerce app or `NEXT_PUBLIC_STOREFRONT_NAME`. The logo, theme tokens and layouts are in `src/components/brand-identity.tsx` and `src/components/commerce-theme.css`.
+The example uses DYLI's fonts, colors and pack designs, with shared live/demo browsing and pack details. Your app name still comes from the registered Commerce app or `NEXT_PUBLIC_STOREFRONT_NAME`. All global component styles load once through `src/components/commerce-styles.css` in the root layout, with theme rules last, so guest/live pages and portal sheets share the same cascade. Guest modals consume a small wallet-prompt context without importing the wallet SDK. The logo, theme tokens and layouts are in `src/components/brand-identity.tsx` and `src/components/commerce-theme.css`.
 
 ## Use the pack assets
 
@@ -15,7 +15,7 @@ Full asset contract and framework-independent usage: [DYLI artwork guide](https:
 
 ## Mobile and performance
 
-Catalog grids use cached native 3D posters. The /packs gallery presents a focused pack with neighboring designs, arrow keys, buttons and swipe navigation. The renderer loads in a separate chunk only when a visible preview or reveal needs it. Desktop previews can animate automatically; mobile previews are opt in. Offscreen/hidden scenes pause, and their resources are released on unmount. Reduced motion, failed WebGL and slow loading keep the poster and a normal reveal button. Pack details have a contained scroll area and fixed checkout footer on mobile. Theme preferences are stored locally without changing a customer's account settings.
+The homepage starts with the native pack gallery and direct quantity, Rip and Blitz controls. Contents and odds stay one tap away. The Packs page adds search and sorting. Both pages present a focused pack with neighboring designs, arrow keys, buttons and swipe navigation. Catalog grids use cached native 3D posters. The renderer loads in a separate chunk only when a visible preview or reveal needs it. Desktop previews can animate automatically; mobile previews are opt in. Offscreen/hidden scenes pause, and their resources are released on unmount. Reduced motion, failed WebGL and slow loading keep the poster and a normal reveal button. Pack details have a contained scroll area and fixed checkout footer on mobile. Theme preferences are stored locally without changing a customer's account settings.
 
 ## Copy and customize
 
@@ -44,7 +44,7 @@ A failed link shows Retry, Try demo and Log out. It keeps pending paid checkout 
 
 ## Payment and result boundaries
 
-The opening animation never pays, selects a reward or finalizes a choice. The existing checkout/recovery layer obtains the paid server result first. Skipping goes to review without choosing or settling anything. “Vault all” and “Sell available” only select choices; the customer must still confirm. Items without an available buyback cannot be selected for sale.
+After an explicit purchase confirmation, the existing paid order opens automatically once. Normal then shows sealed packs to rip; Blitz moves directly through the results. A failed opening offers an explicit retry of the same order. The opening animation never pays, selects a reward or finalizes a choice. The existing checkout/recovery layer obtains the paid server result first. Skipping goes to review without choosing or settling anything. “Vault all” and “Sell available” only select choices; the customer must still confirm. Items without an available buyback cannot be selected for sale.
 
 Live mode uses real money and inventory. Use demo mode or the isolated fixtures below for presentation checks. A production checkout smoke test still needs an explicitly authorized customer and purchase.
 

@@ -912,17 +912,19 @@
 }
 .lc-address {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 }
 .lc-address label,
 .lc-shipping > label {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 12px;
 }
-.lc-address label:nth-child(-n + 3) {
+.lc-address label:nth-child(-n + 3),
+.lc-address label:last-child {
   grid-column: 1/-1;
 }
 .lc-rate {

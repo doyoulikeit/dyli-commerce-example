@@ -5,7 +5,7 @@ import { LiveStorefront } from "../../src/components/live-storefront";
 import { Providers } from "../../src/components/providers";
 import { address } from "./privy.fixture";
 import "../../src/app/globals.css";
-import "../../src/components/commerce-theme.css";
+import "../../src/components/commerce-styles.css";
 
 const originalFetch = window.fetch.bind(window);
 // Dedicated fixture origin only. Allows a new isolated run without carrying

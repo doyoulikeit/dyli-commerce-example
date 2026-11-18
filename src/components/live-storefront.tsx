@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Archive,
   ArrowUpRight,
@@ -22,14 +23,18 @@ import {
   LiveProductDetail,
 } from "@/components/live-catalog";
 import { LiveReveal } from "@/components/live-reveal";
-import { PackBrowser, PackHero } from "@/components/pack-catalog";
+import { PackBrowser } from "@/components/pack-catalog";
 import { CommerceLogo, ThemeSwitch } from "@/components/brand-identity";
 import { AccountGate } from "@/components/account-gate";
 import { useWalletRegistration } from "@/components/use-wallet-registration";
 import { RevealModeSelector } from "@/components/reveal-mode";
 import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences } from "@/lib/opening-preferences";
-import { LiveActivity, LiveSaleActivity, LiveShipmentActivity } from "@/components/live-activity";
+import {
+  LiveActivity,
+  LiveSaleActivity,
+  LiveShipmentActivity,
+} from "@/components/live-activity";
 import { shipmentActivity } from "@/lib/activity";
 import { LiveShipmentTracking } from "@/components/live-shipment-tracking";
 import { EmbeddedCardCheckout } from "@/components/embedded-card-checkout";
@@ -58,20 +63,15 @@ import {
   settlementSummary,
 } from "@/lib/live-commerce";
 import type { ApiRecord, CatalogItem, StorefrontResponse } from "@/lib/types";
-import "./live-storefront.css";
-import "./live-reveal.css";
-import "./live-balance.css";
 
-const allNavigation = (
-  [
-    { id: "home", label: "Home", Icon: House },
-    { id: "shop", label: "Shop", Icon: ShoppingBag },
-    { id: "packs", label: "Packs", Icon: Box },
-    { id: "collection", label: "Vault", Icon: Archive },
-    { id: "trades", label: "Trades", Icon: ArrowLeftRight },
-    { id: "activity", label: "Activity", Icon: Activity },
-  ] as const
-);
+const allNavigation = [
+  { id: "home", label: "Home", Icon: House },
+  { id: "shop", label: "Shop", Icon: ShoppingBag },
+  { id: "packs", label: "Packs", Icon: Box },
+  { id: "collection", label: "Vault", Icon: Archive },
+  { id: "trades", label: "Trades", Icon: ArrowLeftRight },
+  { id: "activity", label: "Activity", Icon: Activity },
+] as const;
 type Tab = (typeof allNavigation)[number]["id"];
 
 export function LiveStorefront({
@@ -83,7 +83,15 @@ export function LiveStorefront({
   const boxesOnly = runtime?.boxesOnly ?? storefrontConfig.navigation.boxesOnly;
   const brandName = runtime?.name || storefrontConfig.brand.name;
   const commerce = useLiveCommerce();
-  const { session, flow, play, busy, error, refresh: refreshAccount, setError: setCommerceError } = commerce;
+  const {
+    session,
+    flow,
+    play,
+    busy,
+    error,
+    refresh: refreshAccount,
+    setError: setCommerceError,
+  } = commerce;
   const [tab, setTab] = useState<Tab>("home");
   const [storefront, setStorefront] = useState(initialStorefront);
   const [catalogLoading, setCatalogLoading] = useState(!initialStorefront);
@@ -91,8 +99,17 @@ export function LiveStorefront({
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<CatalogItem | null>(null);
+  const [pendingCheckout, setPendingCheckout] = useState<{
+    item: CatalogItem;
+    quantity: number;
+    mode?: "normal" | "turbo";
+  } | null>(null);
   const [quantity, setQuantity] = useState(1);
   const openingSettings = useOpeningPreferences(commerce.address);
+  const {
+    preferences: currentOpeningPreferences,
+    update: updateOpeningPreferences,
+  } = openingSettings;
   const [method, setMethod] = useState<"card" | "balance">("card");
   const [showOpening, setShowOpening] = useState(false);
   const [profile, setProfile] = useState(false);
@@ -106,9 +123,25 @@ export function LiveStorefront({
   const [checkoutReturn, setCheckoutReturn] = useState(false);
   const [recoveryHash, setRecoveryHash] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [communityIntent, setCommunityIntent] = useState<CommunityIntent | null>(null);
-  const { ready: authReady, authenticated, address, needsWalletRegistration, registerWallet } = commerce;
-  useWalletRegistration({ ready: authReady, authenticated, address, needsRegistration: needsWalletRegistration, busy, chainId: runtime?.chainId, embedded: !!runtime && runtime.authMode !== "existing", register: registerWallet });
+  const [communityIntent, setCommunityIntent] =
+    useState<CommunityIntent | null>(null);
+  const {
+    ready: authReady,
+    authenticated,
+    address,
+    needsWalletRegistration,
+    registerWallet,
+  } = commerce;
+  useWalletRegistration({
+    ready: authReady,
+    authenticated,
+    address,
+    needsRegistration: needsWalletRegistration,
+    busy,
+    chainId: runtime?.chainId,
+    embedded: !!runtime && runtime.authMode !== "existing",
+    register: registerWallet,
+  });
   const refreshConfirmedAccount = useCallback(async () => {
     await retryConfirmation(() => refreshAccount(true));
   }, [refreshAccount]);
@@ -118,50 +151,82 @@ export function LiveStorefront({
     const timeout = setTimeout(() => {
       controller.abort();
       setCatalogLoading(false);
-      setCatalogError("Inventory is taking longer than usual to load. Please try again.");
+      setCatalogError(
+        "Inventory is taking longer than usual to load. Please try again.",
+      );
     }, 25000);
     void fetch("/api/storefront", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Catalog unavailable");
         const next = await response.json();
-        if (!controller.signal.aborted) { setStorefront(next);setCatalogError(""); }
+        if (!controller.signal.aborted) {
+          setStorefront(next);
+          setCatalogError("");
+        }
       })
-      .catch(() => { if (!controller.signal.aborted) setCatalogError("Inventory couldn’t refresh. Please try again."); })
-      .finally(() => { clearTimeout(timeout);if (!controller.signal.aborted) setCatalogLoading(false); });
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setCatalogError("Inventory couldn’t refresh. Please try again.");
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (!controller.signal.aborted) setCatalogLoading(false);
+      });
     queueMicrotask(() =>
       setCheckoutReturn(
         new URLSearchParams(window.location.search).has("session_id"),
       ),
     );
-    return () => { clearTimeout(timeout);controller.abort(); };
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, [catalogRevision]);
 
   const retryCatalog = () => {
-    setCatalogLoading(!storefront);setCatalogError("");setCatalogRevision(value => value + 1);
+    setCatalogLoading(!storefront);
+    setCatalogError("");
+    setCatalogRevision((value) => value + 1);
   };
 
   const navigate = (next: Tab, refresh = true) => {
     setTab(next);
     if (refresh && session && (next === "activity" || next === "collection")) {
-      void refreshAccount(true).catch(() => setCommerceError("Your account could not refresh. Please try again."));
+      void refreshAccount(true).catch(() =>
+        setCommerceError("Your account could not refresh. Please try again."),
+      );
     }
     window.scrollTo({ top: 0, behavior: "instant" });
   };
   const finishVaultSale = async () => {
-    setSelling(null); setHolding(null); setSuccessMessage("Your sale is confirmed."); navigate("collection", false);
+    setSelling(null);
+    setHolding(null);
+    setSuccessMessage("Your sale is confirmed.");
+    navigate("collection", false);
   };
   const boxes = storefront?.packs || storefront?.boxes || [];
-  const products = boxesOnly
-    ? []
-    : storefront?.catalog || [];
+  const products = boxesOnly ? [] : storefront?.catalog || [];
   const holdings = asRows(session?.holdings.items);
   const pricing = asRecord(flow?.quote?.price_breakdown);
   const checkoutReady = !!flow?.quote && flow.item.id === checkoutItem?.id;
+  const quoteLine = checkoutReady ? asRows(flow?.quote?.items)[0] : undefined;
+  const quotedQuantity = Math.max(1, Number(quoteLine?.quantity) || quantity);
+  const quotedUnitPrice =
+    quoteLine?.unit_amount_cents != null &&
+    Number.isFinite(Number(quoteLine.unit_amount_cents))
+      ? Number(quoteLine.unit_amount_cents) / 100
+      : checkoutItem?.price;
   const capabilities = asRecord(storefront?.readiness.capabilities);
   const community = asRecord(capabilities.community);
-  const marketplace = asRecord(community.marketplace), trading = asRecord(community.trading);
-  const navigation = allNavigation.filter(entry => entry.id === "shop" ? marketplace.ready === true || !boxesOnly : entry.id !== "trades" || trading.ready === true);
-  const vaultSellingReady = asRecord(capabilities.post_vault_offers).ready === true;
+  const marketplace = asRecord(community.marketplace),
+    trading = asRecord(community.trading);
+  const navigation = allNavigation.filter((entry) =>
+    entry.id === "shop"
+      ? marketplace.ready === true || !boxesOnly
+      : entry.id !== "trades" || trading.ready === true,
+  );
+  const vaultSellingReady =
+    asRecord(capabilities.post_vault_offers).ready === true;
   const paymentMethods = Array.isArray(capabilities.payments)
     ? capabilities.payments
     : [];
@@ -174,13 +239,19 @@ export function LiveStorefront({
       item.name.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const startCheckout = (current?: CatalogItem) => {
-    if (!commerce.authenticated) {
-      commerce.login();
+  const startCheckout = (
+    current?: CatalogItem,
+    requestedQuantity = 1,
+    mode?: "normal" | "turbo",
+  ) => {
+    const item = current || selected;
+    if (!item) return;
+    if (mode) openingSettings.update({ ...openingSettings.preferences, mode });
+    if (!commerce.authenticated || !session) {
+      setPendingCheckout({ item, quantity: requestedQuantity, mode });
+      if (!commerce.authenticated) commerce.login();
       return;
     }
-    const item = current || selected;
-    if (!session || !item) return;
     if (!liveReady) {
       commerce.setError(
         "This storefront is waiting for the upgraded Commerce environment.",
@@ -189,11 +260,53 @@ export function LiveStorefront({
     }
     commerce.setError("");
     setCheckoutItem(item);
-    setQuantity(1);
+    setQuantity(Math.max(1, Math.min(quantityLimit(item), requestedQuantity)));
     setSelected(null);
   };
+  useEffect(() => {
+    if (!session || !pendingCheckout) return;
+    // Resume the customer's selection after sign-in; checkout still requires
+    // their explicit quote and payment confirmation.
+    queueMicrotask(() => {
+      setPendingCheckout(null);
+      if (!liveReady) {
+        setCommerceError(
+          "This storefront is waiting for the upgraded Commerce environment.",
+        );
+        return;
+      }
+      if (pendingCheckout.mode)
+        updateOpeningPreferences({
+          ...currentOpeningPreferences,
+          mode: pendingCheckout.mode,
+        });
+      setCheckoutItem(pendingCheckout.item);
+      setQuantity(
+        Math.max(
+          1,
+          Math.min(
+            quantityLimit(pendingCheckout.item),
+            pendingCheckout.quantity,
+          ),
+        ),
+      );
+      setSelected(null);
+    });
+  }, [
+    session,
+    pendingCheckout,
+    liveReady,
+    setCommerceError,
+    currentOpeningPreferences,
+    updateOpeningPreferences,
+  ]);
   const showResume = async (source?: CatalogItem, orderId?: string) => {
-    if (!orderId && flow?.stripeSessionId && !flow.orderId && flow.stripeUiMode === "embedded") {
+    if (
+      !orderId &&
+      flow?.stripeSessionId &&
+      !flow.orderId &&
+      flow.stripeUiMode === "embedded"
+    ) {
       const destination = await commerce.resumeCard();
       if (!destination) return;
       setCheckoutReturn(false);
@@ -214,7 +327,12 @@ export function LiveStorefront({
     setCheckoutReturn(false);
     navigate("collection");
   };
-  const cards = (items: CatalogItem[], count?: number, aboveFold = false, extraClass = "") => (
+  const cards = (
+    items: CatalogItem[],
+    count?: number,
+    aboveFold = false,
+    extraClass = "",
+  ) => (
     <div
       className={`lc-grid ${items[0] && boxItem(items[0]) ? "lc-box-grid" : ""} ${extraClass}`}
     >
@@ -239,8 +357,25 @@ export function LiveStorefront({
     </div>
   );
 
-  if (waitingForAccount(commerce.ready, commerce.authenticated, commerce.address, session?.identity.walletAddress)) {
-    return <AccountGate name={brandName} error={error} linking={needsWalletRegistration} busy={busy} onConnect={() => void registerWallet()} onRetry={() => window.location.reload()} onSignOut={() => void commerce.signOut()} />;
+  if (
+    waitingForAccount(
+      commerce.ready,
+      commerce.authenticated,
+      commerce.address,
+      session?.identity.walletAddress,
+    )
+  ) {
+    return (
+      <AccountGate
+        name={brandName}
+        error={error}
+        linking={needsWalletRegistration}
+        busy={busy}
+        onConnect={() => void registerWallet()}
+        onRetry={() => window.location.reload()}
+        onSignOut={() => void commerce.signOut()}
+      />
+    );
   }
 
   return (
@@ -266,26 +401,53 @@ export function LiveStorefront({
         </nav>
         <div className="lc-account">
           <ThemeSwitch />
-          <button className="lc-balance" aria-label="Your balance" disabled={!!busy} onClick={() => commerce.authenticated ? setProfile(true) : commerce.login()}>
-            <Wallet />
-            {session ? usd(session.balance.amount) : "—"}
-          </button>
+          {commerce.authenticated ? (
+            <button
+              className="lc-balance"
+              aria-label="Your balance"
+              disabled={!!busy}
+              onClick={() =>
+                commerce.authenticated ? setProfile(true) : commerce.login()
+              }
+            >
+              <Wallet />
+              {session ? usd(session.balance.amount) : "—"}
+            </button>
+          ) : (
+            <Link
+              href="/?demo=1"
+              prefetch={false}
+              className="lc-secondary dyli-header-demo"
+            >
+              Try demo
+            </Link>
+          )}
           <button
-            className="lc-icon"
+            className={
+              commerce.authenticated ? "lc-icon" : "lc-secondary dyli-sign-in"
+            }
             onClick={() =>
               commerce.authenticated ? setProfile(true) : commerce.login()
             }
             aria-label={commerce.authenticated ? "Your account" : "Sign in"}
           >
-            <CircleUserRound />
+            {commerce.authenticated ? <CircleUserRound /> : "Sign in"}
           </button>
         </div>
       </header>
       <main>
-        {successMessage && <div className="lc-success" role="status">
-          <span>{successMessage}</span>
-          <button className="lc-icon" aria-label="Dismiss confirmation" onClick={() => setSuccessMessage("")}>×</button>
-        </div>}
+        {successMessage && (
+          <div className="lc-success" role="status">
+            <span>{successMessage}</span>
+            <button
+              className="lc-icon"
+              aria-label="Dismiss confirmation"
+              onClick={() => setSuccessMessage("")}
+            >
+              ×
+            </button>
+          </div>
+        )}
         {error && (
           <div className="lc-notice" role="alert">
             <span>{error}</span>
@@ -310,25 +472,46 @@ export function LiveStorefront({
               >
                 Continue <ArrowUpRight />
               </button>
-              {(flow?.stripeSessionId || checkoutReturn) && !flow?.orderId && !flow?.paymentAttempted && !flow?.paymentHash && (
-                <button className="lc-secondary" disabled={!!busy || !session} onClick={() => {
-                  void commerce.cancelCard().then(ok => {
-                    if (ok) { setCheckoutReturn(false); setCheckoutItem(null); setSelected(null); }
-                  });
-                }}>
-                  Cancel checkout
-                </button>
-              )}
+              {(flow?.stripeSessionId || checkoutReturn) &&
+                !flow?.orderId &&
+                !flow?.paymentAttempted &&
+                !flow?.paymentHash && (
+                  <button
+                    className="lc-secondary"
+                    disabled={!!busy || !session}
+                    onClick={() => {
+                      void commerce.cancelCard().then((ok) => {
+                        if (ok) {
+                          setCheckoutReturn(false);
+                          setCheckoutItem(null);
+                          setSelected(null);
+                        }
+                      });
+                    }}
+                  >
+                    Cancel checkout
+                  </button>
+                )}
               {canClearBalanceRecovery(flow) && (
-                <button type="button" className="lc-secondary" disabled={!!busy || !session} onClick={() => {
-                  if (!window.confirm("Clear this saved Balance checkout?\n\nThis does not cancel or refund a USDC payment. Only clear a test or abandoned attempt where no real USDC was sent. If you paid, choose Continue instead.\n\nThe old recovery details will be kept in this browser for support.")) return;
-                  if (commerce.clearBalanceCheckout()) {
-                    setRecoveryHash("");
-                    setCheckoutItem(null);
-                    setSelected(null);
-                    setShowOpening(false);
-                  }
-                }}>
+                <button
+                  type="button"
+                  className="lc-secondary"
+                  disabled={!!busy || !session}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Clear this saved Balance checkout?\n\nThis does not cancel or refund a USDC payment. Only clear a test or abandoned attempt where no real USDC was sent. If you paid, choose Continue instead.\n\nThe old recovery details will be kept in this browser for support.",
+                      )
+                    )
+                      return;
+                    if (commerce.clearBalanceCheckout()) {
+                      setRecoveryHash("");
+                      setCheckoutItem(null);
+                      setSelected(null);
+                      setShowOpening(false);
+                    }
+                  }}
+                >
                   Clear checkout
                 </button>
               )}
@@ -362,23 +545,41 @@ export function LiveStorefront({
             </button>
           </form>
         )}
-        {catalogError && storefront && tab !== "packs" && <div className="dyli-inline-error" role="alert"><span>{catalogError}</span><button type="button" onClick={retryCatalog}>Try again</button></div>}
-        {!storefront && tab === "home" && <PackBrowser items={[]} onSelect={setSelected} loading={catalogLoading} error={catalogError} onRetry={retryCatalog} />}
+        {catalogError && storefront && tab !== "packs" && (
+          <div className="dyli-inline-error" role="alert">
+            <span>{catalogError}</span>
+            <button type="button" onClick={retryCatalog}>
+              Try again
+            </button>
+          </div>
+        )}
+        {!storefront && tab === "home" && (
+          <PackBrowser
+            items={[]}
+            onSelect={setSelected}
+            loading={catalogLoading}
+            error={catalogError}
+            onRetry={retryCatalog}
+          />
+        )}
         {tab === "home" && storefront && (
           <>
-            <PackHero items={boxes} onSelect={setSelected} onExplore={() => navigate("packs")} />
-            <section id="live-packs">
-              <div className="lc-section-title">
-                <h2>Packs</h2>
-                <button onClick={() => navigate("packs")}>
-                  View all <ArrowUpRight />
-                </button>
-              </div>
-              {cards(boxes, 4, true, "dyli-pack-grid-home")}
-            </section>
-            {marketplace.ready === true && <MarketplacePreview wallet={commerce.address || ""}
-              onViewAll={() => navigate("shop")}
-              onSelect={item => { setCommunityIntent({ kind: "inspect", item }); navigate("shop"); }} />}
+            <PackBrowser
+              items={boxes}
+              onSelect={setSelected}
+              onRip={startCheckout}
+              home
+            />
+            {marketplace.ready === true && (
+              <MarketplacePreview
+                wallet={commerce.address || ""}
+                onViewAll={() => navigate("shop")}
+                onSelect={(item) => {
+                  setCommunityIntent({ kind: "inspect", item });
+                  navigate("shop");
+                }}
+              />
+            )}
             {marketplace.ready !== true && products.length > 0 && (
               <section>
                 <div className="lc-section-title">
@@ -426,7 +627,16 @@ export function LiveStorefront({
             </footer>
           </>
         )}
-        {tab === "packs" && <PackBrowser items={boxes} onSelect={setSelected} loading={catalogLoading} error={catalogError} onRetry={retryCatalog} />}
+        {tab === "packs" && (
+          <PackBrowser
+            items={boxes}
+            onSelect={setSelected}
+            onRip={startCheckout}
+            loading={catalogLoading}
+            error={catalogError}
+            onRetry={retryCatalog}
+          />
+        )}
         {tab === "shop" && marketplace.ready !== true && (
           <>
             <h1>Shop</h1>
@@ -454,9 +664,19 @@ export function LiveStorefront({
               : empty("Nothing here yet", "Try another search.")}
           </>
         )}
-        <LiveCommunity key={commerce.address || "guest"} view={tab} session={session} api={commerce.api} send={commerce.send}
-          marketplace={marketplace} trading={trading} intent={communityIntent} clearIntent={() => setCommunityIntent(null)}
-          login={commerce.login} refresh={refreshConfirmedAccount} />
+        <LiveCommunity
+          key={commerce.address || "guest"}
+          view={tab}
+          session={session}
+          api={commerce.api}
+          send={commerce.send}
+          marketplace={marketplace}
+          trading={trading}
+          intent={communityIntent}
+          clearIntent={() => setCommunityIntent(null)}
+          login={commerce.login}
+          refresh={refreshConfirmedAccount}
+        />
         {tab === "collection" && (
           <>
             <div className="lc-section-title">
@@ -464,7 +684,10 @@ export function LiveStorefront({
               {holdings.length > 0 && (
                 <button
                   className="lc-primary"
-                  onClick={() => { setShippingToken(undefined); setShipping(true); }}
+                  onClick={() => {
+                    setShippingToken(undefined);
+                    setShipping(true);
+                  }}
                 >
                   Ship
                 </button>
@@ -478,7 +701,13 @@ export function LiveStorefront({
                 >
                   Collection
                 </button>
-                <button aria-pressed={shipped} onClick={() => { setShipped(true); navigate("collection"); }}>
+                <button
+                  aria-pressed={shipped}
+                  onClick={() => {
+                    setShipped(true);
+                    navigate("collection");
+                  }}
+                >
                   Shipments
                 </button>
               </div>
@@ -501,9 +730,7 @@ export function LiveStorefront({
                           ))}
                         </div>
                         <div>
-                          <strong>
-                            {shipmentActivity(shipment)}
-                          </strong>
+                          <strong>{shipmentActivity(shipment)}</strong>
                           <p>
                             {asRows(shipment.items).reduce(
                               (sum, item) => sum + Number(item.quantity || 1),
@@ -534,14 +761,23 @@ export function LiveStorefront({
             ) : holdings.length ? (
               <div className="lc-grid">
                 {holdings.map((item) => (
-                  <LiveVaultCard key={String(item.token_id)} item={item} api={commerce.api} sellingAvailable={vaultSellingReady} onOpen={() => setHolding(item)}
-                    onShip={() => { setShippingToken(String(item.token_id)); setShipping(true); }} />
+                  <LiveVaultCard
+                    key={String(item.token_id)}
+                    item={item}
+                    api={commerce.api}
+                    sellingAvailable={vaultSellingReady}
+                    onOpen={() => setHolding(item)}
+                    onShip={() => {
+                      setShippingToken(String(item.token_id));
+                      setShipping(true);
+                    }}
+                  />
                 ))}
               </div>
             ) : (
               empty(
-                "Make room for your first find",
-                "Your next pull could be the one.",
+                "Your vault is empty",
+                "Collectibles you vault after opening a pack will appear here.",
               )
             )}
           </>
@@ -549,12 +785,44 @@ export function LiveStorefront({
         {tab === "activity" && (
           <>
             <h1>Activity</h1>
-            {session && (marketplace.ready || trading.ready) && <CommunityActivity api={commerce.api} hasOtherActivity={!!(session.orders.length || session.offerAcceptances?.length || session.redemptions.length)} />}
-            {!!session?.redemptions.length && <LiveShipmentActivity shipments={session.redemptions} onView={() => { navigate("collection"); setShipped(true); }} />}
-            {!!session?.offerAcceptances?.length && <LiveSaleActivity sales={session.offerAcceptances} busy={busy} onContinue={setSelling} />}
+            {session && (marketplace.ready || trading.ready) && (
+              <CommunityActivity
+                api={commerce.api}
+                hasOtherActivity={
+                  !!(
+                    session.orders.length ||
+                    session.offerAcceptances?.length ||
+                    session.redemptions.length
+                  )
+                }
+              />
+            )}
+            {!!session?.redemptions.length && (
+              <LiveShipmentActivity
+                shipments={session.redemptions}
+                onView={() => {
+                  navigate("collection");
+                  setShipped(true);
+                }}
+              />
+            )}
+            {!!session?.offerAcceptances?.length && (
+              <LiveSaleActivity
+                sales={session.offerAcceptances}
+                busy={busy}
+                onContinue={setSelling}
+              />
+            )}
             {session?.orders.length ? (
-              <LiveActivity orders={session.orders} plays={session.boxPlays || []} busy={busy} onOpen={(item, orderId) => void showResume(item, orderId)} />
-            ) : !session?.offerAcceptances?.length && !session?.redemptions.length && !(session && (marketplace.ready || trading.ready)) ? (
+              <LiveActivity
+                orders={session.orders}
+                plays={session.boxPlays || []}
+                busy={busy}
+                onOpen={(item, orderId) => void showResume(item, orderId)}
+              />
+            ) : !session?.offerAcceptances?.length &&
+              !session?.redemptions.length &&
+              !(session && (marketplace.ready || trading.ready)) ? (
               empty("No activity yet", "Your purchases will appear here.")
             ) : null}
           </>
@@ -594,139 +862,203 @@ export function LiveStorefront({
           }}
         >
           <div className="lc-checkout">
-            {commerce.cardCheckout ? <>
-              {error && <p className="lc-error" role="alert">{error}</p>}
-              <EmbeddedCardCheckout key={commerce.cardCheckout.sessionId} checkout={commerce.cardCheckout} onComplete={async () => {
-                const ok = await commerce.completeCard(commerce.cardCheckout!.sessionId);
-                if (ok) {
-                  setCheckoutItem(null);
-                  setCheckoutReturn(false);
-                  setShowOpening(true);
-                  navigate("collection");
-                }
-                return ok;
-              }} />
-              <button className="lc-card-cancel" disabled={!!busy} onClick={async () => {
-                if (await commerce.cancelCard()) {
-                  setCheckoutItem(null);
-                  setCheckoutReturn(false);
-                }
-              }}>Cancel checkout</button>
-            </> : <>
-            <div className="lc-checkout-product">
-              <Art src={checkoutItem.image} name={checkoutItem.name} />
-              <div>
-                <h2>{checkoutItem.name}</h2>
-                <span>{usd(checkoutItem.price)} each</span>
-              </div>
-            </div>
-            {error && (
-              <p className="lc-error" role="alert">
-                {error}
-              </p>
-            )}
-            {!checkoutReady ? (
+            {commerce.cardCheckout ? (
               <>
-                <label className="lc-stat">
-                  Quantity
-                  <select
-                    value={quantity}
-                    disabled={!!busy}
-                    onChange={(event) =>
-                      setQuantity(Number(event.target.value))
+                {error && (
+                  <p className="lc-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <EmbeddedCardCheckout
+                  key={commerce.cardCheckout.sessionId}
+                  checkout={commerce.cardCheckout}
+                  onComplete={async () => {
+                    const ok = await commerce.completeCard(
+                      commerce.cardCheckout!.sessionId,
+                    );
+                    if (ok) {
+                      setCheckoutItem(null);
+                      setCheckoutReturn(false);
+                      setShowOpening(true);
+                      navigate("collection");
                     }
-                  >
-                    {Array.from(
-                      { length: quantityLimit(checkoutItem) },
-                      (_, index) => (
-                        <option key={index + 1}>{index + 1}</option>
-                      ),
-                    )}
-                  </select>
-                </label>
-                {boxItem(checkoutItem) && <RevealModeSelector value={openingSettings.preferences} onChange={openingSettings.update} quantity={quantity} disabled={!!busy} />}
+                    return ok;
+                  }}
+                />
                 <button
-                  className="lc-primary"
-                  disabled={!!busy || !session}
-                  onClick={() =>
-                    void commerce.prepareQuote(checkoutItem, quantity, openingSettings.preferences)
-                  }
+                  className="lc-card-cancel"
+                  disabled={!!busy}
+                  onClick={async () => {
+                    if (await commerce.cancelCard()) {
+                      setCheckoutItem(null);
+                      setCheckoutReturn(false);
+                    }
+                  }}
                 >
-                  {busy && <LoaderCircle className="vr-spinner" size={18} aria-hidden="true" />} Continue
+                  Cancel checkout
                 </button>
               </>
             ) : (
               <>
-                <div className="lc-payment-options">
-                  <button
-                    aria-pressed={method === "card"}
-                    disabled={
-                      !!busy || !!flow?.paymentAttempted ||
-                      !paymentMethods.includes("stripe_card")
-                    }
-                    onClick={() => setMethod("card")}
-                  >
-                    Card
-                  </button>
-                  <button
-                    aria-pressed={method === "balance"}
-                    disabled={
-                      !!busy || !!flow?.stripeSessionId ||
-                      !paymentMethods.includes("usdc")
-                    }
-                    onClick={() => setMethod("balance")}
-                  >
-                    Balance <small>{usd(session?.balance.amount)}</small>
-                  </button>
+                <div className="lc-checkout-product">
+                  <Art src={checkoutItem.image} name={checkoutItem.name} />
+                  <div>
+                    <h2>{checkoutItem.name}</h2>
+                    <span>
+                      {checkoutReady
+                        ? `${quotedQuantity} ${boxItem(checkoutItem) ? (quotedQuantity === 1 ? "pack" : "packs") : quotedQuantity === 1 ? "item" : "items"} × `
+                        : ""}
+                      {usd(
+                        checkoutReady ? quotedUnitPrice : checkoutItem.price,
+                      )}
+                      {!checkoutReady && " each"}
+                    </span>
+                  </div>
                 </div>
-                <p className="lc-stat lc-item-total">
-                  <span>Items</span>
-                  <strong>{usd(Number(pricing.subtotal_cents) / 100)}</strong>
-                </p>
-                {Number(pricing.partner_fee_cents) > 0 && (
-                  <p className="lc-stat lc-fee">
-                    <span>{String(pricing.fee_label || "Platform fee")}{Number(pricing.fee_quantity) > 1
-                      ? ` · ${usd(Number(pricing.partner_fee_cents) / Number(pricing.fee_quantity) / 100)} × ${pricing.fee_quantity}` : ""}</span>
-                    <span>{usd(Number(pricing.partner_fee_cents) / 100)}</span>
+                {error && (
+                  <p className="lc-error" role="alert">
+                    {error}
                   </p>
                 )}
-                <p className="lc-stat lc-total">
-                  <span>Total</span>
-                  <strong>{usd(Number(pricing.total_cents) / 100)}</strong>
-                </p>
-                {method === "card" && (
-                  <small>
-                    Card processing is shown in secure checkout. Apple Pay
-                    appears when available.
-                  </small>
+                {!checkoutReady ? (
+                  <>
+                    <label className="lc-stat">
+                      Quantity
+                      <select
+                        value={quantity}
+                        disabled={!!busy}
+                        onChange={(event) =>
+                          setQuantity(Number(event.target.value))
+                        }
+                      >
+                        {Array.from(
+                          { length: quantityLimit(checkoutItem) },
+                          (_, index) => (
+                            <option key={index + 1}>{index + 1}</option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    {boxItem(checkoutItem) && (
+                      <RevealModeSelector
+                        value={openingSettings.preferences}
+                        onChange={openingSettings.update}
+                        quantity={quantity}
+                        disabled={!!busy}
+                      />
+                    )}
+                    <button
+                      className="lc-primary"
+                      disabled={!!busy || !session}
+                      onClick={() =>
+                        void commerce.prepareQuote(
+                          checkoutItem,
+                          quantity,
+                          openingSettings.preferences,
+                        )
+                      }
+                    >
+                      {busy && (
+                        <LoaderCircle
+                          className="vr-spinner"
+                          size={18}
+                          aria-hidden="true"
+                        />
+                      )}{" "}
+                      Continue
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {flow && !receiptRequired(flow) && (
+                      <button
+                        className="lc-edit-quantity"
+                        disabled={!!busy}
+                        onClick={commerce.clearUnpaid}
+                      >
+                        Edit quantity & preferences
+                      </button>
+                    )}
+                    <div className="lc-payment-options">
+                      <button
+                        aria-pressed={method === "card"}
+                        disabled={
+                          !!busy ||
+                          !!flow?.paymentAttempted ||
+                          !paymentMethods.includes("stripe_card")
+                        }
+                        onClick={() => setMethod("card")}
+                      >
+                        Card
+                      </button>
+                      <button
+                        aria-pressed={method === "balance"}
+                        disabled={
+                          !!busy ||
+                          !!flow?.stripeSessionId ||
+                          !paymentMethods.includes("usdc")
+                        }
+                        onClick={() => setMethod("balance")}
+                      >
+                        Balance <small>{usd(session?.balance.amount)}</small>
+                      </button>
+                    </div>
+                    <p className="lc-stat lc-item-total">
+                      <span>Items</span>
+                      <strong>
+                        {usd(Number(pricing.subtotal_cents) / 100)}
+                      </strong>
+                    </p>
+                    {Number(pricing.partner_fee_cents) > 0 && (
+                      <p className="lc-stat lc-fee">
+                        <span>
+                          {String(pricing.fee_label || "Platform fee")}
+                          {Number(pricing.fee_quantity) > 1
+                            ? ` · ${usd(Number(pricing.partner_fee_cents) / Number(pricing.fee_quantity) / 100)} × ${pricing.fee_quantity}`
+                            : ""}
+                        </span>
+                        <span>
+                          {usd(Number(pricing.partner_fee_cents) / 100)}
+                        </span>
+                      </p>
+                    )}
+                    <p className="lc-stat lc-total">
+                      <span>Total</span>
+                      <strong>{usd(Number(pricing.total_cents) / 100)}</strong>
+                    </p>
+                    {method === "card" && (
+                      <small>
+                        Card processing is shown in secure checkout. Apple Pay
+                        appears when available.
+                      </small>
+                    )}
+                    <button
+                      className="lc-primary"
+                      disabled={
+                        !!busy ||
+                        !paymentMethods.includes(
+                          method === "card" ? "stripe_card" : "usdc",
+                        )
+                      }
+                      onClick={async () => {
+                        if (method === "card") {
+                          await commerce.payCard();
+                        } else if (await commerce.payBalance()) {
+                          setCheckoutItem(null);
+                          setShowOpening(true);
+                          navigate("collection");
+                        }
+                      }}
+                    >
+                      {busy ||
+                        (method === "card"
+                          ? "Continue to card"
+                          : `Pay ${usd(Number(pricing.total_cents) / 100)} with balance`)}
+                    </button>
+                  </>
                 )}
-                <button
-                  className="lc-primary"
-                  disabled={
-                    !!busy ||
-                    !paymentMethods.includes(
-                      method === "card" ? "stripe_card" : "usdc",
-                    )
-                  }
-                  onClick={async () => {
-                    if (method === "card") {
-                      await commerce.payCard();
-                    }
-                    else if (await commerce.payBalance()) {
-                      setCheckoutItem(null);
-                      setShowOpening(true);
-                      navigate("collection");
-                    }
-                  }}
-                >
-                  {busy ||
-                    (method === "card"
-                      ? "Continue to card"
-                      : "Pay with balance")}
-                </button>
               </>
             )}
-            </>}
           </div>
         </LiveModal>
       )}
@@ -742,7 +1074,10 @@ export function LiveStorefront({
           onOpen={() => void commerce.openBoxes()}
           onChoose={commerce.choose}
           onSettle={async () => {
-            const result = settlementSummary(flow.decisions || play.decisions || [], play.rewards);
+            const result = settlementSummary(
+              flow.decisions || play.decisions || [],
+              play.rewards,
+            );
             if (await commerce.settle()) {
               setShowOpening(false);
               setSuccessMessage(result.success);
@@ -755,41 +1090,77 @@ export function LiveStorefront({
         />
       )}
       {profile && session && (
-        <LiveBalance key={commerce.address} session={session} readWallet={commerce.readWallet} send={commerce.send}
-          onClose={() => setProfile(false)} onSignOut={async () => {
+        <LiveBalance
+          key={commerce.address}
+          session={session}
+          readWallet={commerce.readWallet}
+          send={commerce.send}
+          onClose={() => setProfile(false)}
+          onSignOut={async () => {
             if (await commerce.signOut()) setProfile(false);
-          }} />
+          }}
+        />
       )}
       {holding && session ? (
-        <LiveVaultSale key={`${commerce.address}:${holding.token_id}`} item={holding} session={session}
+        <LiveVaultSale
+          key={`${commerce.address}:${holding.token_id}`}
+          item={holding}
+          session={session}
           sellingAvailable={vaultSellingReady}
-          api={commerce.api} send={commerce.send} onSettled={refreshConfirmedAccount} onComplete={finishVaultSale} onClose={() => setHolding(null)}
-          onList={marketplace.ready === true ? () => { setCommunityIntent({ kind: "list", item: holding }); setHolding(null); navigate("shop", false); } : undefined}
-          onTrade={trading.ready === true ? () => { setCommunityIntent({ kind: "trade", item: holding }); setHolding(null); navigate("trades", false); } : undefined}
-          onShip={() => { setShippingToken(String(holding.token_id)); setHolding(null); setShipping(true); }} />
-      ) : holding && (
-        <LiveModal title="In your vault" onClose={() => setHolding(null)}>
-          <div className="lc-checkout">
-            <Art src={assetImage(holding)} name={String(holding.name)} />
-            <h2>{String(holding.name)}</h2>
-            {asRows(holding.attributes).map((attribute, index) => (
-              <p className="lc-stat" key={index}>
-                <span>{String(attribute.trait_type)}</span>
-                <strong>{String(attribute.value)}</strong>
-              </p>
-            ))}
-            <button
-              className="lc-primary"
-              onClick={() => {
-                setShippingToken(String(holding.token_id));
-                setHolding(null);
-                setShipping(true);
-              }}
-            >
-              Ship
-            </button>
-          </div>
-        </LiveModal>
+          api={commerce.api}
+          send={commerce.send}
+          onSettled={refreshConfirmedAccount}
+          onComplete={finishVaultSale}
+          onClose={() => setHolding(null)}
+          onList={
+            marketplace.ready === true
+              ? () => {
+                  setCommunityIntent({ kind: "list", item: holding });
+                  setHolding(null);
+                  navigate("shop", false);
+                }
+              : undefined
+          }
+          onTrade={
+            trading.ready === true
+              ? () => {
+                  setCommunityIntent({ kind: "trade", item: holding });
+                  setHolding(null);
+                  navigate("trades", false);
+                }
+              : undefined
+          }
+          onShip={() => {
+            setShippingToken(String(holding.token_id));
+            setHolding(null);
+            setShipping(true);
+          }}
+        />
+      ) : (
+        holding && (
+          <LiveModal title="In your vault" onClose={() => setHolding(null)}>
+            <div className="lc-checkout">
+              <Art src={assetImage(holding)} name={String(holding.name)} />
+              <h2>{String(holding.name)}</h2>
+              {asRows(holding.attributes).map((attribute, index) => (
+                <p className="lc-stat" key={index}>
+                  <span>{String(attribute.trait_type)}</span>
+                  <strong>{String(attribute.value)}</strong>
+                </p>
+              ))}
+              <button
+                className="lc-primary"
+                onClick={() => {
+                  setShippingToken(String(holding.token_id));
+                  setHolding(null);
+                  setShipping(true);
+                }}
+              >
+                Ship
+              </button>
+            </div>
+          </LiveModal>
+        )
       )}
       {shipping && session && (
         <LiveRedemption
@@ -807,11 +1178,24 @@ export function LiveStorefront({
           onClose={() => setShipping(false)}
         />
       )}
-      {selling && session && <LiveVaultSale key={`${commerce.address}:${selling.token_id}`} item={selling}
-        initialAcceptanceId={selling.acceptance_id ? String(selling.acceptance_id) : undefined}
-        session={session} api={commerce.api} send={commerce.send} onClose={() => setSelling(null)}
-        onSettled={refreshConfirmedAccount} onComplete={finishVaultSale} />}
-      {busy && !profile && !checkoutItem && !(showOpening && play && flow) && <CommerceProgress message={busy} />}
+      {selling && session && (
+        <LiveVaultSale
+          key={`${commerce.address}:${selling.token_id}`}
+          item={selling}
+          initialAcceptanceId={
+            selling.acceptance_id ? String(selling.acceptance_id) : undefined
+          }
+          session={session}
+          api={commerce.api}
+          send={commerce.send}
+          onClose={() => setSelling(null)}
+          onSettled={refreshConfirmedAccount}
+          onComplete={finishVaultSale}
+        />
+      )}
+      {busy && !profile && !checkoutItem && !(showOpening && play && flow) && (
+        <CommerceProgress message={busy} />
+      )}
     </div>
   );
 }

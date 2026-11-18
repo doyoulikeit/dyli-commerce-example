@@ -99,7 +99,7 @@ export function CommunityMarket({
       <div className="cm-heading">
         <div>
           <h1>Marketplace</h1>
-          <p>Discover collectibles from your community.</p>
+          <p>Buy, sell and make offers.</p>
         </div>
         <button
           className="lc-primary"

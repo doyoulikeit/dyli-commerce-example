@@ -163,7 +163,7 @@ export function LiveBalance({ session, readWallet, send, onClose, onSignOut }: P
       </>}
       {view === "transfer" && record && <div className="lc-transfer-result" role="status">
         {record.status === "confirmed" ? <Check size={30} /> : pendingWithdrawal(record) ? <LoaderCircle size={26} className="vr-spinner" /> : null}
-        <h2>{record.status === "confirmed" ? "Sent." : record.status === "failed" ? "Transfer not sent." : record.hash ? "On its way." : "Checking your transfer."}</h2>
+        <h2>{record.status === "confirmed" ? "Transfer confirmed" : record.status === "failed" ? "Transfer not sent" : record.hash ? "Transfer pending" : "Checking transfer"}</h2>
         <strong>{record.amount} USDC</strong>
         <code>{record.recipient}</code>
         <span>{network}</span>

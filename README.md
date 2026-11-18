@@ -30,7 +30,7 @@ The homepage shows Marketplace below Packs, with **View all** for search, filter
 
 ## Pack experience
 
-The storefront includes DYLI branding, light/dark themes, a native focused-pack gallery, searchable packs, live hits and odds, and mobile bottom sheets. Normal opens individual packs; Blitz skips the buildup. Multi-pulls have a sealed-pack grid and Reveal all. Catalog cards stay lightweight; pack previews and openings reuse DYLI’s lazily loaded 3D renderer with reduced-motion and image fallbacks. Bulk review lets customers select vault or available buybacks before one explicit confirmation.
+The homepage opens on DYLI’s native pack gallery with direct quantity, Rip and Blitz controls. The storefront includes consistent light/dark themes, searchable packs, live hits and odds, and mobile bottom sheets. Normal opens individual packs; Blitz skips the buildup. Multi-pulls have a sealed-pack grid and Reveal all. Catalog cards stay lightweight; pack previews and openings reuse DYLI’s lazily loaded 3D renderer with reduced-motion and image fallbacks. Bulk review lets customers select vault or available buybacks before one explicit confirmation.
 
 The API now supplies optional public `artwork` metadata for the model, textures and poster. Reuse the renderer and React wrapper in your own app: [pack UI and asset guide](docs/PACK-EXPERIENCE.md).
 

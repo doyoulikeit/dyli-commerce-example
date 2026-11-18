@@ -46,7 +46,7 @@ await build({
       setup(build) {
         build.onLoad({ filter: /globals\.css$/ }, async (args) => ({
           contents: (await readFile(args.path, "utf8")).replace(
-            '@import "tailwindcss";',
+            /@import "tailwindcss"(?: source\([^;]+\))?;/,
             "",
           ),
           loader: "css",

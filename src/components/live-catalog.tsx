@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useWalletPrompt } from "@/components/providers";
+import { useWalletPrompt } from "@/components/wallet-prompt";
 import { acquireModalScroll } from "@/lib/modal-scroll";
 import { X } from "lucide-react";
 import { PackCard } from "@/components/pack-catalog";

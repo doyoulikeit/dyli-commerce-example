@@ -6,13 +6,13 @@ The demo reads DYLI's live catalog, pack contents, published odds and current bu
 
 ## Try the flow
 
-1. Choose a pack and inspect its top hits and odds.
-2. Open 1–10 packs with virtual Card or Balance. Start with $500.
+1. Swipe or browse packs on the homepage. Use the info button for top hits and odds.
+2. Pick a quantity and choose Rip or Blitz directly. Checkout uses virtual Card or Balance, starting with $500.
 3. Choose **Normal** to rip individual packs, or **Blitz** to skip the buildup. Multi-pulls have a pack grid and **Reveal all**.
 4. Select **Vault** or an available **Sell** offer, then confirm the summary. Sales add virtual funds; vaulted pulls appear in Collection.
 5. Use the account menu's **Reset demo** to start over. **Exit demo** returns to the live storefront.
 
-Closing an opening leaves a **Continue opening** action so the session can resume. Collection, balance and activity persist in this tab's `sessionStorage`. If browser storage is unavailable, the demo still works in memory. It uses separate keys from live checkout recovery.
+Closing or reloading an unfinished opening leaves a **Continue opening** action at the top of the page. It keeps the same simulated pulls and saved choices; finish it before starting another opening. Collection, balance and activity persist in this tab's `sessionStorage`. If browser storage is unavailable, the demo still works in memory. It uses separate keys from live checkout recovery.
 
 ## Run locally
 

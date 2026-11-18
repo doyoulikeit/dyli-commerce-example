@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "@/components/commerce-theme.css";
+import "@/components/commerce-styles.css";
 
 const siteName = process.env.NEXT_PUBLIC_STOREFRONT_NAME || "DYLI";
 
@@ -35,11 +35,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className="h-full antialiased"
-    >
+    <html lang="en" suppressHydrationWarning className="h-full antialiased">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.dataset.theme=localStorage.getItem("dyli-commerce-theme")==="dark"?"dark":"light"}catch{}`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

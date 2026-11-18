@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeOpeningPreferences, openingPreferenceKey, parseOpeningPreferences, type OpeningPreferences } from "@/lib/opening-preferences";
 
 const eventName = "vaulted:opening-preferences";
@@ -22,7 +22,7 @@ export function useOpeningPreferences(account: string) {
   }, () => null);
   const raw = temporary?.key === key ? temporary.raw : saved;
   const preferences = useMemo(() => parseOpeningPreferences(raw), [raw]);
-  const update = (next: OpeningPreferences) => {
+  const update = useCallback((next: OpeningPreferences) => {
     const raw = JSON.stringify(normalizeOpeningPreferences(next));
     try {
       if (!key) throw new Error("Account is loading");
@@ -30,6 +30,6 @@ export function useOpeningPreferences(account: string) {
       setTemporary(null);
       window.dispatchEvent(new Event(eventName));
     } catch { setTemporary({ key, raw }); }
-  };
+  }, [key]);
   return { preferences, update };
 }

@@ -4,6 +4,8 @@ import { PrivyProvider, usePrivy, useWallets, useSignMessage, useModalStatus, us
 import { createContext, useContext } from "react";
 import { base, baseSepolia } from "viem/chains";
 import type { CommerceRuntime } from "@/lib/commerce-runtime";
+import { WalletPromptContext } from "./wallet-prompt";
+export { useWalletPrompt } from "./wallet-prompt";
 import { CommerceAuthContext } from "./commerce-auth";
 import { usePartnerAuthAdapter } from "./partner-auth-adapter";
 import { sendBaseTransaction } from "@/lib/base-wallet";
@@ -13,8 +15,7 @@ import { validateTransaction } from "@/lib/live-commerce";
 
 const RuntimeContext = createContext<CommerceRuntime | null>(null);
 export const useCommerceRuntime = () => useContext(RuntimeContext);
-const WalletPromptContext = createContext(false);
-export const useWalletPrompt = () => useContext(WalletPromptContext);
+
 
 function PrivyAdapter({ children }: { children: React.ReactNode }) {
   const auth = usePrivy();

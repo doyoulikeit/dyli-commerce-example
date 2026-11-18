@@ -19,6 +19,7 @@ test('embedded wallet still signs authorization, without a second confirmation p
       useModalStatus: () => ({ isOpen: false }), useSign7702Authorization: () => ({ signAuthorization() {} }),
       useSignMessage: () => ({ signMessage: async (...args) => { calls.push(args); return { signature: 'real-signature-result' }; } }),
     };
+    if (name === './wallet-prompt') return { WalletPromptContext: { Provider: 'wallet-prompt' } };
     if (name === './commerce-auth') return { CommerceAuthContext: { Provider: 'auth' } };
     return {};
   } });

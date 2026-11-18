@@ -1,12 +1,6 @@
 "use client";
 import Link from "next/link";
 
-import { AddressElement, Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-import type {
-  StripeAddressElementChangeEvent,
-  StripeAddressElementOptions,
-} from "@stripe/stripe-js";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
@@ -33,15 +27,14 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { LiveProductDetail, LiveModal } from "@/components/live-catalog";
-import "./live-storefront.css";
-import "./live-reveal.css";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApiRecord, CatalogItem, StorefrontResponse } from "@/lib/types";
-import { PackBrowser, PackCard, PackHero } from "@/components/pack-catalog";
+import { PackBrowser } from "@/components/pack-catalog";
 import { LiveReveal } from "@/components/live-reveal";
-import { drawDemoPulls, type DemoPull } from "@/lib/demo-pulls";
+import { restoreDemoOpening, type DemoOpening } from "@/lib/demo-opening";
+import { drawDemoPulls } from "@/lib/demo-pulls";
 import { RevealModeSelector } from "@/components/reveal-mode";
 import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences, type OpeningPreferences } from "@/lib/opening-preferences";
@@ -116,7 +109,7 @@ type DemoState = {
 };
 type BoxData = { box: ApiRecord; ranges: ApiRecord; history: ApiRecord };
 
-type BoxRun = { id: string; item: CatalogItem; rewards: DemoPull[]; decisions: Array<"claim"|"sell_back">; revealed: boolean; total: number; preferences: OpeningPreferences };
+type BoxRun = DemoOpening;
 type ShippingRate = {
   id: string;
   carrier: "USPS" | "UPS";
@@ -134,6 +127,7 @@ type ShippingAddress = {
 };
 
 const STORAGE_KEY = "vaulted-session-poc-v5";
+const OPENING_KEY = "dyli-demo-opening-v1";
 const PROFILE_KEY = "vaulted-session-profile-v1";
 const SESSION_START_BALANCE = 500;
 const PLATFORM_FEE = 0;
@@ -160,12 +154,6 @@ const SHIPPING_RATES: ShippingRate[] = [
     price: 8.42,
   },
 ];
-const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
-const stripePublishableKey =
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
-const stripePromise = stripePublishableKey
-  ? loadStripe(stripePublishableKey)
-  : null;
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-US", {
@@ -365,6 +353,7 @@ export function Storefront({
     const savedName = readDemoStorage(PROFILE_KEY) || "Collector";
     const frame = window.requestAnimationFrame(() => {
       setDemo(restoredDemo);
+      setBoxRun(restoreDemoOpening(readDemoStorage(OPENING_KEY), restoredDemo.activity));
       setProfileName(savedName);
       setProfileReady(true);
     });
@@ -410,6 +399,12 @@ export function Storefront({
     return () => window.clearTimeout(timeout);
   }, [demo.balance, profileReady]);
 
+  useEffect(() => {
+    if (!profileReady) return;
+    if (boxRun) writeDemoStorage(OPENING_KEY, JSON.stringify(boxRun));
+    else removeDemoStorage(OPENING_KEY);
+  }, [profileReady, boxRun]);
+
   const updateDemo = useCallback(
     (update: (current: DemoState) => DemoState) => {
       setDemo((current) => {
@@ -435,12 +430,18 @@ export function Storefront({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const beginPurchase = (item: CatalogItem) => {
+  const beginPurchase = (item: CatalogItem, requestedQuantity = 1, mode?: "normal" | "turbo") => {
+    if (boxRun) {
+      setNotice("Finish your current demo opening first.");
+      setShowDemoOpening(true);
+      return;
+    }
     setSelected(null);
     setPurchase(item);
-    setQuantity(1);
+    setQuantity(Math.max(1, Math.min(maxQuantity(item), requestedQuantity)));
+    if (mode) openingSettings.update({ ...openingSettings.preferences, mode });
     setPayment(
-      demo.balance >= (item.price || 0) + PLATFORM_FEE ? "balance" : "card",
+      demo.balance >= (item.price || 0) * Math.max(1, Math.min(maxQuantity(item), requestedQuantity)) + PLATFORM_FEE ? "balance" : "card",
     );
     setCheckoutStage("checkout");
   };
@@ -469,6 +470,8 @@ export function Storefront({
         status: isBox(purchase) ? "Opening" : "In collection",
         image: purchase.image || "",
       };
+      const pendingOpening: BoxRun | null = boxData ? { id: entry.id, item: purchase, rewards, total: quantity, decisions: [], revealed: false, preferences: normalizeOpeningPreferences(openingSettings.preferences) } : null;
+      if (pendingOpening) writeDemoStorage(OPENING_KEY, JSON.stringify(pendingOpening));
       updateDemo((current) => {
         const next = {
           ...current,
@@ -510,9 +513,8 @@ export function Storefront({
         return next;
       });
       if (boxData) {
-        const item = purchase;
         setPurchase(null);
-        setBoxRun({ id: entry.id, item, rewards, total: quantity, decisions: [], revealed: false, preferences: normalizeOpeningPreferences(openingSettings.preferences) });
+        setBoxRun(pendingOpening);
         setShowDemoOpening(true);
       } else {
         setPurchase(null);
@@ -650,6 +652,7 @@ export function Storefront({
   const resetWelcome = () => {
     removeDemoStorage(PROFILE_KEY);
     removeDemoStorage(STORAGE_KEY);
+    removeDemoStorage(OPENING_KEY);
     previousBalance.current = SESSION_START_BALANCE;
     setBalanceSignal(null);
     setDemo(EMPTY_DEMO);
@@ -666,7 +669,7 @@ export function Storefront({
   };
 
   return (
-    <div className="store-app">
+    <div className="store-app lc-app">
       <Header
         brand={storefrontConfig.brand.name}
         active={tab}
@@ -687,6 +690,7 @@ export function Storefront({
         </div>
       ) : null}
       <main className="store-main">
+      {boxRun && !showDemoOpening && <div className="dyli-demo-resume"><span>You have a demo opening to finish.</span><button className="secondary-button" onClick={() => setShowDemoOpening(true)}>Continue opening</button></div>}
         {tab === "home" ? (
           <HomeView
             holdings={holdings}
@@ -716,6 +720,7 @@ export function Storefront({
             loading={!storefront && !storefrontError}
             error={storefrontError}
             onSelect={setSelected}
+            onRip={beginPurchase}
           />
         ) : null}
         {tab === "collection" ? (
@@ -824,7 +829,6 @@ export function Storefront({
           }}
         />
       ) : null}
-      {boxRun && !showDemoOpening && <div className="dyli-demo-resume"><span>You have a demo opening to finish.</span><button className="secondary-button" onClick={() => setShowDemoOpening(true)}>Continue opening</button></div>}
       {boxRun && showDemoOpening ? <LiveReveal demo item={boxRun.item} play={{id:boxRun.id,quantity:boxRun.total,rewards:boxRun.revealed ? boxRun.rewards.map((reward,index) => ({index,token_id:reward.id,product_id:0,product:{name:reward.name,image:reward.image,brand:reward.brand,grade:reward.grade,fmv_usd:reward.value},rarity:reward.tier,buyback_amount:reward.buyback,disposition:null})) : []}} decisions={boxRun.decisions} busy="" error="" preferences={boxRun.preferences} onOpen={() => setBoxRun(current => current ? {...current,revealed:true}:null)} onChoose={(index,choice) => setBoxRun(current => {if(!current)return current;const decisions=[...current.decisions];decisions[index]=choice;return {...current,decisions};})} onSettle={settleDemoPulls} onClose={() => setShowDemoOpening(false)} /> : null}
       {redemptionOpen ? (
         <RedemptionModal
@@ -853,7 +857,7 @@ export function Storefront({
         />
       ) : null}
       {!profileReady ? (
-        <div className="welcome-layer" />
+        <div className="welcome-layer" role="status" aria-label="Loading demo"><CommerceLogo name={storefrontConfig.brand.name} /><LoaderCircle className="lc-account-loading-spinner" aria-hidden="true" /></div>
       ) : null}
     </div>
   );
@@ -908,13 +912,14 @@ function Header({
 }) {
   return (
     <header className="store-header">
-      <button onClick={() => onNavigate("home")} className="brand-button">
+      <button onClick={() => onNavigate("home")} className="brand-button" aria-label={`${brand} home`}>
         <Logo brand={brand} />
       </button>
-      <nav>
+      <nav className="main-nav">
         {NAV.slice(1).map((item) => (
           <button
             className={active === item.id ? "active" : ""}
+            aria-current={active === item.id ? "page" : undefined}
             key={item.id}
             onClick={() => onNavigate(item.id)}
           >
@@ -988,6 +993,7 @@ function BottomNav({
       {NAV.map((item) => (
         <button
           className={active === item.id ? "active" : ""}
+            aria-current={active === item.id ? "page" : undefined}
           key={item.id}
           onClick={() => onNavigate(item.id)}
         >
@@ -1016,12 +1022,12 @@ function HomeView({
   onNavigate: (tab: Tab) => void;
   onSelect: (item: CatalogItem) => void;
   onSelectHolding: (holding: Holding) => void;
-  onBuy: (item: CatalogItem) => void;
+  onBuy: (item: CatalogItem, quantity?: number, mode?: "normal" | "turbo") => void;
 }) {
   const shopPreview = balancedPreview(shop, 4);
   return (
     <div className="page-in">
-      <PackHero items={boxes} onSelect={onSelect} onExplore={() => onNavigate("packs")} demo />
+      <PackBrowser items={boxes} onSelect={onSelect} onRip={onBuy} home />
       {holdings.length ? (
         <section className="asset-section">
           <SectionTitle
@@ -1035,24 +1041,6 @@ function HomeView({
                 key={`${holding.id}-${holding.session ? "session" : "live"}`}
                 holding={holding}
                 onSelect={() => onSelectHolding(holding)}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-      {boxes.length ? (
-        <section className="asset-section" id="home-buy">
-          <SectionTitle
-            title="Open a pack"
-            action="See all"
-            onAction={() => onNavigate("packs")}
-          />
-          <div className="dyli-pack-grid dyli-pack-grid-home">
-            {boxes.slice(0, 4).map((item) => (
-              <BoxCard
-                key={item.key}
-                item={item}
-                onSelect={() => onSelect(item)}
               />
             ))}
           </div>
@@ -1153,7 +1141,7 @@ function MarketView({
   loading: boolean;
   error: string;
   onSelect: (item: CatalogItem) => void;
-  onBuy: (item: CatalogItem) => void;
+  onBuy: (item: CatalogItem, quantity?: number, mode?: "normal" | "turbo") => void;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ShopView>("graded");
@@ -1277,24 +1265,17 @@ function BoxesView({
   loading,
   error,
   onSelect,
+  onRip,
 }: {
   items: CatalogItem[];
   loading: boolean;
   error: string;
   onSelect: (item: CatalogItem) => void;
+  onRip: (item: CatalogItem, quantity?: number, mode?: "normal" | "turbo") => void;
 }) {
-  return <div className="page-in"><PackBrowser items={items} loading={loading} error={error} onSelect={onSelect} onRetry={() => window.location.reload()} /></div>;
+  return <div className="page-in"><PackBrowser items={items} loading={loading} error={error} onSelect={onSelect} onRip={onRip} onRetry={() => window.location.reload()} /></div>;
 }
 
-function BoxCard({
-  item,
-  onSelect,
-}: {
-  item: CatalogItem;
-  onSelect: () => void;
-}) {
-  return <PackCard item={item} onSelect={onSelect} />;
-}
 
 function ShipmentCard({ shipment }: { shipment: Shipment }) {
   const itemCount = shipment.holdings.reduce(
@@ -1363,8 +1344,8 @@ function CollectionView({
           <h1>Collection</h1>
           <span>
             {section === "owned"
-              ? `${itemCount} items`
-              : `${shipments.length} shipments`}
+              ? `${itemCount} ${itemCount === 1 ? "item" : "items"}`
+              : `${shipments.length} ${shipments.length === 1 ? "shipment" : "shipments"}`}
           </span>
         </div>
         {section === "owned" ? <strong>{money(value)}</strong> : null}
@@ -1393,7 +1374,7 @@ function CollectionView({
               <strong>Ship from your vault</strong>
               <small>UPS &amp; USPS rates</small>
             </div>
-            <button disabled={!holdings.length} onClick={onRedeem}>
+            <button className="lc-primary" disabled={!holdings.length} onClick={onRedeem}>
               Start shipment
               <ArrowRight />
             </button>
@@ -1633,8 +1614,8 @@ function HoldingDetail({
           </div>
         </div>
         <footer>
-          <button onClick={onList}>List</button>
-          <button onClick={onShip}>Ship</button>
+          <button className="lc-secondary" onClick={onList}>List</button>
+          <button className="lc-primary" onClick={onShip}>Ship</button>
         </footer>
       </LiveModal>
   );
@@ -1831,29 +1812,29 @@ function CollectibleDetail({
           </span>
           <div className="detail-actions">
             {isBox(item) ? (
-              <button onClick={onBuy}>
+              <button className="lc-primary" onClick={onBuy}>
                 Open pack
                 <ArrowRight />
               </button>
             ) : ownedHolding ? (
               <>
                 <button
-                  className="secondary"
+                  className="secondary lc-secondary"
                   onClick={() => onList(ownedHolding)}
                 >
                   List
                 </button>
-                <button onClick={() => onShip(ownedHolding)}>
+                <button className="lc-primary" onClick={() => onShip(ownedHolding)}>
                   Ship
                   <ArrowRight />
                 </button>
               </>
             ) : (
               <>
-                <button className="secondary" onClick={onOffer}>
+                <button className="secondary lc-secondary" onClick={onOffer}>
                   Make offer
                 </button>
-                <button onClick={onBuy}>
+                <button className="lc-primary" onClick={onBuy}>
                   Buy now
                   <ArrowRight />
                 </button>
@@ -1963,46 +1944,13 @@ function MarketOrderModal({
             </span>
             <strong>{valid ? money(numericPrice * quantity) : "—"}</strong>
           </div>
-          <button className="order-submit" disabled={!valid} type="submit">
+          <button className="order-submit lc-primary" disabled={!valid} type="submit">
             {intent.side === "listing" ? "List now" : "Place offer"}
             <ArrowRight />
           </button>
         </form>
       </LiveModal>
   );
-}
-
-function StripeShippingAddress({
-  profileName,
-  onChange,
-}: {
-  profileName: string;
-  onChange: (address: ShippingAddress, complete: boolean) => void;
-}) {
-  const options: StripeAddressElementOptions = {
-    mode: "shipping",
-    allowedCountries: ["US"],
-    blockPoBox: true,
-    autocomplete: googleMapsApiKey
-      ? { mode: "google_maps_api", apiKey: googleMapsApiKey }
-      : { mode: "automatic" },
-    defaultValues: { name: profileName, address: { country: "US" } },
-  };
-  const handleChange = (event: StripeAddressElementChangeEvent) => {
-    const address = event.value.address;
-    onChange(
-      {
-        name: event.value.name,
-        line1: address.line1,
-        line2: address.line2 || "",
-        city: address.city,
-        state: address.state,
-        postalCode: address.postal_code,
-      },
-      event.complete,
-    );
-  };
-  return <AddressElement options={options} onChange={handleChange} />;
 }
 
 function NativeShippingAddress({
@@ -2194,7 +2142,7 @@ function RedemptionModal({
           >
             <X />
           </button>
-          <span>Get shipped</span>
+          <span>Demo shipping</span>
         </header>
         {shipment ? (
           <div className="redemption-complete">
@@ -2210,7 +2158,7 @@ function RedemptionModal({
                 </span>
               ))}
             </div>
-            <h1>On its way.</h1>
+            <h1>Demo shipment created</h1>
             <strong>
               {shipment.holdings.reduce(
                 (sum, holding) => sum + holding.quantity,
@@ -2223,7 +2171,7 @@ function RedemptionModal({
               {shipment.rate.carrier} {shipment.rate.service} ·{" "}
               {shipment.address.city}, {shipment.address.state}
             </p>
-            <button onClick={onDone}>Done</button>
+            <button className="lc-primary" onClick={onDone}>Done</button>
           </div>
         ) : (
           <form onSubmit={submit}>
@@ -2292,35 +2240,10 @@ function RedemptionModal({
               <h2>Shipping address</h2>
               <div className="stripe-address-shell">
                 <MapPin />
-                {stripePromise ? (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      appearance: {
-                        theme: "flat",
-                        variables: {
-                          colorPrimary: "#111216",
-                          colorText: "#111216",
-                          colorDanger: "#ca4452",
-                          colorBackground: "#ffffff",
-                          borderRadius: "11px",
-                          fontFamily: "Arial, sans-serif",
-                          spacingUnit: "4px",
-                        },
-                      },
-                    }}
-                  >
-                    <StripeShippingAddress
-                      profileName={profileName}
-                      onChange={updateAddress}
-                    />
-                  </Elements>
-                ) : (
-                  <NativeShippingAddress
-                    address={address}
-                    onChange={updateAddress}
-                  />
-                )}
+                <NativeShippingAddress
+                  address={address}
+                  onChange={updateAddress}
+                />
               </div>
             </section>
             {addressComplete ? (
@@ -2366,7 +2289,7 @@ function RedemptionModal({
               </div>
             ) : null}
             <button
-              className="ship-button"
+              className="ship-button lc-primary"
               disabled={!selectedCount || !addressComplete || !ratesReady}
               type="submit"
             >
@@ -2376,7 +2299,7 @@ function RedemptionModal({
                   ? "Complete address"
                   : ratesLoading
                     ? "Getting rates…"
-                    : "Get shipped"}
+                    : "Create demo shipment"}
               {ratesLoading ? <LoaderCircle /> : <ArrowRight />}
             </button>
           </form>
@@ -2489,6 +2412,7 @@ function Checkout({
             <div className="payment-options">
               <button
                 className={payment === "card" ? "active" : ""}
+                aria-pressed={payment === "card"}
                 onClick={() => onPayment("card")}
               >
                 <CreditCard />
@@ -2499,6 +2423,7 @@ function Checkout({
               </button>
               <button
                 className={payment === "balance" ? "active" : ""}
+                aria-pressed={payment === "balance"}
                 onClick={() => onPayment("balance")}
               >
                 <WalletCards />
@@ -2524,7 +2449,7 @@ function Checkout({
               <strong>{money(total)}</strong>
             </div>
             <button className="pay-button" onClick={onCheckout}>
-              {isBox(item) ? "Open demo pack" : "Complete demo purchase"}
+              {isBox(item) ? `Open ${quantity} demo ${quantity === 1 ? "pack" : "packs"}` : "Complete demo purchase"}
               <span>{money(total)}</span>
             </button>
           </div>

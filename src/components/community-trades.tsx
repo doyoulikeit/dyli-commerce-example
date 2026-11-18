@@ -69,7 +69,6 @@ export function CommunityTrades({
     <section className="cm-surface">
       <div className="cm-heading">
         <div>
-          <span className="cm-eyebrow">Find your next trade</span>
           <h1>Trades</h1>
           <p>Swap collectibles with your community.</p>
         </div>
@@ -573,6 +572,8 @@ function TradeComposer({
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value);
+                    setSearching(event.target.value.trim().length >= 2);
+                    setError("");
                     setCollectors([]);
                   }}
                 />

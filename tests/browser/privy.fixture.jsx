@@ -1,9 +1,15 @@
 // Bundler alias in the isolated browser harness ONLY. Never imported by the app.
+import { useSyncExternalStore } from "react";
+
 export const address = `0x${"a".repeat(40)}`;
 export const PrivyProvider = ({ children }) => children;
 const getAccessToken = async () => "offline-fixture-token";
-const login = () => {};
-const logout = async () => {};
+let authenticated = !new URLSearchParams(location.search).has("signedout");
+const listeners = new Set();
+const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
+const setAuthenticated = value => { authenticated = value; listeners.forEach(listener => listener()); };
+const login = () => setAuthenticated(true);
+const logout = async () => setAuthenticated(false);
 const wallet = {
   address,
   walletClientType: "privy",
@@ -18,7 +24,7 @@ const sendTransaction = async (tx) => {
 const signMessage = async () => ({ signature: `0x${"1".repeat(130)}` });
 export const usePrivy = () => ({
   ready: true,
-  authenticated: true,
+  authenticated: useSyncExternalStore(subscribe, () => authenticated, () => false),
   login,
   logout,
   getAccessToken,

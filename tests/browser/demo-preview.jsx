@@ -2,7 +2,7 @@
 import { createRoot } from 'react-dom/client';
 import { Storefront } from '../../src/components/storefront';
 import '../../src/app/globals.css';
-import '../../src/components/commerce-theme.css';
+import '../../src/components/commerce-styles.css';
 const originalFetch = window.fetch.bind(window);
 window.fixtureAudit = [];
 window.fetch = (url, init) => {

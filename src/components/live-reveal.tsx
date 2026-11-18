@@ -67,7 +67,7 @@ export function LiveReveal({
 }: Props) {
   const fast = preferences.mode === "turbo";
   const sound = useRevealSounds();
-  const [opened, setOpened] = useState(false);
+  const openingRequested = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const [cursor, setCursor] = useState(() =>
@@ -127,6 +127,15 @@ export function LiveReveal({
       }
     }
   }, [play.rewards]);
+
+  useEffect(() => {
+    // Pay/Confirm has already created this order. Start its idempotent opening
+    // once, then let the customer physically rip the awarded packs.
+    if (play.rewards.length || busy || error || openingRequested.current)
+      return;
+    openingRequested.current = true;
+    onOpen();
+  }, [play.rewards.length, busy, error, onOpen]);
 
   const advance = () => {
     scroller.current?.scrollTo({ top: 0 });
@@ -227,32 +236,19 @@ export function LiveReveal({
           )}
           {!play.rewards.length ? (
             <div className="vr-pending">
-              <button
-                className="vr-idle-box"
-                aria-label={
-                  play.quantity > 1
-                    ? `Open ${play.quantity} packs`
-                    : "Open pack"
-                }
-                disabled={!!busy}
-                onClick={() => {
-                  void sound.unlock();
-                  setOpened(true);
-                  onOpen();
-                }}
-              >
+              <div className="vr-idle-box" aria-hidden="true">
                 <PackArtwork item={item} controls={false} priority />
-              </button>
-              <span className="vr-open-hint" role="status">
-                {busy ? (
-                  <>
-                    <LoaderCircle className="vr-spinner" size={14} />
-                    {busy}
-                  </>
-                ) : (
-                  "Click to open the pack"
-                )}
-              </span>
+              </div>
+              {error && !busy ? (
+                <button className="vr-primary" onClick={onOpen}>
+                  Retry opening
+                </button>
+              ) : (
+                <span className="vr-open-hint" role="status">
+                  <LoaderCircle className="vr-spinner" size={16} />
+                  {busy || "Opening your packs…"}
+                </span>
+              )}
             </div>
           ) : grid ? (
             <div className="vr-pack-grid-view">
@@ -514,7 +510,7 @@ export function LiveReveal({
               decision={decisions[cursor]}
               busy={busy}
               sound={sound}
-              startImmediately={opened && play.quantity === 1}
+              startImmediately={false}
               alreadyRevealed={revealed.includes(cursor)}
               onRevealed={() => markRevealed(cursor)}
               autoSell={

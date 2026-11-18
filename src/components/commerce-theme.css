@@ -23,7 +23,7 @@
   --surface: #fff;
   --blue: #007ac2;
   --blue-soft: #e7f4fc;
-  --green: #138253;
+  --green: #0b7248;
   --red: #c83e4b;
   --yellow: #ffd766;
   --hero: #eaf5fd;
@@ -230,7 +230,7 @@ button span {
 }
 .lc-app .lc-primary,
 .lc-modal .lc-primary,
-.dyli-pack-hero .lc-primary,
+.lc-modal.dyli-demo-modal .lc-primary,
 .dyli-pack-gallery .lc-primary,
 .vr-shell .vr-primary {
   display: inline-flex;
@@ -252,7 +252,7 @@ button span {
 }
 .lc-app .lc-primary:hover,
 .lc-modal .lc-primary:hover,
-.dyli-pack-hero .lc-primary:hover,
+.lc-modal.dyli-demo-modal .lc-primary:hover,
 .dyli-pack-gallery .lc-primary:hover,
 .vr-shell .vr-primary:hover {
   background: #f9c02f;
@@ -265,6 +265,7 @@ button span {
 }
 .lc-app .lc-secondary,
 .lc-modal .lc-secondary,
+.lc-modal.dyli-demo-modal .lc-secondary,
 .store-app .secondary-button {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -303,7 +304,7 @@ button span {
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 0;
 }
 .lc-app .lc-section-title > button:hover,
@@ -328,240 +329,8 @@ button span {
   background: #24a76a;
   box-shadow: 0 0 0 4px #24a76a12;
 }
-.dyli-pack-hero {
-  isolation: isolate;
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.08fr 1fr;
-  align-items: center;
-  gap: 28px;
-  min-height: 520px;
-  padding: 46px 52px;
-  border: 1px solid color-mix(in srgb, var(--blue) 9%, var(--line));
-  border-radius: 32px;
-  background: var(--hero);
-  overflow: hidden;
-  margin-bottom: 44px;
-}
-.dyli-hero-copy {
-  min-width: 0;
-  position: relative;
-  z-index: 2;
-}
-.lc-app .dyli-hero-copy h1,
-.store-app .dyli-hero-copy h1 {
-  font-family: var(--display);
-  font-size: clamp(40px, 4.4vw, 67px);
-  font-weight: 900;
-  line-height: 1.03;
-  letter-spacing: -0.04em;
-  margin: 21px 0 21px;
-  color: var(--ink);
-  overflow-wrap: normal;
-}
-.dyli-hero-copy h1 > span {
-  color: var(--blue);
-}
-.dyli-hero-copy > p {
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.7;
-  margin: 0;
-  max-width: 400px;
-}
-.dyli-hero-actions {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 28px;
-}
 .dyli-demo-note {
   font-size: 11px;
-  color: var(--muted);
-}
-.dyli-hero-benefits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  margin-top: 35px;
-  max-width: 400px;
-}
-.dyli-hero-benefits > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 650;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.dyli-hero-benefits svg {
-  width: 15px;
-  height: 15px;
-  stroke-width: 1.7;
-}
-.dyli-hero-showcase {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  align-self: stretch;
-}
-.dyli-hero-orbit {
-  position: absolute;
-  inset: 10% -2% 17%;
-  border: 1px solid color-mix(in srgb, var(--blue) 15%, transparent);
-  border-radius: 50%;
-  transform: rotate(-17deg);
-  z-index: -1;
-  background: radial-gradient(
-    ellipse,
-    color-mix(in srgb, var(--surface) 75%, transparent),
-    transparent 70%
-  );
-}
-.dyli-hero-orbit::after {
-  content: "";
-  position: absolute;
-  inset: 12% -8%;
-  border: 1px solid color-mix(in srgb, var(--blue) 8%, transparent);
-  border-radius: 50%;
-  transform: rotate(33deg);
-}
-.dyli-hero-spark {
-  position: absolute;
-  color: var(--yellow);
-  font-size: 48px;
-  line-height: 1;
-  pointer-events: none;
-}
-.dyli-hero-spark-one {
-  top: 18%;
-  right: 2%;
-  transform: rotate(15deg);
-}
-.dyli-hero-spark-two {
-  left: 3%;
-  bottom: 30%;
-  font-size: 25px;
-  color: var(--blue);
-}
-.dyli-hero-showcase .dyli-hero-pack {
-  height: 365px;
-  width: min(100%, 390px);
-  z-index: 1;
-}
-.dyli-hero-pack-label {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  max-width: 100%;
-  width: min(100%, 380px);
-  padding: 14px 17px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-  cursor: pointer;
-  text-align: left;
-}
-.dyli-hero-pack-label > span {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-  flex: 1;
-}
-.dyli-hero-pack-label small {
-  color: var(--muted);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-}
-.dyli-hero-pack-label strong {
-  font-weight: 800;
-  font-size: 14px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.dyli-hero-pack-label > b {
-  font-family: var(--display);
-  font-weight: 900;
-  font-size: 25px;
-  white-space: nowrap;
-}
-.dyli-hero-picker {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  margin-top: 14px;
-}
-.dyli-hero-picker > button {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.dyli-hero-picker > button:hover {
-  background: var(--surface);
-  color: var(--ink);
-}
-.dyli-hero-picker > div {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-.dyli-hero-picker > div > button {
-  width: 20px;
-  height: 26px;
-  position: relative;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
-.dyli-hero-picker > div > button::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 10px;
-  width: 7px;
-  height: 7px;
-  background: color-mix(in srgb, var(--ink) 23%, transparent);
-  border-radius: 100px;
-  transition: width 0.15s;
-}
-.dyli-hero-picker > div > button.is-selected::after {
-  left: 2px;
-  width: 16px;
-  background: var(--ink);
-}
-.dyli-hero-placeholder {
-  display: grid;
-  justify-items: center;
-  gap: 18px;
-  text-align: center;
-  padding: 42px;
-  color: var(--blue);
-}
-.dyli-hero-placeholder strong {
-  font-family: var(--display);
-  font-size: 34px;
-  color: var(--ink);
-}
-.dyli-hero-placeholder > span {
-  font-size: 13px;
   color: var(--muted);
 }
 .dyli-pack-art {
@@ -900,7 +669,7 @@ button span {
 }
 .dyli-brand-pills > button {
   flex: none;
-  min-height: 41px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 10px 18px;
@@ -977,7 +746,7 @@ button span {
   flex: none;
   background: none;
   color: inherit;
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 8px;
   font-weight: 800;
   white-space: nowrap;
@@ -1240,7 +1009,7 @@ button span {
   background: none;
   border: 0;
   border-radius: 999px;
-  min-height: 35px;
+  min-height: 44px;
   padding: 8px 17px;
   font-size: 11px;
   font-weight: 800;
@@ -1533,7 +1302,7 @@ button span {
   border-radius: 12px;
   color: var(--muted);
   font-weight: 750;
-  min-height: 42px;
+  min-height: 44px;
 }
 .lc-app .lc-toggle button[aria-pressed="true"],
 .lc-modal .lc-methods button[aria-pressed="true"],
@@ -1654,14 +1423,14 @@ button span {
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 .vr-modal .vr-skip {
   background: var(--ink);
   color: var(--surface);
   border-radius: 99px;
-  min-height: 40px;
+  min-height: 44px;
   white-space: nowrap;
 }
 .vr-modal .vr-stage {
@@ -1791,7 +1560,7 @@ button span {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 40px;
+  min-height: 44px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 99px;
@@ -1811,14 +1580,6 @@ button span {
 :root[data-theme="dark"] .store-app {
   color: var(--ink);
 }
-@media (min-width: 1500px) {
-  .dyli-pack-hero {
-    min-height: 550px;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 395px;
-  }
-}
 @media (max-width: 1100px) {
   .lc-app .lc-header,
   .store-app .store-header {
@@ -1827,21 +1588,6 @@ button span {
   }
   .lc-header nav button {
     padding: 10px 12px;
-  }
-  .dyli-pack-hero {
-    padding: 36px;
-    gap: 15px;
-    min-height: 485px;
-  }
-  .lc-app .dyli-hero-copy h1,
-  .store-app .dyli-hero-copy h1 {
-    font-size: clamp(38px, 4.6vw, 54px);
-  }
-  .dyli-hero-benefits {
-    gap: 9px 12px;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 340px;
   }
   .dyli-pack-detail-top {
     gap: 28px;
@@ -1884,27 +1630,6 @@ button span {
     padding: 10px 12px;
     gap: 7px;
     font-size: 13px;
-  }
-  .dyli-pack-hero {
-    grid-template-columns: 1fr 1fr;
-    min-height: 430px;
-    padding: 30px;
-  }
-  .lc-app .dyli-hero-copy h1,
-  .store-app .dyli-hero-copy h1 {
-    font-size: 43px;
-  }
-  .dyli-hero-copy > p {
-    font-size: 14px;
-  }
-  .dyli-hero-benefits {
-    margin-top: 26px;
-  }
-  .dyli-hero-benefits > span {
-    font-size: 9px;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 315px;
   }
   .dyli-pack-card-info {
     padding: 18px;
@@ -2005,72 +1730,6 @@ button span {
   }
   .lc-app .lc-section-title > button {
     font-size: 11px;
-  }
-  .dyli-pack-hero {
-    grid-template-columns: 1fr 1fr;
-    padding: 28px 24px;
-    border-radius: 25px;
-    gap: 12px;
-    margin-bottom: 32px;
-  }
-  .lc-app .dyli-hero-copy h1,
-  .store-app .dyli-hero-copy h1 {
-    font-size: 38px;
-    margin-top: 17px;
-  }
-  .dyli-hero-copy > p {
-    font-size: 12px;
-    line-height: 1.7;
-  }
-  .dyli-hero-actions {
-    margin-top: 22px;
-  }
-  .dyli-hero-actions > .lc-primary {
-    font-size: 13px;
-    min-height: 46px;
-    padding: 12px 19px;
-    gap: 8px;
-  }
-  .dyli-hero-benefits {
-    gap: 8px;
-  }
-  .dyli-hero-benefits > span {
-    font-size: 8px;
-  }
-  .dyli-hero-benefits svg {
-    width: 12px;
-    height: 12px;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 290px;
-  }
-  .dyli-hero-pack-label {
-    padding: 12px;
-    gap: 10px;
-    border-radius: 15px;
-  }
-  .dyli-hero-pack-label strong {
-    font-size: 12px;
-  }
-  .dyli-hero-pack-label small {
-    font-size: 8px;
-  }
-  .dyli-hero-pack-label > b {
-    font-size: 22px;
-  }
-  .dyli-hero-pack-label > svg {
-    display: none;
-  }
-  .dyli-hero-picker {
-    margin-top: 8px;
-  }
-  .dyli-hero-spark-one {
-    font-size: 36px;
-    right: -3px;
-  }
-  .dyli-hero-spark-two {
-    font-size: 21px;
-    left: -5px;
   }
   .dyli-pack-grid,
   .lc-app .lc-box-grid,
@@ -2228,7 +1887,7 @@ button span {
   .dyli-tabs > button {
     font-size: 10px;
     padding: 8px 12px;
-    min-height: 34px;
+    min-height: 44px;
   }
   .dyli-top-hits {
     grid-auto-columns: calc((100% - 14px) / 2);
@@ -2287,7 +1946,7 @@ button span {
     min-height: calc(64px + env(safe-area-inset-top));
     padding-left: 16px;
     padding-right: 16px;
-    grid-template-columns: 44px minmax(0, 1fr) 94px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     gap: 8px;
   }
   .vr-modal .vr-toolbar > span {
@@ -2298,7 +1957,7 @@ button span {
     padding: 10px;
   }
   .vr-modal .vr-review-choices button {
-    min-height: 42px;
+    min-height: 44px;
   }
   .vr-modal .vr-review-footer > .vr-primary {
     min-height: 50px;
@@ -2326,69 +1985,10 @@ button span {
   }
 }
 @media (max-width: 520px) {
-  .dyli-pack-hero {
-    grid-template-columns: 1fr;
-    padding: 25px 23px 20px;
-    gap: 12px;
-    min-height: 0;
-  }
-  .dyli-hero-copy > p {
-    font-size: 13px;
-    max-width: 310px;
-  }
-  .lc-app .dyli-hero-copy h1,
-  .store-app .dyli-hero-copy h1 {
-    font-size: clamp(32px, 9vw, 45px);
-    line-height: 1.06;
-    margin: 17px 0 16px;
-  }
-  .dyli-hero-benefits {
-    display: none;
-  }
-  .dyli-hero-actions {
-    margin-top: 20px;
-    gap: 10px;
-  }
-  .dyli-hero-actions > .lc-primary {
-    min-height: 44px;
-    font-size: 12px;
-    padding: 11px 19px;
-  }
   .dyli-demo-note {
     font-size: 9px;
     max-width: 100px;
     line-height: 1.6;
-  }
-  .dyli-hero-showcase {
-    min-height: 0;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 295px;
-    width: 100%;
-    max-width: 330px;
-    margin-top: -5px;
-  }
-  .dyli-hero-pack-label {
-    width: 100%;
-    max-width: 330px;
-    padding: 13px 15px;
-  }
-  .dyli-hero-pack-label strong {
-    font-size: 13px;
-  }
-  .dyli-hero-pack-label > b {
-    font-size: 24px;
-  }
-  .dyli-hero-picker {
-    margin-top: 5px;
-  }
-  .dyli-hero-spark-one {
-    top: 15%;
-    right: 7%;
-  }
-  .dyli-hero-spark-two {
-    left: 9%;
-    bottom: 32%;
   }
   .dyli-desktop-break {
     display: none;
@@ -2482,7 +2082,7 @@ button span {
   }
   .dyli-brand-pills > button {
     font-size: 10px;
-    min-height: 38px;
+    min-height: 44px;
     padding: 9px 14px;
   }
   .dyli-pack-detail-header > span {
@@ -2577,12 +2177,6 @@ button span {
   .lc-app .lc-account {
     gap: 5px;
   }
-  .dyli-pack-hero {
-    padding: 23px 19px 18px;
-  }
-  .dyli-hero-showcase .dyli-hero-pack {
-    height: 270px;
-  }
   .dyli-pack-card-info > strong {
     font-size: 21px;
   }
@@ -2644,8 +2238,7 @@ button span {
     animation: none;
   }
   .dyli-pack-card,
-  .dyli-pack-card-stage > img,
-  .dyli-hero-picker > div > button::after {
+  .dyli-pack-card-stage > img {
     transition: none;
   }
   .dyli-pack-card:hover,
@@ -2683,11 +2276,6 @@ button span {
 .vr-modal .vr-decision-buttons .vr-vault:hover:not(:disabled) {
   background: var(--soft);
   color: var(--ink);
-}
-.lc-app .dyli-hero-copy h1,
-.store-app .dyli-hero-copy h1 {
-  letter-spacing: -0.015em;
-  word-spacing: 0.025em;
 }
 @media (max-width: 360px) {
   .lc-header .brand-lockup .dyli-commerce-logo strong {
@@ -2823,11 +2411,6 @@ button span {
   font-weight: 600;
   color: var(--muted);
   line-height: 1.5;
-}
-.dyli-hero-pack-label small {
-  text-transform: none;
-  letter-spacing: normal;
-  font-size: 12px;
 }
 .dyli-demo-link,
 .dyli-account-exit .lc-secondary {
@@ -3138,6 +2721,7 @@ button span {
   --page: #191a24;
   --muted: #b7bfce;
   --hero: #333744;
+  --vr-muted: #b7bfce;
   --green: #81dfb2;
   background: radial-gradient(
     ellipse at 50% 15%,
@@ -3159,6 +2743,9 @@ button span {
 .vr-modal .vr-native h2,
 .vr-modal .vr-native h3 {
   color: #fff;
+}
+.vr-modal .vr-native .vr-rarity-tag {
+  color: #191a24;
 }
 .vr-modal .vr-native .vr-rarity-reveal > strong {
   color: var(--rarity);
@@ -3398,4 +2985,587 @@ button span {
 }
 .dyli-gallery-info .dyli-pack-stats > div + div {
   border-color: #ffffff30;
+}
+
+/* One interaction model across live, demo and portaled dialogs. */
+button:not(:disabled),
+a[href],
+summary,
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+.dyli-gallery-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.dyli-gallery-quantity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffffff50;
+  border-radius: 999px;
+  background: #ffffff0b;
+  color: #fff;
+  min-height: 52px;
+}
+.dyli-gallery-details,
+.dyli-gallery-blitz {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 1px solid #ffffff50;
+  border-radius: 50%;
+  background: #ffffff0b;
+  color: #fff;
+}
+.dyli-gallery-blitz[aria-pressed="true"] {
+  background: #ffd766;
+  border-color: #ffd766;
+  color: #191a24;
+}
+.dyli-gallery-controls > button:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px #ffffff25;
+}
+.dyli-gallery-controls .lc-primary {
+  min-width: 160px;
+}
+.dyli-pack-home .dyli-brand-pills {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.dyli-pack-home .dyli-pack-gallery {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .dyli-gallery-stage {
+    height: clamp(230px, 36svh, 305px);
+  }
+  .dyli-gallery-info {
+    gap: 10px;
+  }
+  .dyli-gallery-controls {
+    gap: 6px;
+    width: 100%;
+    padding: 0 8px;
+  }
+  .dyli-gallery-quantity {
+    min-height: 44px;
+  }
+  .dyli-gallery-details,
+  .dyli-gallery-blitz {
+    width: 40px;
+    height: 44px;
+  }
+  .dyli-gallery-controls .lc-primary {
+    min-width: 0;
+    min-height: 46px;
+    gap: 6px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .dyli-gallery-controls .lc-primary svg {
+    width: 16px;
+  }
+  .dyli-pack-home .dyli-brand-pills {
+    justify-content: flex-start;
+  }
+  .dyli-pack-home .dyli-pack-gallery {
+    margin-top: 8px;
+  }
+}
+/* Keep the main Rip controls visible in the first screen at normal sizes. */
+.dyli-pack-home .dyli-gallery-stage {
+  height: clamp(180px, calc(100svh - 480px), 400px);
+}
+.dyli-pack-home .dyli-pack-gallery {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+.dyli-pack-home .dyli-gallery-info {
+  gap: 10px;
+}
+.dyli-pack-home .dyli-gallery-info h2 {
+  font-size: clamp(30px, 3.6vw, 44px);
+}
+.dyli-pack-home .dyli-gallery-info .dyli-pack-stats {
+  padding: 7px 4px;
+}
+.dyli-pack-home .dyli-gallery-info .dyli-pack-stats dd {
+  font-size: 25px;
+}
+@media (max-width: 600px) {
+  .dyli-pack-home .dyli-gallery-stage {
+    height: clamp(180px, calc(100svh - 520px), 305px);
+  }
+  .dyli-pack-home .dyli-pack-gallery {
+    padding-top: 12px;
+    padding-bottom: 16px;
+  }
+  .dyli-pack-home .dyli-gallery-info h2 {
+    font-size: 30px;
+  }
+  .dyli-gallery-controls .lc-primary {
+    font-size: clamp(11px, 3.4vw, 14px);
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+.dyli-pack-home .dyli-brand-pills {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+.lc-main:has(.dyli-pack-home),
+.store-main:has(.dyli-pack-home) {
+  padding-top: 16px;
+}
+@media (min-width: 601px) {
+  .dyli-pack-home .dyli-gallery-stage {
+    height: clamp(180px, calc(100svh - 524px), 400px);
+  }
+}
+.dyli-gallery-quantity {
+  position: relative;
+  min-width: 72px;
+}
+.dyli-gallery-quantity select {
+  appearance: none;
+  min-height: 48px;
+  width: 72px;
+  padding: 0 25px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: transparent;
+  font-weight: 800;
+  font-size: 14px;
+}
+.dyli-gallery-quantity > svg {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+}
+.dyli-gallery-quantity option {
+  color: #191a24;
+  background: #fff;
+}
+@media (max-width: 600px) {
+  .dyli-gallery-quantity select {
+    min-height: 44px;
+  }
+  .dyli-gallery-details,
+  .dyli-gallery-blitz,
+  .dyli-gallery-arrow {
+    width: 44px;
+    height: 44px;
+  }
+  .dyli-gallery-controls .lc-primary {
+    flex: 0 1 auto;
+  }
+}
+/* Header and demo controls share the same contrast in both themes. */
+.dyli-theme-switch {
+  width: 44px;
+  height: 44px;
+}
+.store-header .profile-chip {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.store-header .profile-chip > i {
+  background: #007ac2;
+  color: #fff;
+}
+.store-header .profile-menu > div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.store-header .profile-menu > div button {
+  min-height: 44px;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 10px;
+}
+.store-header .profile-menu > div button:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+.dyli-demo-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 4px max(18px, calc((100vw - 1280px) / 2));
+}
+.dyli-demo-banner > span {
+  min-width: 0;
+  line-height: 1.5;
+}
+.dyli-demo-banner a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 4px 6px;
+  white-space: nowrap;
+  color: #005b8c;
+}
+:root[data-theme="dark"] .dyli-demo-banner a {
+  color: #a5dcff;
+}
+.dyli-brand-pills > button {
+  min-height: 44px;
+}
+@media (max-width: 600px) {
+  .dyli-theme-switch {
+    width: 44px;
+    height: 44px;
+  }
+  .store-header .profile-chip {
+    width: 44px;
+    height: 44px;
+  }
+  .store-header .profile-chip > i {
+    width: 28px;
+    height: 28px;
+  }
+  .dyli-demo-banner {
+    gap: 8px;
+    font-size: 11px;
+  }
+  .dyli-demo-banner a {
+    font-size: 11px;
+  }
+}
+.lc-modal .quantity-control button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.lc-modal .quantity-control button:hover:not(:disabled) {
+  background: var(--soft);
+  color: var(--ink);
+}
+.lc-modal.dyli-demo-modal > header > button {
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--ink);
+}
+.lc-modal button:disabled {
+  opacity: 0.45;
+}
+
+/* Consistent touch targets across portal dialogs and the account header. */
+.lc-modal:not(.vr-modal) button,
+.vr-modal .vr-shell button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.lc-app .lc-header > button,
+.lc-app .lc-header .lc-balance,
+.lc-app .lc-header .lc-avatar {
+  min-height: 44px;
+}
+.dyli-odds-row,
+.dyli-odds-row > span,
+.dyli-odds-note {
+  font-size: 12px;
+}
+.dyli-tabs > button,
+.dyli-how-it-works small {
+  font-size: 12px;
+}
+.vr-modal .vr-review-card h3 {
+  font-size: 13px;
+  line-height: 1.45;
+  min-height: 2.9em;
+}
+
+.lc-modal .lc-edit-quantity {
+  align-self: flex-start;
+  border: 0;
+  padding: 0;
+  margin: -12px 0 12px;
+  color: var(--blue);
+  background: transparent;
+  font-size: 13px;
+  text-align: left;
+}
+
+.lc-app .lc-account > button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.lc-app button,
+.store-app button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.lc-app .lc-vault-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 10px;
+}
+.lc-app .lc-vault-card > .lc-product {
+  background: transparent;
+  box-shadow: none;
+}
+.lc-app .lc-vault-card .lc-art {
+  border-radius: 13px;
+}
+.lc-app .lc-product-info strong,
+.lc-app .lc-product > strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.45;
+  min-height: 2.9em;
+  overflow-wrap: anywhere;
+}
+.lc-app .lc-vault-card-actions {
+  margin-top: 12px;
+}
+.lc-app .lc-vault-card-actions button {
+  font-size: 13px;
+  padding: 10px 8px;
+}
+
+.lc-modal input,
+.lc-modal select,
+.lc-modal textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.lc-modal .lc-checkout {
+  min-width: 0;
+}
+.lc-balance-amount strong span {
+  margin-left: 8px;
+}
+.lc-modal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .lc-modal input,
+  .lc-modal select,
+  .lc-modal textarea {
+    font-size: 16px;
+  }
+}
+
+.store-app .redemption-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.store-app .redemption-card > span {
+  flex: none;
+}
+.store-app .redemption-card > div {
+  flex: 1;
+  min-width: 120px;
+}
+.store-app .redemption-card > button {
+  width: auto;
+  font-size: 14px;
+}
+.lc-modal.holding-modal h1,
+.lc-modal.detail-modal h1 {
+  font-size: clamp(28px, 4vw, 40px);
+}
+.lc-modal .native-address label {
+  min-width: 0;
+}
+.lc-modal .native-address label > span {
+  font-size: 12px;
+}
+.lc-modal .native-address input {
+  height: 48px;
+}
+@media (max-width: 600px) {
+  .store-app .redemption-card > button {
+    width: 100%;
+  }
+}
+@media (max-width: 360px) {
+  .lc-header .dyli-commerce-logo > span,
+  .store-header .dyli-commerce-logo > span {
+    display: none;
+  }
+}
+
+.lc-modal .redeem-select strong {
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.lc-modal .redeem-select small,
+.lc-modal .shipping-rates small {
+  font-size: 11px;
+}
+.lc-modal .redeem-heading span {
+  font-size: 12px;
+}
+.lc-modal .redeem-quantity {
+  grid-template-columns: 44px 28px 44px;
+}
+.lc-modal .redeem-quantity button {
+  width: 44px;
+  height: 44px;
+}
+.lc-modal .order-quantity > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lc-modal .order-quantity button {
+  width: 44px;
+  height: 44px;
+}
+@media (max-width: 600px) {
+  .lc-modal .redeem-items > article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lc-modal .redeem-quantity {
+    justify-self: end;
+    margin-bottom: 10px;
+  }
+}
+
+.lc-modal .redemption-complete {
+  padding: 28px 20px;
+}
+.lc-modal .redemption-complete h1 {
+  font-size: clamp(28px, 4vw, 37px);
+  letter-spacing: -0.025em;
+}
+.lc-modal .redemption-complete > strong {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  font-size: 14px;
+}
+.store-app .activity-row {
+  grid-template-columns: 50px minmax(0, 1fr) 110px 100px;
+}
+.store-app .activity-row > div strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.store-app .activity-row > div small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.store-app .activity-row > b {
+  font-size: 14px;
+  white-space: nowrap;
+}
+@media (max-width: 660px) {
+  .store-app .activity-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding-block: 16px;
+  }
+}
+
+.lc-modal .price-field input {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.store-app .welcome-layer {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 24px;
+  background: var(--page);
+  backdrop-filter: none;
+}
+
+.lc-header .dyli-header-demo,
+.lc-header .dyli-sign-in {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 10px 14px;
+  min-height: 44px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.store-main .dyli-demo-resume {
+  width: 100%;
+  margin: 0 0 24px;
+}
+
+/* Use the same navigation breakpoint for guest and signed-in layouts. */
+@media (max-width: 900px) {
+  .lc-header nav,
+  .store-header .main-nav {
+    display: none;
+  }
+  .lc-app .lc-bottom-nav,
+  .store-app .bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 60;
+    display: grid;
+    height: calc(74px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    padding: 6px 4px env(safe-area-inset-bottom);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .store-app .bottom-nav button,
+  .lc-app .lc-bottom-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-size: 11px;
+  }
+  .lc-app,
+  .store-app {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
 }

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Home, ShoppingBag, Box, Layers, ArrowLeftRight, Activity } from "lucide-react";
 import { LiveCommunity } from "../../src/components/live-community";
 import { CommunityActivity } from "../../src/components/community-activity";
+import { CommerceLogo, ThemeSwitch } from "../../src/components/brand-identity";
 import { MarketplacePreview } from "../../src/components/market-cards";
 import "../../src/app/globals.css";
 import "../../src/components/live-storefront.css";
@@ -96,9 +97,9 @@ function Preview() {
   const refresh = useCallback(async () => { window.fixtureAudit.push({ type: "refresh" }); setSession(value => ({ ...value })); }, []);
   const nav = [["home", "Home", Home], ["shop", "Shop", ShoppingBag], ["boxes", "Boxes", Box], ["vault", "Vault", Layers], ["trades", "Trades", ArrowLeftRight], ["activity", "Activity", Activity]];
   return <div className="lc-app">
-    <header className="lc-header"><div className="brand-lockup"><strong>Vaulted</strong><i>LOCAL TEST</i></div>
+    <header className="lc-header"><div className="brand-lockup"><CommerceLogo /></div>
       <nav>{nav.map(([key, label]) => <button key={key} aria-current={view === key ? "page" : undefined} onClick={() => setView(key)}>{label}</button>)}</nav>
-      <button className="lc-secondary">$500.00</button>
+      <div className="lc-account"><ThemeSwitch /><button className="lc-secondary">$500.00</button></div>
     </header>
     <main style={{ width: "min(1440px,100%)", margin: "auto", padding: "32px 20px 100px" }}>
       {view === 'home' && <><section className="lc-portfolio"><div><p>Your next great find.</p><h1>Start your collection.</h1></div></section><section style={{ marginBottom: 48 }}><div className="lc-section-title"><h2>Boxes</h2><button onClick={() => setView('boxes')}>View all</button></div><div className="lc-grid"><div className="cm-preview-notice">Box catalog fixture</div></div></section>

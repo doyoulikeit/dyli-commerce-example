@@ -35,7 +35,6 @@ import type {
   SessionResponse,
   TransactionInstruction,
 } from "@/lib/types";
-import "./community.css";
 
 type Props = {
   view: string;
