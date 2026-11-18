@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { LoaderCircle } from "lucide-react";
 import { CommerceLogo } from "@/components/brand-identity";
@@ -16,7 +17,7 @@ export function AccountGate({ name, error, linking, busy, onConnect, onRetry, on
         <p role="alert">{linking ? "We couldn’t connect your wallet automatically. Try again, or log out and sign back in." : "Your account couldn’t load. Please try again."}</p>
         <button className="lc-primary" onClick={linking ? onConnect : onRetry}>{linking ? "Connect wallet" : "Try again"}</button>
       </>}
-      <div className="dyli-account-exit"><a href="/?demo=1" className="lc-secondary">Try demo</a><button type="button" className="dyli-text-button" disabled={!!busy} onClick={onSignOut}>Log out</button></div>
+      <div className="dyli-account-exit"><Link prefetch={false} href="/?demo=1" className="lc-secondary">Try demo</Link><button type="button" className="dyli-text-button" disabled={!!busy} onClick={onSignOut}>Log out</button></div>
     </div>
   </main>;
 }

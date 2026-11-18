@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { AddressElement, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
@@ -6,7 +7,7 @@ import type {
   StripeAddressElementChangeEvent,
   StripeAddressElementOptions,
 } from "@stripe/stripe-js";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
   ArrowLeft,
@@ -673,7 +674,7 @@ export function Storefront({
         onNavigate={navigate}
         onReset={resetWelcome}
       />
-      <div className="dyli-demo-banner" role="status"><span><strong>Demo mode</strong> Virtual funds. No real purchases or shipments.</span>{!storefrontConfig.demo.enabled && <a href="/">Exit demo</a>}</div>
+      <div className="dyli-demo-banner" role="status"><span><strong>Demo mode</strong> Virtual funds. No real purchases or shipments.</span>{!storefrontConfig.demo.enabled && <Link prefetch={false} href="/">Exit demo</Link>}</div>
       {notice ? (
         <div className="app-notice">
           <Info />

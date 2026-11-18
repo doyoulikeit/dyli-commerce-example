@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
@@ -174,7 +175,7 @@ export function PackHero({
             Explore packs
             <ArrowRight size={19} />
           </button>
-          {demo ? <span className="dyli-demo-note">No real purchases.</span> : <a href="/?demo=1" className="lc-secondary dyli-demo-link">Try demo</a>}
+          {demo ? <span className="dyli-demo-note">No real purchases.</span> : <Link prefetch={false} href="/?demo=1" className="lc-secondary dyli-demo-link">Try demo</Link>}
         </div>
         <div className="dyli-hero-benefits">
           <span>

@@ -11,7 +11,7 @@ function weighted<T>(items: T[], weight: (item: T) => number, random: () => numb
 export function drawDemoPulls(data: ApiRecord, item: CatalogItem, quantity: number, random = Math.random): DemoPull[] {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) throw Error('Choose between 1 and 10 demo packs.');
   const box = record(data.pack ?? data.box);
-  const groups = rows(record(data.ranges).ranges).map(range => ({ ...range, rate: Number(range.rate ?? 0), items: rows(range.items).filter(card => count(card) > 0) })).filter(range => range.rate > 0 && Number.isFinite(range.rate) && range.items.length);
+  const groups = rows(record(data.ranges).ranges).map(range => ({ ...range, range_name: String(range.range_name || "Pull"), rate: Number(range.rate ?? 0), items: rows(range.items).filter(card => count(card) > 0) })).filter(range => range.rate > 0 && Number.isFinite(range.rate) && range.items.length);
   if (!groups.length) throw Error('This pack isn’t available for a demo yet. Try another pack.');
   return Array.from({length: quantity}, () => {
     const range = weighted(groups, group => group.rate, random), card = weighted(range.items, count, random);
