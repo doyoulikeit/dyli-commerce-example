@@ -2715,3 +2715,18 @@ button span {
   .dyli-pack-sort > span { display: inline; font-size: 12px; }
   .dyli-pack-sort select { min-width: 0; max-width: 100%; width: 175px; font-size: 14px; }
 }
+@media(max-width:520px) {
+  .dyli-hero-copy > .dyli-eyebrow, .dyli-pack-card-info > .dyli-eyebrow { font-size: 10px; }
+  .dyli-pack-card-state { font-size: 9px; }
+  .dyli-detail-description { font-size: 14px; }
+  .dyli-how-it-works { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .dyli-how-it-works > span { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
+  .dyli-how-it-works strong { font-size: 14px; }
+  .dyli-how-it-works small { font-size: 12px; line-height: 1.6; }
+  .dyli-detail-trust { flex-wrap: wrap; }
+  .dyli-detail-trust > span { font-size: 11px; }
+  .dyli-top-hits > article > p { font-size: 12px; }
+  .dyli-pack-sort select { width: 185px; font-size: 16px; }
+  .dyli-page-title > div > .dyli-eyebrow { font-size: 10px; }
+}
+@media(max-width:360px) { .dyli-brand-pills { margin-right: -14px; padding-right: 14px; } }
