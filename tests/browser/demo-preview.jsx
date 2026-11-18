@@ -14,4 +14,10 @@ window.fetch = (url, init) => {
   return originalFetch(url, init);
 };
 const data = await (await fetch('/api/storefront')).json();
+// Keep unpublished assets on this fixture origin, with no auth or proxy writes.
+for (const item of [...data.packs, ...data.catalog]) {
+  if (!item.raw?.artwork) continue;
+  for (const [key,value] of Object.entries(item.raw.artwork)) if (key.endsWith('_url') && typeof value === 'string' && value.includes('/commerce-assets/')) item.raw.artwork[key] = new URL(new URL(value).pathname,location.origin).href;
+  item.image = item.raw.artwork.poster_url;
+}
 createRoot(document.getElementById('root')).render(<Storefront initialStorefront={data} />);

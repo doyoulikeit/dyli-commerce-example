@@ -317,17 +317,6 @@ button span {
 .lc-footer > a {
   color: var(--muted);
 }
-.dyli-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  line-height: 1.4;
-}
 .dyli-live-dot {
   display: inline-block;
   flex: none;
@@ -356,11 +345,6 @@ button span {
   min-width: 0;
   position: relative;
   z-index: 2;
-}
-.dyli-hero-copy > .dyli-eyebrow {
-  color: var(--ink);
-  font-size: 10px;
-  letter-spacing: 0.13em;
 }
 .lc-app .dyli-hero-copy h1,
 .store-app .dyli-hero-copy h1 {
@@ -776,10 +760,6 @@ button span {
   flex-direction: column;
   gap: 8px;
   padding: 22px 22px 18px;
-}
-.dyli-pack-card-info > .dyli-eyebrow {
-  font-size: 9px;
-  letter-spacing: 0.13em;
 }
 .dyli-pack-card-info > strong {
   font-family: var(--display);
@@ -2036,10 +2016,6 @@ button span {
     font-size: 38px;
     margin-top: 17px;
   }
-  .dyli-hero-copy > .dyli-eyebrow {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-  }
   .dyli-hero-copy > p {
     font-size: 12px;
     line-height: 1.7;
@@ -2141,9 +2117,6 @@ button span {
   }
   .dyli-page-title p {
     font-size: 12px;
-  }
-  .dyli-page-title .dyli-eyebrow {
-    font-size: 8px;
   }
   .lc-modal.dyli-pack-detail-modal {
     width: 100%;
@@ -2367,9 +2340,6 @@ button span {
     line-height: 1.06;
     margin: 17px 0 16px;
   }
-  .dyli-hero-copy > .dyli-eyebrow {
-    font-size: 8px;
-  }
   .dyli-hero-benefits {
     display: none;
   }
@@ -2429,10 +2399,6 @@ button span {
     font-size: 23px;
     line-height: 1.15;
   }
-  .dyli-pack-card-info > .dyli-eyebrow {
-    font-size: 8px;
-    letter-spacing: 0.07em;
-  }
   .dyli-pack-card-meta {
     font-size: 9px;
     gap: 6px;
@@ -2473,10 +2439,6 @@ button span {
   .lc-app .lc-box-grid,
   .home-box-grid {
     gap: 12px;
-  }
-  .dyli-page-title .dyli-eyebrow {
-    max-width: 220px;
-    font-size: 7px;
   }
   .lc-app .dyli-page-title h1,
   .store-app .dyli-page-title h1 {
@@ -2716,7 +2678,6 @@ button span {
   .dyli-pack-sort select { min-width: 0; max-width: 100%; width: 175px; font-size: 14px; }
 }
 @media(max-width:520px) {
-  .dyli-hero-copy > .dyli-eyebrow, .dyli-pack-card-info > .dyli-eyebrow { font-size: 10px; }
   .dyli-pack-card-state { font-size: 9px; }
   .dyli-detail-description { font-size: 14px; }
   .dyli-how-it-works { grid-template-columns: minmax(0, 1fr); gap: 18px; }
@@ -2727,7 +2688,6 @@ button span {
   .dyli-detail-trust > span { font-size: 11px; }
   .dyli-top-hits > article > p { font-size: 12px; }
   .dyli-pack-sort select { width: 185px; font-size: 16px; }
-  .dyli-page-title > div > .dyli-eyebrow { font-size: 10px; }
 }
 @media(max-width:360px) { .dyli-brand-pills { margin-right: -14px; padding-right: 14px; } }
 /* Product metadata stays plain. No decorative eyebrow labels. */
@@ -2754,3 +2714,12 @@ button span {
  .lc-modal.dyli-demo-modal .pay-button { position: sticky; bottom: 0; }
  .lc-modal.dyli-demo-modal input, .lc-modal.dyli-demo-modal select { font-size: 16px; }
 }
+.dyli-demo-resume { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: min(100% - 36px,1320px); margin: 20px auto; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+.dyli-demo-resume button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 10px 18px; min-height: 44px; }
+.lc-modal.dyli-demo-modal .pay-button { background: var(--yellow); color: #191a24; border-radius: 999px; font-weight: 750; }
+.lc-modal.dyli-demo-modal .pay-button span { color: inherit; }
+.lc-modal.dyli-demo-modal .payment-options button { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.lc-modal.dyli-demo-modal .payment-options button.active { background: var(--blue-soft); border-color: var(--blue); }
+.lc-modal.dyli-demo-modal .payment-options strong { color: inherit; }
+.lc-modal.dyli-demo-modal .checkout-item { background: var(--surface); color: var(--ink); }
+.lc-modal.dyli-demo-modal .checkout-item > span { background: var(--soft); }
