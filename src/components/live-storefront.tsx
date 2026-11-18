@@ -214,9 +214,9 @@ export function LiveStorefront({
     setCheckoutReturn(false);
     navigate("collection");
   };
-  const cards = (items: CatalogItem[], count?: number, aboveFold = false) => (
+  const cards = (items: CatalogItem[], count?: number, aboveFold = false, extraClass = "") => (
     <div
-      className={`lc-grid ${items[0] && boxItem(items[0]) ? "lc-box-grid" : ""}`}
+      className={`lc-grid ${items[0] && boxItem(items[0]) ? "lc-box-grid" : ""} ${extraClass}`}
     >
       {items.slice(0, count).map((item, index) => (
         <LiveProductCard
@@ -369,12 +369,12 @@ export function LiveStorefront({
             <PackHero items={boxes} onSelect={setSelected} onExplore={() => navigate("packs")} />
             <section id="live-packs">
               <div className="lc-section-title">
-                <h2>Find your next favorite.</h2>
+                <h2>Packs</h2>
                 <button onClick={() => navigate("packs")}>
                   View all <ArrowUpRight />
                 </button>
               </div>
-              {cards(boxes, 3, true)}
+              {cards(boxes, 4, true, "dyli-pack-grid-home")}
             </section>
             {marketplace.ready === true && <MarketplacePreview wallet={commerce.address || ""}
               onViewAll={() => navigate("shop")}

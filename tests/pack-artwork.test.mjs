@@ -41,3 +41,11 @@ test('the lazy renderer is pinned to the audited DYLI content hash', () => {
   assert.equal(hash, meta.sha256);
   assert.equal(meta.source, `https://www.dyli.io/commerce-assets/v1/pack-renderer.${hash.slice(0,16)}.mjs`);
 });
+
+test('native finish metadata preserves foil colors and rejects invalid gradients', () => {
+  const materials = { body_top: '#007AC2', body_bottom: '#003C70', body_blend: [0, 1], matte: false, iridescence: .8 };
+  const source = { ...item, raw: { artwork: { ...artwork, materials } } };
+  assert.deepEqual(packArtwork(source).materials, materials);
+  assert.equal(packArtwork({ ...item, raw: { artwork: { ...artwork, materials: { ...materials, body_blend: [1,0] } } } }).materials, undefined);
+  assert.equal(packArtwork({ ...item, raw: { artwork: { ...artwork, materials: { ...materials, body_top: 'bad' } } } }).materials, undefined);
+});

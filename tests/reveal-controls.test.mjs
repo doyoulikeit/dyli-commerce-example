@@ -27,6 +27,7 @@ function previewComponent() {
     if (name === 'motion/react') return { motion: { div: 'motion-div', article: 'motion-article' }, useReducedMotion: () => false };
     if (name === '@/components/use-reveal-sounds') return { useRevealSounds: () => ({ enabled: true, ready: false, interaction() {}, toggle() {}, unlock() {}, play() {} }) };
     if (name === '@/components/live-catalog') return { LiveModal: 'modal', Art: 'art' };
+    if (name === '@/lib/pack-artwork') return { packArtwork: () => null, packPoster: () => '/pack.webp' };
     if (name === '@/lib/opening-preferences') return preferences;
     if (name === '@/lib/live-commerce') return { assetImage: () => '/item.webp', usd: value => `$${value}`, settlementSummary: () => ({ sold: 0, claimed: 0, action: 'Confirm choices' }) };
     if (name === '@/lib/reveal') return { rarityAccent: () => '#888888' };
@@ -136,4 +137,22 @@ test('bulk choices select eligible pulls but require an explicit final confirmat
   assert.ok(!calls.includes('settle'));
   const locked = nodes(render({ ...props, busy: 'Confirming…' }), node => node.props?.className === 'vr-bulk-choices')[0];
   assert.ok(nodes(locked, node => node.type === 'button').every(node => node.props.disabled));
+});
+
+test('Normal multi-pulls start sealed and picking a pack changes presentation without settlement', () => {
+  const render = previewComponent();
+  const writes = [];
+  const props = {
+    play: { id: 'multi', quantity: 3, rewards: [0,1,2].map(index => ({ index, product: { name: `Pull ${index}` }, buyback_amount: 10 })) },
+    item: { name: 'Pack' }, decisions: [], busy: '', error: '', preferences: preferences.normalizeOpeningPreferences(),
+    onOpen() { writes.push('open'); }, onChoose() { writes.push('choice'); }, onSettle() { writes.push('settle'); }, onClose() {},
+  };
+  const grid = render(props);
+  const packs = nodes(grid, node => node.props?.className === 'vr-grid-pack');
+  assert.equal(packs.length, 3);
+  assert.equal(packs[1].props['aria-label'], 'Rip pack 2');
+  packs[1].props.onClick();
+  const opened = render(props);
+  assert.equal(nodes(opened, node => node.props?.className === 'vr-pack-grid').length, 0);
+  assert.deepEqual(writes, []);
 });

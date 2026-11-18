@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -100,7 +100,7 @@ export function PackCard({
           className={`dyli-pack-card-state${restocking ? " is-restocking" : ""}`}
         >
           <i />
-          {restocking ? "Restocking" : "Ready to open"}
+          {restocking ? "Restocking" : "Available"}
         </span>
         {poster ? (
           <Image
@@ -128,7 +128,7 @@ export function PackCard({
               Top hit <b>{usd(topValue).replace(/\.00$/, "")}</b>
             </span>
           ) : (
-            <span>Find your next favorite</span>
+            <span>View contents</span>
           )}
           <span className="dyli-card-arrow">
             <ArrowUpRight size={20} />
@@ -156,13 +156,9 @@ export function PackHero({
   return (
     <section className="dyli-pack-hero" aria-label="Discover packs">
       <div className="dyli-hero-copy">
-        <h1>
-          Small pack.
-          <br />
-          <span>Big possibilities.</span>
-        </h1>
+        <h1>Open a pack.</h1>
         <p>
-          Open a pack. Find your next favorite.
+          Collect cards, sealed packs and more.
           <br className="dyli-desktop-break" /> Vault it, sell it back, or get
           it shipped.
         </p>
@@ -175,7 +171,17 @@ export function PackHero({
             Explore packs
             <ArrowRight size={19} />
           </button>
-          {demo ? <span className="dyli-demo-note">No real purchases.</span> : <Link prefetch={false} href="/?demo=1" className="lc-secondary dyli-demo-link">Try demo</Link>}
+          {demo ? (
+            <span className="dyli-demo-note">No real purchases.</span>
+          ) : (
+            <Link
+              prefetch={false}
+              href="/?demo=1"
+              className="lc-secondary dyli-demo-link"
+            >
+              Try demo
+            </Link>
+          )}
         </div>
         <div className="dyli-hero-benefits">
           <span>
@@ -269,11 +275,7 @@ export function PackHero({
         ) : (
           <div className="dyli-hero-placeholder">
             <Sparkles size={70} />
-            <strong>
-              Something good
-              <br />
-              is coming.
-            </strong>
+            <strong>No packs available.</strong>
             <span>New packs will appear here.</span>
           </div>
         )}
@@ -327,8 +329,8 @@ export function PackBrowser({
     <section className="dyli-pack-browser" aria-labelledby="pack-browser-title">
       <div className="dyli-page-title">
         <div>
-          <h1 id="pack-browser-title">Pick your pack.</h1>
-          <p>View the odds and see what you could pull.</p>
+          <h1 id="pack-browser-title">Packs</h1>
+          <p>Choose a pack to view its contents and odds.</p>
         </div>
         <span className="dyli-count">
           {items.length} {items.length === 1 ? "pack" : "packs"}
@@ -370,6 +372,9 @@ export function PackBrowser({
           </button>
         ))}
       </div>
+      {!loading && !error && filtered.length > 0 && (
+        <PackGallery items={filtered} onSelect={onSelect} />
+      )}
       {error && (
         <div className="dyli-inline-error" role="alert">
           <strong>Packs couldn’t load</strong>
@@ -410,7 +415,7 @@ export function PackBrowser({
             <h2>
               {query || brand !== "All packs"
                 ? "No packs found"
-                : "More good things are coming."}
+                : "No packs available."}
             </h2>
             <p>
               {query || brand !== "All packs"
@@ -432,6 +437,129 @@ export function PackBrowser({
           </div>
         )
       )}
+    </section>
+  );
+}
+
+// API-driven version of the /packs coverflow. Only the focused pack mounts a
+// renderer; neighboring packs use the native cached posters.
+function PackGallery({
+  items,
+  onSelect,
+}: {
+  items: CatalogItem[];
+  onSelect: (item: CatalogItem) => void;
+}) {
+  const [selectedKey, setSelectedKey] = useState(items[0]?.key);
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.key === selectedKey),
+  );
+  const item = items[index];
+  const touch = useRef<number | null>(null);
+  const go = (delta: number) =>
+    setSelectedKey(items[(index + delta + items.length) % items.length].key);
+  const restocking = packIsRestocking(item);
+  const neighbor = (offset: number) =>
+    items.length > Math.abs(offset)
+      ? items[(index + offset + items.length) % items.length]
+      : null;
+  return (
+    <section
+      className="dyli-pack-gallery"
+      aria-label="Choose a pack"
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          go(event.key === "ArrowRight" ? 1 : -1);
+        }
+      }}
+      tabIndex={0}
+    >
+      <div
+        className="dyli-gallery-stage"
+        onTouchStart={(event) => {
+          touch.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          const start = touch.current;
+          touch.current = null;
+          if (
+            start != null &&
+            Math.abs((event.changedTouches[0]?.clientX ?? start) - start) > 45
+          )
+            go(event.changedTouches[0].clientX < start ? 1 : -1);
+        }}
+      >
+        {[-2, -1, 1, 2].map((offset) => {
+          const pack = neighbor(offset);
+          return pack ? (
+            <button
+              type="button"
+              className="dyli-gallery-neighbor"
+              data-offset={offset}
+              key={offset}
+              aria-label={`Select ${pack.name}`}
+              onClick={() => setSelectedKey(pack.key)}
+            >
+              <Image
+                src={packPoster(pack) || "/brand/dyli-mark.svg"}
+                alt=""
+                fill
+                sizes="240px"
+                unoptimized
+                draggable={false}
+              />
+            </button>
+          ) : null;
+        })}
+        <PackArtwork
+          key={item.key}
+          item={item}
+          className="dyli-gallery-focus"
+          priority
+          controls={false}
+        />
+        {items.length > 1 && (
+          <>
+            <button
+              className="dyli-gallery-arrow dyli-gallery-prev"
+              type="button"
+              aria-label="Previous pack"
+              onClick={() => go(-1)}
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              className="dyli-gallery-arrow dyli-gallery-next"
+              type="button"
+              aria-label="Next pack"
+              onClick={() => go(1)}
+            >
+              <ChevronRight size={24} />
+            </button>
+          </>
+        )}
+      </div>
+      <div className="dyli-gallery-info" aria-live="polite">
+        <span className="dyli-pack-brand">{packBrand(item.brand)}</span>
+        <h2>{item.name}</h2>
+        <PackStats item={item} compact />
+        <button
+          type="button"
+          className="lc-primary"
+          onClick={() => onSelect(item)}
+        >
+          {restocking
+            ? "View pack · Restocking"
+            : `Rip · ${usd(item.price).replace(/\.00$/, "")}`}
+          <ArrowRight size={18} />
+        </button>
+        <span className="dyli-gallery-position">
+          {index + 1} / {items.length}
+        </span>
+      </div>
     </section>
   );
 }

@@ -34,6 +34,7 @@ import {
 import Image from "next/image";
 import { LiveProductDetail, LiveModal } from "@/components/live-catalog";
 import "./live-storefront.css";
+import "./live-reveal.css";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -1045,8 +1046,8 @@ function HomeView({
             action="See all"
             onAction={() => onNavigate("packs")}
           />
-          <div className="home-pack-grid">
-            {boxes.slice(0, 3).map((item) => (
+          <div className="dyli-pack-grid dyli-pack-grid-home">
+            {boxes.slice(0, 4).map((item) => (
               <BoxCard
                 key={item.key}
                 item={item}

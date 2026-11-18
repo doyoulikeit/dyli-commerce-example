@@ -4,7 +4,7 @@ The example uses DYLI's fonts, colors and pack designs, with shared live/demo br
 
 ## Use the pack assets
 
-`pack.artwork` is optional. When present it supplies the public GLB, rendered front texture, flat poster and material map. It also identifies the portable DYLI renderer. The model is shared across designs, about 341 KB. All asset URLs are content-hashed and cacheable, with no API key or customer token required.
+`pack.artwork` is optional. When present it supplies the public GLB, rendered front texture, native 3D poster, material map and foil finish settings. It also identifies the portable DYLI renderer. The model is shared across designs, about 341 KB. All asset URLs are content-hashed and cacheable, with no API key or customer token required.
 
 - `src/lib/pack-artwork.ts` validates asset URLs and preserves ordinary image fallbacks.
 - `src/components/pack-artwork.tsx` is the React wrapper. Use `mode="preview"` for sealed artwork and `mode="rip"` for the visual opening. The imperative `open()` method animates a tear; `onComplete` advances presentation.
@@ -15,7 +15,32 @@ Full asset contract and framework-independent usage: [DYLI artwork guide](https:
 
 ## Mobile and performance
 
-Catalog grids use flat images. The renderer loads in a separate chunk only when a visible preview or reveal needs it. Desktop previews can animate automatically; mobile previews are opt in. Offscreen/hidden scenes pause, and their resources are released on unmount. Reduced motion, failed WebGL and slow loading keep the poster and a normal reveal button. Pack details have a contained scroll area and fixed checkout footer on mobile. Theme preferences are stored locally without changing a customer's account settings.
+Catalog grids use cached native 3D posters. The /packs gallery presents a focused pack with neighboring designs, arrow keys, buttons and swipe navigation. The renderer loads in a separate chunk only when a visible preview or reveal needs it. Desktop previews can animate automatically; mobile previews are opt in. Offscreen/hidden scenes pause, and their resources are released on unmount. Reduced motion, failed WebGL and slow loading keep the poster and a normal reveal button. Pack details have a contained scroll area and fixed checkout footer on mobile. Theme preferences are stored locally without changing a customer's account settings.
+
+## Copy and customize
+
+Fork this repository and follow [the quickstart](PARTNER-QUICKSTART.md). Use the existing server routes and login adapter; your Commerce key stays on the server.
+
+| Change | File |
+| --- | --- |
+| App name | `NEXT_PUBLIC_STOREFRONT_NAME` or your registered Commerce app |
+| Logo and theme toggle | `src/components/brand-identity.tsx` |
+| Colors, fonts, spacing, mobile sheets | `src/components/commerce-theme.css`, `public/brand`, `public/fonts` |
+| Home cards, searchable catalog, focused-pack gallery | `src/components/pack-catalog.tsx` |
+| Contents, odds, stock, current price | `src/components/pack-detail.tsx`, `src/components/live-catalog.tsx` |
+| Normal / Blitz preferences | `src/components/reveal-mode.tsx`, `src/lib/opening-preferences.ts` |
+| Individual rip, multi-pack grid, reveal all, review | `src/components/live-reveal.tsx` |
+| Local no-login demo draws | `src/lib/demo-pulls.ts` |
+
+The opening uses the native Category / Grade or Condition / Rarity beats, with unavailable or repeated metadata omitted. Blitz skips those detail beats. Multi-pulls let the customer choose which sealed pack to rip and return to the grid; Reveal all opens review. The same component runs in live and guest demo mode.
+
+Pass the API's complete `artwork` object through, including `materials`. The body colors and gradient are the foil underneath transparent ink. Using the front texture alone loses the native pack colors. The poster is rendered from the same native design and remains usable without WebGL.
+
+### Embedded wallet setup
+
+The supplied Privy adapter automatically signs the verified wallet-link message for its embedded wallet after login. `embeddedWallets.showWalletUIs: false` and per-call `showWalletUIs: false` hide routine wallet confirmation panels. Keep Privy's required recovery, MFA and security checks. Your app still asks the customer to confirm a purchase or sale. External wallets and custom login adapters keep their own authorization requirements; do not attempt to silently sign with them.
+
+A failed link shows Retry, Try demo and Log out. It keeps pending paid checkout recovery intact.
 
 ## Payment and result boundaries
 

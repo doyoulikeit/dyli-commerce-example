@@ -2653,73 +2653,732 @@ button span {
 }
 
 /* Keep button amounts readable in both themes, including nested labels. */
-.lc-header .brand-lockup .dyli-commerce-logo strong { font-size: clamp(23px, 2.1vw, 30px); }
-.lc-primary strong, .vr-primary strong { color: inherit; }
-.vr-modal .vr-decision-buttons .vr-sell { background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green); border-color: var(--green); }
-.vr-modal .vr-decision-buttons .vr-sell:hover:not(:disabled) { background: color-mix(in srgb, var(--green) 17%, var(--surface)); color: var(--green); }
-.vr-modal .vr-decision-buttons .vr-sell strong { color: inherit; font-weight: 800; }
-.vr-modal .vr-decision-buttons .vr-vault { background: var(--surface); color: var(--ink); border-color: var(--line); }
-.vr-modal .vr-decision-buttons .vr-vault:hover:not(:disabled) { background: var(--soft); color: var(--ink); }
-.lc-app .dyli-hero-copy h1, .store-app .dyli-hero-copy h1 { letter-spacing: -.015em; word-spacing: .025em; }
-@media(max-width:360px) { .lc-header .brand-lockup .dyli-commerce-logo strong { max-width: 76px; } }
-.lc-app .lc-notice, .lc-modal .lc-notice { background: var(--soft); color: var(--ink); border-color: var(--line); }
-@media(max-width:760px) {
-  dialog.lc-modal input, dialog.lc-modal select, dialog.lc-modal textarea, .dyli-search input { font-size: 16px; }
+.lc-header .brand-lockup .dyli-commerce-logo strong {
+  font-size: clamp(23px, 2.1vw, 30px);
 }
-.lc-app :is(.cm-resume, .cm-note, .cm-activity-card) { background: var(--surface); color: var(--ink); border-color: var(--line); }
-.lc-modal :is(.lc-shipping-items-summary > div, .lc-address-comparison > div, .lc-deposit-address, .lc-withdraw-review, .lc-transfer-result) { background: var(--soft); color: var(--ink); border-color: var(--line); }
-.lc-modal :is(.lc-balance-back, .lc-balance-foot, .lc-deposit-status, .lc-network-notice, .lc-balance-explorer, .lc-transfer-link small, .lc-balance-amount small, .lc-balance-amount > span) { color: var(--muted); }
-.lc-modal :is(.lc-transfer-link, .lc-balance-body code, .lc-withdraw-form label, .lc-network-notice strong) { color: var(--ink); }
-@media(max-width:520px) {
-  .dyli-pack-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .dyli-search { width: 100%; max-width: none; }
-  .dyli-pack-sort { justify-self: end; max-width: 100%; }
-  .dyli-pack-sort > span { display: inline; font-size: 12px; }
-  .dyli-pack-sort select { min-width: 0; max-width: 100%; width: 175px; font-size: 14px; }
+.lc-primary strong,
+.vr-primary strong {
+  color: inherit;
 }
-@media(max-width:520px) {
-  .dyli-pack-card-state { font-size: 9px; }
-  .dyli-detail-description { font-size: 14px; }
-  .dyli-how-it-works { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  .dyli-how-it-works > span { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
-  .dyli-how-it-works strong { font-size: 14px; }
-  .dyli-how-it-works small { font-size: 12px; line-height: 1.6; }
-  .dyli-detail-trust { flex-wrap: wrap; }
-  .dyli-detail-trust > span { font-size: 11px; }
-  .dyli-top-hits > article > p { font-size: 12px; }
-  .dyli-pack-sort select { width: 185px; font-size: 16px; }
+.vr-modal .vr-decision-buttons .vr-sell {
+  background: color-mix(in srgb, var(--green) 10%, var(--surface));
+  color: var(--green);
+  border-color: var(--green);
 }
-@media(max-width:360px) { .dyli-brand-pills { margin-right: -14px; padding-right: 14px; } }
+.vr-modal .vr-decision-buttons .vr-sell:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--green) 17%, var(--surface));
+  color: var(--green);
+}
+.vr-modal .vr-decision-buttons .vr-sell strong {
+  color: inherit;
+  font-weight: 800;
+}
+.vr-modal .vr-decision-buttons .vr-vault {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.vr-modal .vr-decision-buttons .vr-vault:hover:not(:disabled) {
+  background: var(--soft);
+  color: var(--ink);
+}
+.lc-app .dyli-hero-copy h1,
+.store-app .dyli-hero-copy h1 {
+  letter-spacing: -0.015em;
+  word-spacing: 0.025em;
+}
+@media (max-width: 360px) {
+  .lc-header .brand-lockup .dyli-commerce-logo strong {
+    max-width: 76px;
+  }
+}
+.lc-app .lc-notice,
+.lc-modal .lc-notice {
+  background: var(--soft);
+  color: var(--ink);
+  border-color: var(--line);
+}
+@media (max-width: 760px) {
+  dialog.lc-modal input,
+  dialog.lc-modal select,
+  dialog.lc-modal textarea,
+  .dyli-search input {
+    font-size: 16px;
+  }
+}
+.lc-app :is(.cm-resume, .cm-note, .cm-activity-card) {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.lc-modal
+  :is(
+    .lc-shipping-items-summary > div,
+    .lc-address-comparison > div,
+    .lc-deposit-address,
+    .lc-withdraw-review,
+    .lc-transfer-result
+  ) {
+  background: var(--soft);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.lc-modal
+  :is(
+    .lc-balance-back,
+    .lc-balance-foot,
+    .lc-deposit-status,
+    .lc-network-notice,
+    .lc-balance-explorer,
+    .lc-transfer-link small,
+    .lc-balance-amount small,
+    .lc-balance-amount > span
+  ) {
+  color: var(--muted);
+}
+.lc-modal
+  :is(
+    .lc-transfer-link,
+    .lc-balance-body code,
+    .lc-withdraw-form label,
+    .lc-network-notice strong
+  ) {
+  color: var(--ink);
+}
+@media (max-width: 520px) {
+  .dyli-pack-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .dyli-search {
+    width: 100%;
+    max-width: none;
+  }
+  .dyli-pack-sort {
+    justify-self: end;
+    max-width: 100%;
+  }
+  .dyli-pack-sort > span {
+    display: inline;
+    font-size: 12px;
+  }
+  .dyli-pack-sort select {
+    min-width: 0;
+    max-width: 100%;
+    width: 175px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 520px) {
+  .dyli-pack-card-state {
+    font-size: 9px;
+  }
+  .dyli-detail-description {
+    font-size: 14px;
+  }
+  .dyli-how-it-works {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .dyli-how-it-works > span {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .dyli-how-it-works strong {
+    font-size: 14px;
+  }
+  .dyli-how-it-works small {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .dyli-detail-trust {
+    flex-wrap: wrap;
+  }
+  .dyli-detail-trust > span {
+    font-size: 11px;
+  }
+  .dyli-top-hits > article > p {
+    font-size: 12px;
+  }
+  .dyli-pack-sort select {
+    width: 185px;
+    font-size: 16px;
+  }
+}
+@media (max-width: 360px) {
+  .dyli-brand-pills {
+    margin-right: -14px;
+    padding-right: 14px;
+  }
+}
 /* Product metadata stays plain. No decorative eyebrow labels. */
-.dyli-pack-brand { display: block; font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.5; }
-.dyli-hero-pack-label small { text-transform: none; letter-spacing: normal; font-size: 12px; }
-.dyli-demo-link, .dyli-account-exit .lc-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 13px 22px; text-decoration: none; }
-.dyli-demo-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 18px; padding: 14px max(24px,calc((100vw - 1320px)/2)); background: var(--blue-soft); color: var(--ink); font-size: 13px; line-height: 1.6; }
-.dyli-demo-banner strong { margin-right: 10px; }
-.dyli-demo-banner a { font-weight: 700; white-space: nowrap; }
-.lc-account-loading { background: var(--page); color: var(--ink); }
-.lc-account-loading .lc-primary { border: 0; border-radius: 999px; min-height: 48px; padding: 13px 24px; background: var(--yellow); color: #191a24; font-weight: 750; }
-.lc-account-loading .lc-account-loading-message { max-width: 440px; }
-.lc-account-loading-message h1 { font: 900 clamp(28px,5vw,38px)/1.2 var(--display); }
-.dyli-account-exit { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
-.dyli-account-exit .lc-secondary { min-height: 46px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; color: var(--ink); }
-.dyli-text-button { background: none; border: 0; color: var(--ink); padding: 13px 20px; min-height: 46px; font-weight: 700; }
-.lc-modal.dyli-demo-modal { background: var(--surface); color: var(--ink); }
-.lc-modal.dyli-demo-modal > header { flex: none; background: var(--surface); border-color: var(--line); }
-.lc-modal.reveal-screen { inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; background: var(--page); color: var(--ink); }
-@media(max-width:760px) {
- .dyli-demo-banner { padding: 12px 18px; font-size: 12px; }
- .lc-modal.dyli-demo-modal:not(.detail-modal) { width: 100%; max-width: 100%; max-height: calc(100dvh - max(16px,env(safe-area-inset-top))); margin: auto 0 0; border: 0; border-radius: 24px 24px 0 0; }
- .lc-modal.dyli-demo-modal > header { position: sticky; top: 0; min-height: 60px; z-index: 3; }
- .lc-modal.dyli-demo-modal .pay-button { position: sticky; bottom: 0; }
- .lc-modal.dyli-demo-modal input, .lc-modal.dyli-demo-modal select { font-size: 16px; }
+.dyli-pack-brand {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.5;
 }
-.dyli-demo-resume { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: min(100% - 36px,1320px); margin: 20px auto; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
-.dyli-demo-resume button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 10px 18px; min-height: 44px; }
-.lc-modal.dyli-demo-modal .pay-button { background: var(--yellow); color: #191a24; border-radius: 999px; font-weight: 750; }
-.lc-modal.dyli-demo-modal .pay-button span { color: inherit; }
-.lc-modal.dyli-demo-modal .payment-options button { background: var(--surface); color: var(--ink); border-color: var(--line); }
-.lc-modal.dyli-demo-modal .payment-options button.active { background: var(--blue-soft); border-color: var(--blue); }
-.lc-modal.dyli-demo-modal .payment-options strong { color: inherit; }
-.lc-modal.dyli-demo-modal .checkout-item { background: var(--surface); color: var(--ink); }
-.lc-modal.dyli-demo-modal .checkout-item > span { background: var(--soft); }
+.dyli-hero-pack-label small {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 12px;
+}
+.dyli-demo-link,
+.dyli-account-exit .lc-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 22px;
+  text-decoration: none;
+}
+.dyli-demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 14px max(24px, calc((100vw - 1320px) / 2));
+  background: var(--blue-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.dyli-demo-banner strong {
+  margin-right: 10px;
+}
+.dyli-demo-banner a {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lc-account-loading {
+  background: var(--page);
+  color: var(--ink);
+}
+.lc-account-loading .lc-primary {
+  border: 0;
+  border-radius: 999px;
+  min-height: 48px;
+  padding: 13px 24px;
+  background: var(--yellow);
+  color: #191a24;
+  font-weight: 750;
+}
+.lc-account-loading .lc-account-loading-message {
+  max-width: 440px;
+}
+.lc-account-loading-message h1 {
+  font: 900 clamp(28px, 5vw, 38px) / 1.2 var(--display);
+}
+.dyli-account-exit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.dyli-account-exit .lc-secondary {
+  min-height: 46px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+}
+.dyli-text-button {
+  background: none;
+  border: 0;
+  color: var(--ink);
+  padding: 13px 20px;
+  min-height: 46px;
+  font-weight: 700;
+}
+.lc-modal.dyli-demo-modal {
+  background: var(--surface);
+  color: var(--ink);
+}
+.lc-modal.dyli-demo-modal > header {
+  flex: none;
+  background: var(--surface);
+  border-color: var(--line);
+}
+.lc-modal.reveal-screen {
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--page);
+  color: var(--ink);
+}
+@media (max-width: 760px) {
+  .dyli-demo-banner {
+    padding: 12px 18px;
+    font-size: 12px;
+  }
+  .lc-modal.dyli-demo-modal:not(.detail-modal) {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+    margin: auto 0 0;
+    border: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .lc-modal.dyli-demo-modal > header {
+    position: sticky;
+    top: 0;
+    min-height: 60px;
+    z-index: 3;
+  }
+  .lc-modal.dyli-demo-modal .pay-button {
+    position: sticky;
+    bottom: 0;
+  }
+  .lc-modal.dyli-demo-modal input,
+  .lc-modal.dyli-demo-modal select {
+    font-size: 16px;
+  }
+}
+.dyli-demo-resume {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100% - 36px, 1320px);
+  margin: 20px auto;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.dyli-demo-resume button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 18px;
+  min-height: 44px;
+}
+.lc-modal.dyli-demo-modal .pay-button {
+  background: var(--yellow);
+  color: #191a24;
+  border-radius: 999px;
+  font-weight: 750;
+}
+.lc-modal.dyli-demo-modal .pay-button span {
+  color: inherit;
+}
+.lc-modal.dyli-demo-modal .payment-options button {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.lc-modal.dyli-demo-modal .payment-options button.active {
+  background: var(--blue-soft);
+  border-color: var(--blue);
+}
+.lc-modal.dyli-demo-modal .payment-options strong {
+  color: inherit;
+}
+.lc-modal.dyli-demo-modal .checkout-item {
+  background: var(--surface);
+  color: var(--ink);
+}
+.lc-modal.dyli-demo-modal .checkout-item > span {
+  background: var(--soft);
+}
+.dyli-pack-grid.dyli-pack-grid-home,
+.lc-app .lc-box-grid.dyli-pack-grid-home {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.dyli-pack-grid-home .dyli-pack-card-stage {
+  aspect-ratio: auto;
+  height: clamp(230px, 26vw, 380px);
+}
+@media (max-width: 520px) {
+  .dyli-pack-grid-home .dyli-pack-card-stage {
+    height: 205px;
+  }
+}
+
+/* The same focused-pack arrangement as DYLI /packs, driven by API catalog data. */
+.dyli-pack-gallery {
+  margin: 24px 0 40px;
+  border-radius: 28px;
+  padding: 24px 12px 28px;
+  background: radial-gradient(ellipse at 50% 25%, #34678a, #152d43 65%);
+  color: #fff;
+  overflow: hidden;
+  isolation: isolate;
+}
+.dyli-gallery-stage {
+  height: 380px;
+  position: relative;
+  max-width: 1040px;
+  margin: auto;
+  touch-action: pan-y;
+}
+.dyli-gallery-focus {
+  position: absolute !important;
+  inset: 0;
+  z-index: 3;
+  width: 300px !important;
+  height: 100% !important;
+  margin: auto;
+  pointer-events: none;
+}
+.dyli-gallery-neighbor {
+  position: absolute;
+  top: 7%;
+  left: 50%;
+  width: 220px;
+  height: 86%;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+  filter: drop-shadow(0 10px 14px #0004);
+}
+.dyli-gallery-neighbor img {
+  object-fit: contain;
+}
+.dyli-gallery-neighbor[data-offset="-1"] {
+  transform: translateX(-155%) rotate(-9deg);
+  opacity: 0.8;
+  z-index: 2;
+}
+.dyli-gallery-neighbor[data-offset="1"] {
+  transform: translateX(55%) rotate(9deg);
+  opacity: 0.8;
+  z-index: 2;
+}
+.dyli-gallery-neighbor[data-offset="-2"] {
+  transform: translateX(-240%) rotate(-15deg) scale(0.82);
+  opacity: 0.35;
+  z-index: 1;
+}
+.dyli-gallery-neighbor[data-offset="2"] {
+  transform: translateX(140%) rotate(15deg) scale(0.82);
+  opacity: 0.35;
+  z-index: 1;
+}
+.dyli-gallery-arrow {
+  position: absolute;
+  top: 45%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #ffffff50;
+  border-radius: 50%;
+  background: #ffffff18;
+  color: #fff;
+  cursor: pointer;
+}
+.dyli-gallery-prev {
+  left: 8px;
+}
+.dyli-gallery-next {
+  right: 8px;
+}
+.dyli-gallery-info {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.dyli-gallery-info .dyli-pack-brand {
+  color: #ffffffad;
+}
+.dyli-gallery-info h2 {
+  font: 900 clamp(30px, 4.5vw, 52px) / 1 var(--display);
+  text-transform: uppercase;
+  margin: 0;
+  max-width: 90%;
+  text-wrap: balance;
+  color: #fff;
+}
+.dyli-gallery-info .dyli-pack-stats {
+  color: #fff;
+  justify-content: center;
+}
+.dyli-gallery-info .dyli-pack-stats dt {
+  color: #ffffffad;
+}
+.dyli-gallery-info .dyli-pack-stats dd {
+  color: #fff;
+}
+.dyli-gallery-position {
+  font-size: 12px;
+  color: #ffffff90;
+}
+/* Opening uses the native immersive stage in both app themes. */
+.lc-modal.vr-modal:has(.vr-native) {
+  background: #191a24;
+}
+.vr-modal .vr-native {
+  --ink: #fff;
+  --surface: #242633;
+  --soft: #ffffff0d;
+  --line: #ffffff25;
+  --page: #191a24;
+  --muted: #b7bfce;
+  --hero: #333744;
+  --green: #81dfb2;
+  background: radial-gradient(
+    ellipse at 50% 15%,
+    color-mix(in srgb, var(--pack-color) 23%, #191a24),
+    #191a24 70%
+  );
+  color: #fff;
+}
+.vr-modal .vr-native .vr-toolbar {
+  background: #191a2440;
+  color: #fff;
+}
+.vr-modal .vr-native .vr-stage,
+.vr-modal .vr-native .vr-pending {
+  background: transparent;
+}
+.vr-modal .vr-native .vr-clue > strong,
+.vr-modal .vr-native .vr-rarity-reveal > strong,
+.vr-modal .vr-native h2,
+.vr-modal .vr-native h3 {
+  color: #fff;
+}
+.vr-modal .vr-native .vr-rarity-reveal > strong {
+  color: var(--rarity);
+}
+.vr-modal .vr-native .vr-close,
+.vr-modal .vr-native .vr-sound {
+  color: #fff;
+  background: #ffffff10;
+}
+.vr-modal .vr-native .vr-skip {
+  color: #fff;
+  background: #ffffff15;
+  border: 1px solid #ffffff30;
+}
+.vr-modal .vr-native .vr-primary {
+  background: #ffd766;
+  color: #191a24;
+}
+.vr-modal .vr-native .vr-vault {
+  background: #ffd766;
+  color: #191a24;
+}
+.vr-modal .vr-native .vr-review-totals strong,
+.vr-modal .vr-native .vr-review-totals small {
+  color: inherit;
+}
+.vr-pack-grid-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px 24px max(24px, env(safe-area-inset-bottom));
+}
+.vr-pack-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px 20px;
+  margin: auto;
+  width: 100%;
+  max-width: 1180px;
+}
+.vr-pack-slot {
+  width: clamp(150px, 22vw, 240px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vr-grid-pack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 0.67;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.2s;
+  isolation: isolate;
+}
+.vr-grid-pack:hover {
+  transform: translateY(-5px);
+}
+.vr-grid-pack > img {
+  object-fit: contain;
+}
+.vr-grid-pack > .lc-art {
+  position: absolute;
+  inset: 0;
+}
+.vr-grid-pack-number {
+  position: absolute;
+  z-index: 2;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: #191a24dd;
+  border: 1px solid #ffffff40;
+  border-radius: 99px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.vr-pack-slot[data-revealed] .vr-grid-pack {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--rarity) 18%, transparent);
+}
+.vr-pack-slot h3 {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.vr-pack-slot > p {
+  font-size: 12px;
+  color: #b7bfce;
+  text-align: center;
+  margin: 0;
+}
+.vr-pack-slot .vr-review-choices {
+  display: flex;
+  gap: 6px;
+}
+.vr-pack-slot .vr-review-choices button {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 6px;
+  font-size: 12px;
+  justify-content: center;
+}
+.vr-grid-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px;
+  border: 1px solid #ffffff20;
+  border-radius: 20px;
+  background: #191a24ed;
+  backdrop-filter: blur(12px);
+  color: #b7bfce;
+  font-size: 13px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+@media (max-width: 600px) {
+  .dyli-pack-gallery {
+    padding: 12px 0 22px;
+    margin: 20px -4px 28px;
+    border-radius: 22px;
+  }
+  .dyli-gallery-stage {
+    height: 330px;
+  }
+  .dyli-gallery-focus {
+    width: 230px !important;
+  }
+  .dyli-gallery-neighbor {
+    width: 190px;
+  }
+  .dyli-gallery-neighbor[data-offset="-1"] {
+    transform: translateX(-135%) rotate(-11deg) scale(0.86);
+  }
+  .dyli-gallery-neighbor[data-offset="1"] {
+    transform: translateX(35%) rotate(11deg) scale(0.86);
+  }
+  .dyli-gallery-arrow {
+    width: 36px;
+    height: 36px;
+    background: #191a2470;
+  }
+  .dyli-gallery-info h2 {
+    font-size: 34px;
+  }
+  .vr-pack-grid-view {
+    padding: 20px 12px max(16px, env(safe-area-inset-bottom));
+  }
+  .vr-pack-grid {
+    gap: 20px 10px;
+  }
+  .vr-pack-slot {
+    width: calc(50% - 5px);
+    max-width: 220px;
+  }
+  .vr-grid-footer {
+    gap: 12px;
+    width: 100%;
+    font-size: 12px;
+    padding: 12px;
+  }
+  .vr-grid-footer .vr-primary {
+    font-size: 13px;
+    min-width: 0;
+    padding: 14px 16px;
+  }
+  .vr-pack-slot .vr-review-choices {
+    flex-wrap: wrap;
+  }
+  .vr-pack-slot .vr-review-choices button {
+    flex: 1 1 65px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dyli-gallery-neighbor,
+  .vr-grid-pack {
+    transition: none;
+  }
+}
+.lc-modal.dyli-demo-modal .payment-options button small,
+.lc-modal.dyli-demo-modal .payment-options button.active small {
+  color: var(--muted);
+}
+.lc-modal .vr-mode {
+  display: flex;
+  padding: 5px;
+  gap: 4px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.lc-modal .vr-mode button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+.lc-modal .vr-mode button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 7px #0000000c;
+}

@@ -4,6 +4,8 @@ export type PackSceneOptions = {
     version: 1;
     model_url: string;
     texture_url?: string;
+    material_map_url?: string;
+    materials?: { body_top: string; body_bottom: string; body_blend: [number, number]; matte: boolean; iridescence: number };
     poster_url: string;
   };
   mode?: "preview" | "rip";

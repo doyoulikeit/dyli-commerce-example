@@ -63,7 +63,7 @@ export function PackDetailContent({
           <ArrowLeft size={18} />
           <span>All packs</span>
         </button>
-        <span>Make your next great find.</span>
+
         <button
           type="button"
           className="lc-icon"
@@ -78,7 +78,7 @@ export function PackDetailContent({
           <div className="dyli-pack-detail-art">
             <span className="dyli-detail-status">
               <i />
-              {restocking ? "Restocking" : "Ready when you are"}
+              {restocking ? "Restocking" : "Available"}
             </span>
             <PackArtwork key={item.id} item={item} detail={box} priority />
           </div>
@@ -91,7 +91,7 @@ export function PackDetailContent({
               {item.description &&
               !/digital box, physical item|guranteed/i.test(item.description)
                 ? item.description
-                : "A surprise collectible, picked from this pack’s current inventory. Keep it in your vault, accept an available buyback, or request shipping."}
+                : "Each pack contains one collectible from its current inventory. Vault your pull, accept an available buyback, or ship eligible items."}
             </p>
             <PackStats item={item} detail={box} />
             <div className="dyli-how-it-works">
@@ -99,20 +99,20 @@ export function PackDetailContent({
                 <span>1</span>
                 <div>
                   <strong>Open your pack</strong>
-                  <small>See your collectible come to life.</small>
+                  <small>Reveal your collectible.</small>
                 </div>
               </span>
               <span>
                 <span>2</span>
                 <div>
-                  <strong>Make it yours</strong>
+                  <strong>Vault or sell</strong>
                   <small>Vault it or accept an available buyback.</small>
                 </div>
               </span>
               <span>
                 <span>3</span>
                 <div>
-                  <strong>Keep collecting</strong>
+                  <strong>Shipping</strong>
                   <small>Ship eligible items whenever you’re ready.</small>
                 </div>
               </span>

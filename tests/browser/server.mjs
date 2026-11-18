@@ -28,6 +28,7 @@ await build({
   jsx: "automatic",
   tsconfig: path.join(root, "tsconfig.json"),
   alias: {
+    "next/image": path.join(root, "tests/browser/image.fixture.jsx"),
     "@privy-io/react-auth": path.join(root, "tests/browser/privy.fixture.jsx"),
     "@/lib/base-wallet": path.join(root, "tests/browser/base-wallet.fixture.ts"),
   },
@@ -106,6 +107,7 @@ if (process.env.VERIFY_BUILD_ONLY !== "true") http
       if (/^\/(?:brand|fonts)\/[\w.-]+$/.test(url.pathname) || (process.env.VERIFY_ASSET_ROOT && /^\/commerce-assets\/v1\/[\w/.-]+$/.test(url.pathname) && !url.pathname.includes(".."))) {
         const assetRoot = url.pathname.startsWith("/commerce-assets/") ? process.env.VERIFY_ASSET_ROOT : path.join(root, "public");
         const ext = path.extname(url.pathname);
+        res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Content-Type", ({ ".svg": "image/svg+xml", ".woff2": "font/woff2", ".otf": "font/otf", ".glb": "model/gltf-binary", ".webp": "image/webp", ".mjs": "text/javascript" })[ext] || "application/octet-stream");
         res.end(await readFile(path.join(assetRoot, url.pathname.slice(1))));
         return;

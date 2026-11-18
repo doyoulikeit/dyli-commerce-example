@@ -30,7 +30,7 @@ The homepage shows Marketplace below Packs, with **View all** for search, filter
 
 ## Pack experience
 
-The storefront includes DYLI branding, light/dark themes, searchable packs, live hits and odds, and a mobile pack sheet with a fixed checkout footer. Catalog cards stay lightweight; pack previews and openings reuse DYLI’s lazily loaded 3D renderer with reduced-motion and image fallbacks. Bulk review lets customers select vault or available buybacks before one explicit confirmation.
+The storefront includes DYLI branding, light/dark themes, a native focused-pack gallery, searchable packs, live hits and odds, and mobile bottom sheets. Normal opens individual packs; Blitz skips the buildup. Multi-pulls have a sealed-pack grid and Reveal all. Catalog cards stay lightweight; pack previews and openings reuse DYLI’s lazily loaded 3D renderer with reduced-motion and image fallbacks. Bulk review lets customers select vault or available buybacks before one explicit confirmation.
 
 The API now supplies optional public `artwork` metadata for the model, textures and poster. Reuse the renderer and React wrapper in your own app: [pack UI and asset guide](docs/PACK-EXPERIENCE.md).
 
@@ -57,6 +57,7 @@ Optional server settings: `INCLUDED_IDS` selects your packs; `FLAT_FEE` or `PERC
 ## Live or demo?
 
 - `NEXT_PUBLIC_DEMO_MODE=false`: real accounts, production money and inventory, including on localhost.
+- Visit `/?demo=1` or click **Try demo** from the live app: no login or signatures, virtual funds, and the same pack opening UI.
 - `NEXT_PUBLIC_DEMO_MODE=true`: non-paying [UI demo](docs/DEMO-MODE.md), without customer login. A Commerce key is still required to load this example's live catalog.
 
 A custom UI can start with mock data without a key, or the Public Read API with a free Read key. Read keys cannot call Commerce endpoints, including this example's catalog and bootstrap.

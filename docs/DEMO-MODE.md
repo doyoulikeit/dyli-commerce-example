@@ -1,61 +1,30 @@
-# Optional UI demo
+# Guest demo
 
-A session-based collectibles storefront powered by live DYLI data. The catalog, marketplace inventory, pack artwork, pack contents, published odds, prices, and buyback values come from DYLI; identity, checkout, Collection, and Activity stay in the browser session.
+Open `/?demo=1` on a running storefront to try the pack experience without signing in. The live homepage and account-connection screen also have **Try demo** links. `NEXT_PUBLIC_DEMO_MODE=true` makes the guest demo the default for the whole deployment.
 
-## Demo features
+The demo reads DYLI's live catalog, pack contents, published odds and current buyback values through the server. It uses virtual funds and local choices. It does not create a customer, ask for a wallet signature, charge a card, reserve stock, settle a buyback or request a shipment.
 
-- Live graded and sealed Shop limited to Pokémon and One Piece, with packs, packs, and bundles
-- Live, in-stock Packs that are not marked for restocking
-- Live Pack details, chase artwork, inventory, and published odds
-- Two-step welcome flow that asks for a name and grants `$500.00`
-- Card or Balance checkout simulation with multi-quantity controls
-- Immediate Pack opening with live range inventory used for each draw
-- Keep-to-Collection and sell-to-Balance decisions
-- Session Collection, value, and Activity
-- Responsive desktop and mobile layouts
+## Try the flow
 
-No payment or transaction is submitted in POC mode. Every page load seeds the session balance at `$500.00`; simulated purchases subtract from it and sell-backs add funds. Session purchases, pulls, and activity are stored in `sessionStorage`, while the balance refreshes to `$500.00` on reload.
+1. Choose a pack and inspect its top hits and odds.
+2. Open 1–10 packs with virtual Card or Balance. Start with $500.
+3. Choose **Normal** to rip individual packs, or **Blitz** to skip the buildup. Multi-pulls have a pack grid and **Reveal all**.
+4. Select **Vault** or an available **Sell** offer, then confirm the summary. Sales add virtual funds; vaulted pulls appear in Collection.
+5. Use the account menu's **Reset demo** to start over. **Exit demo** returns to the live storefront.
 
-## Configure the demo
+Closing an opening leaves a **Continue opening** action so the session can resume. Collection, balance and activity persist in this tab's `sessionStorage`. If browser storage is unavailable, the demo still works in memory. It uses separate keys from live checkout recovery.
 
-```bash
-npm ci
-# Add NEXT_PUBLIC_DEMO_MODE=true to your existing private .env.local.
-```
+## Run locally
 
-Keep a server-side **Commerce key** for catalog reads: this example calls Commerce endpoints even in demo mode. A free Read key or missing key won't populate its live catalog. No Privy login is needed for simulated purchases. For a custom UI, mock data needs no key and the Public Read API accepts a free Read key. Optional POC-only address autocomplete settings:
+Use Node 24+, install with `npm ci`, add your server-side Commerce key to `.env.local`, then run `npm run dev`. Visit [localhost:3000/?demo=1](http://localhost:3000/?demo=1).
 
-```bash
-NEXT_PUBLIC_STOREFRONT_NAME=Vaulted
-NEXT_PUBLIC_DEMO_MODE=true
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
-```
+A Commerce key is needed for this example's server-side catalog reads. A missing key or a Read-only key cannot populate this Commerce catalog. No Privy login is needed in guest mode. Keep `DYLI_API_KEY` server-side; never use a `NEXT_PUBLIC_` prefix.
 
-Keep `DYLI_API_KEY` server-side. Never expose it with a `NEXT_PUBLIC_` prefix.
+## Files to reuse
 
-## Run
+- `src/components/storefront.tsx`: guest session, simulated checkout, collection and activity.
+- `src/lib/demo-pulls.ts`: published-range and available-quantity weighting. Draws are simulated and do not predict future live results.
+- `src/components/live-reveal.tsx`: shared Normal, Blitz, multi-pack grid and review presentation for live and demo.
+- `src/components/pack-artwork.tsx`: shared 3D opening, poster and reduced-motion fallback.
 
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Data boundaries
-
-- `src/lib/storefront-server.ts` composes the live commerce catalog and public pack metadata.
-- `src/app/api/packs/[id]` loads a Pack, its published ranges, and the items currently in those ranges.
-- `src/components/storefront.tsx` owns the welcome profile, temporary checkout, balance, Pack draw, Collection, and Activity for the current browser session.
-
-The Pack simulator first selects a live published odds bucket and then selects from that bucket's current DYLI inventory, weighted by the quantity in the Pack. It does not use a local prize list.
-
-## Verify
-
-```bash
-npm run lint
-npm test
-npm run build
-```
-
-See the [DYLI Commerce documentation](https://www.dyli.io/docs/api/commerce) and [Pack API documentation](https://www.dyli.io/docs/api/packs).
+Guest mode is a presentation demo, not a sandbox for real payment or inventory testing. See [testing](https://www.dyli.io/docs/api/commerce-testing) and the [pack experience guide](PACK-EXPERIENCE.md).

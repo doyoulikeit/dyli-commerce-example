@@ -8,6 +8,13 @@ export type PackArtwork = {
   texture_url: string;
   material_map_url?: string;
   renderer_url?: string;
+  materials?: {
+    body_top: string;
+    body_bottom: string;
+    body_blend: [number, number];
+    matte: boolean;
+    iridescence: number;
+  };
 };
 
 const record = (value: unknown): ApiRecord =>
@@ -37,6 +44,19 @@ export function packArtwork(
     model = publicUrl(source.model_url),
     texture = publicUrl(source.texture_url);
   if (source.version !== 1 || !poster || !model || !texture) return null;
+  const materials = record(source.materials);
+  const blend = materials.body_blend;
+  const nativeFinish =
+    /^#[0-9a-f]{6}$/i.test(String(materials.body_top)) &&
+    /^#[0-9a-f]{6}$/i.test(String(materials.body_bottom)) &&
+    Array.isArray(blend) &&
+    blend.length === 2 &&
+    blend.every(
+      (value) => typeof value === "number" && Number.isFinite(value),
+    ) &&
+    Number(blend[0]) >= 0 &&
+    Number(blend[1]) <= 1 &&
+    Number(blend[0]) < Number(blend[1]);
   return {
     version: 1,
     design_key: String(source.design_key || ""),
@@ -45,6 +65,21 @@ export function packArtwork(
     texture_url: texture,
     material_map_url: publicUrl(source.material_map_url) || undefined,
     renderer_url: publicUrl(source.renderer_url) || undefined,
+    materials: nativeFinish
+      ? {
+          body_top: String(materials.body_top),
+          body_bottom: String(materials.body_bottom),
+          body_blend: [
+            Number((blend as number[])[0]),
+            Number((blend as number[])[1]),
+          ],
+          matte: materials.matte === true,
+          iridescence: Math.min(
+            1,
+            Math.max(0, Number(materials.iridescence) || 0),
+          ),
+        }
+      : undefined,
   };
 }
 
