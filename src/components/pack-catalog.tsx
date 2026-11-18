@@ -119,7 +119,7 @@ export function PackCard({
         </span>
       </span>
       <span className="dyli-pack-card-info">
-        <span className="dyli-eyebrow">{packBrand(item.brand)}</span>
+        <span className="dyli-pack-brand">{packBrand(item.brand)}</span>
         <strong>{item.name}</strong>
         <span className="dyli-pack-card-meta">
           {topValue != null && topValue > 0 ? (
@@ -155,10 +155,6 @@ export function PackHero({
   return (
     <section className="dyli-pack-hero" aria-label="Discover packs">
       <div className="dyli-hero-copy">
-        <span className="dyli-eyebrow">
-          <span className="dyli-live-dot" />
-          {demo ? "Try the experience" : "Your next great pull"}
-        </span>
         <h1>
           Small pack.
           <br />
@@ -178,11 +174,7 @@ export function PackHero({
             Explore packs
             <ArrowRight size={19} />
           </button>
-          {demo && (
-            <span className="dyli-demo-note">
-              Demo balance. Real possibilities.
-            </span>
-          )}
+          {demo ? <span className="dyli-demo-note">No real purchases.</span> : <a href="/?demo=1" className="lc-secondary dyli-demo-link">Try demo</a>}
         </div>
         <div className="dyli-hero-benefits">
           <span>
@@ -334,11 +326,8 @@ export function PackBrowser({
     <section className="dyli-pack-browser" aria-labelledby="pack-browser-title">
       <div className="dyli-page-title">
         <div>
-          <span className="dyli-eyebrow">
-            A little surprise. A lot to love.
-          </span>
           <h1 id="pack-browser-title">Pick your pack.</h1>
-          <p>Choose a favorite. See what’s inside. Make it yours.</p>
+          <p>View the odds and see what you could pull.</p>
         </div>
         <span className="dyli-count">
           {items.length} {items.length === 1 ? "pack" : "packs"}

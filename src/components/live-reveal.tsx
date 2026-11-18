@@ -13,13 +13,14 @@ import type { BoxPlay, CatalogItem } from "@/lib/types";
 
 type Choice = "claim" | "sell_back";
 type Props = {
-  play: BoxPlay; item: CatalogItem; decisions: Choice[]; busy: string; error: string;
+  play: Pick<BoxPlay, "id" | "quantity" | "rewards">; item: CatalogItem; decisions: Choice[]; busy: string; error: string;
   preferences: OpeningPreferences;
+  demo?: boolean;
   onOpen: () => void; onChoose: (index: number, choice: Choice) => void;
   onSettle: () => void; onClose: () => void;
 };
 
-export function LiveReveal({ play, item, decisions, busy, error, preferences, onOpen, onChoose, onSettle, onClose }: Props) {
+export function LiveReveal({ play, item, decisions, busy, error, preferences, demo = false, onOpen, onChoose, onSettle, onClose }: Props) {
   const fast = preferences.mode === "turbo";
   const sound = useRevealSounds();
   const [opened, setOpened] = useState(false);
@@ -64,7 +65,7 @@ export function LiveReveal({ play, item, decisions, busy, error, preferences, on
     <div className="vr-shell">
       <header className="vr-toolbar">
         <button className="vr-close" aria-label="Close reveal" disabled={!!busy} onClick={onClose}><X size={20} /></button>
-        <span>{review ? "Your pulls" : play.rewards.length ? `${Math.min(cursor + 1, play.quantity)} of ${play.quantity}` : item.name}</span>
+        <span>{demo && "Demo · "}{review ? "Your pulls" : play.rewards.length ? `${Math.min(cursor + 1, play.quantity)} of ${play.quantity}` : item.name}</span>
         <div className="vr-toolbar-actions"><button className="vr-sound" aria-label={sound.enabled ? "Mute sound" : "Enable sound"} aria-pressed={sound.enabled} title="Sound on / off (M)" onClick={sound.toggle}>{sound.enabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
         {!!play.rewards.length && <button className="vr-skip" disabled={!!busy} title={review ? "Back to individual pulls" : "Reveal all pulls"} onClick={() => {
           if (review) { scroller.current?.scrollTo({ top: 0 }); setView("pull"); }

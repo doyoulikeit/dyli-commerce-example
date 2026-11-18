@@ -9,15 +9,16 @@ if (!output || !process.env.ESBUILD_PACKAGE_PATH)
     "Set VERIFY_OUTPUT and ESBUILD_PACKAGE_PATH to your temporary verification dependencies",
   );
 const { build } = await import(process.env.ESBUILD_PACKAGE_PATH);
+const demoOnly = process.env.VERIFY_VIEW === "demo";
 const revealOnly = process.env.VERIFY_VIEW === "reveal";
 const offersOnly = process.env.VERIFY_VIEW === "offers";
 const shippingOnly = process.env.VERIFY_VIEW === "shipping";
 const communityOnly = process.env.VERIFY_VIEW === "community";
-const previewPort = communityOnly ? 3112 : shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
-const isolated = communityOnly || revealOnly || offersOnly || shippingOnly;
+const previewPort = demoOnly ? 3113 : communityOnly ? 3112 : shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
+const isolated = demoOnly || communityOnly || revealOnly || offersOnly || shippingOnly;
 const fixtureDir = process.env.VERIFY_FIXTURE_DIR;
 await build({
-  entryPoints: { harness: path.join(root, `tests/browser/${communityOnly ? "community-preview" : shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
+  entryPoints: { harness: path.join(root, `tests/browser/${demoOnly ? "demo-preview" : communityOnly ? "community-preview" : shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
   bundle: true,
   outdir: output,
   format: "esm",

@@ -31,15 +31,20 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { LiveProductDetail } from "@/components/live-catalog";
+import { LiveProductDetail, LiveModal } from "@/components/live-catalog";
 import "./live-storefront.css";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApiRecord, CatalogItem, StorefrontResponse } from "@/lib/types";
 import { PackBrowser, PackCard, PackHero } from "@/components/pack-catalog";
-import { PackArtwork, type PackArtworkHandle } from "@/components/pack-artwork";
+import { LiveReveal } from "@/components/live-reveal";
+import { drawDemoPulls, type DemoPull } from "@/lib/demo-pulls";
+import { RevealModeSelector } from "@/components/reveal-mode";
+import { useOpeningPreferences } from "@/components/use-opening-preferences";
+import { normalizeOpeningPreferences, type OpeningPreferences } from "@/lib/opening-preferences";
 import { CommerceLogo, ThemeSwitch } from "@/components/brand-identity";
+import { readDemoStorage, writeDemoStorage, removeDemoStorage } from "@/lib/demo-storage";
 import { storefrontConfig } from "@/config/storefront";
 
 type Tab = "home" | "market" | "packs" | "collection" | "activity";
@@ -108,28 +113,8 @@ type DemoState = {
   marketOrders: MarketOrder[];
 };
 type BoxData = { box: ApiRecord; ranges: ApiRecord; history: ApiRecord };
-type Reward = {
-  id: string;
-  name: string;
-  image: string;
-  brand: string;
-  grade: string;
-  value: number;
-  buyback: number;
-  tier: string;
-  odds: number;
-};
-type BoxRun = {
-  item: CatalogItem;
-  data: BoxData;
-  total: number;
-  opened: number;
-  stage: "sealed" | "suspense" | "rarity" | "revealed" | "complete";
-  reward: Reward | null;
-  kept: number;
-  sold: number;
-  credit: number;
-};
+
+type BoxRun = { id: string; item: CatalogItem; rewards: DemoPull[]; decisions: Array<"claim"|"sell_back">; revealed: boolean; total: number; preferences: OpeningPreferences };
 type ShippingRate = {
   id: string;
   carrier: "USPS" | "UPS";
@@ -149,7 +134,7 @@ type ShippingAddress = {
 const STORAGE_KEY = "vaulted-session-poc-v5";
 const PROFILE_KEY = "vaulted-session-profile-v1";
 const SESSION_START_BALANCE = 500;
-const PLATFORM_FEE = 1;
+const PLATFORM_FEE = 0;
 const EMPTY_DEMO: DemoState = {
   balance: SESSION_START_BALANCE,
   holdings: [],
@@ -306,18 +291,7 @@ async function api<T>(path: string): Promise<T> {
   return payload as T;
 }
 
-function useModal(onClose: () => void) {
-  useEffect(() => {
-    const prior = document.body.style.overflow;
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prior;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-}
+
 
 export function Storefront({
   initialStorefront,
@@ -340,6 +314,9 @@ export function Storefront({
     "checkout" | "processing" | "success"
   >("checkout");
   const [boxRun, setBoxRun] = useState<BoxRun | null>(null);
+  const [showDemoOpening, setShowDemoOpening] = useState(false);
+  const settledDemoRuns = useRef(new Set<string>());
+  const openingSettings = useOpeningPreferences("demo");
   const [redemptionOpen, setRedemptionOpen] = useState(false);
   const [redemptionHoldingId, setRedemptionHoldingId] = useState("");
   const [collectionSection, setCollectionSection] = useState<
@@ -355,7 +332,7 @@ export function Storefront({
 
   useEffect(() => {
     let restoredDemo = EMPTY_DEMO;
-    const saved = window.sessionStorage.getItem(STORAGE_KEY);
+    const saved = readDemoStorage(STORAGE_KEY);
     if (saved) {
       try {
         const restored = JSON.parse(saved) as DemoState;
@@ -373,16 +350,16 @@ export function Storefront({
               ? restored.marketOrders
               : [],
           };
-          window.sessionStorage.setItem(
+          writeDemoStorage(
             STORAGE_KEY,
             JSON.stringify(restoredDemo),
           );
         }
       } catch {
-        window.sessionStorage.removeItem(STORAGE_KEY);
+        removeDemoStorage(STORAGE_KEY);
       }
     }
-    const savedName = window.sessionStorage.getItem(PROFILE_KEY) || "";
+    const savedName = readDemoStorage(PROFILE_KEY) || "Collector";
     const frame = window.requestAnimationFrame(() => {
       setDemo(restoredDemo);
       setProfileName(savedName);
@@ -434,7 +411,7 @@ export function Storefront({
     (update: (current: DemoState) => DemoState) => {
       setDemo((current) => {
         const next = update(current);
-        window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        writeDemoStorage(STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     },
@@ -478,6 +455,7 @@ export function Storefront({
         : Promise.resolve(null);
       await new Promise((resolve) => window.setTimeout(resolve, 420));
       const boxData = await boxDataPromise;
+      const rewards = boxData ? drawDemoPulls(boxData, purchase, quantity) : [];
       const entry: SessionActivity = {
         id: crypto.randomUUID(),
         type: isBox(purchase) ? "box" : "purchase",
@@ -531,17 +509,8 @@ export function Storefront({
       if (boxData) {
         const item = purchase;
         setPurchase(null);
-        setBoxRun({
-          item,
-          data: boxData,
-          total: quantity,
-          opened: 0,
-          stage: "sealed",
-          reward: null,
-          kept: 0,
-          sold: 0,
-          credit: 0,
-        });
+        setBoxRun({ id: entry.id, item, rewards, total: quantity, decisions: [], revealed: false, preferences: normalizeOpeningPreferences(openingSettings.preferences) });
+        setShowDemoOpening(true);
       } else {
         setPurchase(null);
         navigate("collection");
@@ -554,171 +523,30 @@ export function Storefront({
     }
   };
 
-  const reveal = () => {
-    if (!boxRun || boxRun.stage !== "sealed") return;
-    const box = record(boxRun.data.box);
-    const rangePayload = record(boxRun.data.ranges);
-    const ranges = records(rangePayload.ranges);
-    const allItems = ranges.flatMap((range) => records(range.items));
-    const odds = records(
-      box.odds_buckets || record(boxRun.item.raw).odds_buckets,
-    );
-    const weighted = odds
-      .map((bucket) => {
-        const percent = Number(bucket.percent ?? bucket.rarity ?? 0);
-        const minimum = Number(bucket.min ?? 0);
-        const maximum = Number(bucket.max ?? Number.MAX_SAFE_INTEGER);
-        const candidates = allItems.filter((item) => {
-          const rarity = Number(item.rarity);
-          const value = Number(item.box_price || item.price || 0);
-          return (
-            (Number.isFinite(rarity) && Math.abs(rarity - percent) < 0.02) ||
-            (value >= minimum && value <= maximum)
-          );
-        });
-        return { bucket, percent, candidates };
-      })
-      .filter((group) => group.percent > 0 && group.candidates.length > 0);
-    let pool: ApiRecord[] = [];
-    let tier = "Pull";
-    let oddsPercent = 0;
-    if (weighted.length) {
-      const totalWeight = weighted.reduce(
-        (sum, group) => sum + group.percent,
-        0,
-      );
-      let roll = Math.random() * totalWeight;
-      const group =
-        weighted.find((entry) => (roll -= entry.percent) <= 0) ||
-        weighted[weighted.length - 1];
-      pool = group.candidates;
-      tier = text(group.bucket.tier || pool[0]?.range_name || "Pull");
-      oddsPercent = group.percent;
-    } else {
-      pool = records(
-        box.top_chase_cards || record(boxRun.item.raw).top_chase_cards,
-      );
-    }
-    if (!pool.length) {
-      setNotice("This pack does not expose an available prize pool.");
-      return;
-    }
-    const inventoryWeight = pool.reduce(
-      (sum, item) =>
-        sum + Math.max(1, Number(item.qty_in_box || item.qty_remaining || 1)),
-      0,
-    );
-    let inventoryRoll = Math.random() * inventoryWeight;
-    const picked =
-      pool.find(
-        (item) =>
-          (inventoryRoll -= Math.max(
-            1,
-            Number(item.qty_in_box || item.qty_remaining || 1),
-          )) <= 0,
-      ) || pool[pool.length - 1];
-    const value = Number(
-      picked.box_price || picked.fmv_usd || picked.price || 0,
-    );
-    const buybackRate = Number(
-      box.buyback_rate || record(boxRun.item.raw).buyback_rate || 0,
-    );
-    const reward: Reward = {
-      id: text(picked.token_id || picked.product_id || crypto.randomUUID()),
-      name: nameFor(picked),
-      image: imageFor(picked),
-      brand: text(picked.brand || boxRun.item.brand || "Collectible"),
-      grade: text(picked.cert || picked.subcategory || "Authenticated"),
-      value,
-      buyback: Number(picked.buyback_price || value * buybackRate),
-      tier: text(picked.range_name || tier),
-      odds: Number(picked.rarity || oddsPercent),
-    };
-    setBoxRun({ ...boxRun, stage: "suspense", reward });
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    window.setTimeout(
-      () => {
-        setBoxRun((current) =>
-          current?.stage === "suspense"
-            ? { ...current, stage: "rarity" }
-            : current,
-        );
-        window.setTimeout(
-          () =>
-            setBoxRun((current) =>
-              current?.stage === "rarity"
-                ? { ...current, stage: "revealed" }
-                : current,
-            ),
-          reduced ? 120 : 1550,
-        );
-      },
-      reduced ? 120 : 2200,
-    );
+  
+
+    const settleDemoPulls = () => {
+    if (!boxRun || settledDemoRuns.current.has(boxRun.id) || boxRun.decisions.length !== boxRun.total || boxRun.rewards.some((reward,index) => !boxRun.decisions[index] || (boxRun.decisions[index] === 'sell_back' && reward.buyback <= 0))) return;
+    settledDemoRuns.current.add(boxRun.id);
+    const credited = boxRun.rewards.reduce((sum,reward,index) => sum + (boxRun.decisions[index] === "sell_back" ? reward.buyback : 0), 0);
+    const claimed = boxRun.decisions.filter(choice => choice === "claim").length;
+    const activity: SessionActivity[] = boxRun.rewards.map((reward,index) => ({id:crypto.randomUUID(),type:boxRun.decisions[index] === "sell_back" ? "sell" : "keep",title:reward.name,subtitle:boxRun.item.name,amount:boxRun.decisions[index] === "sell_back" ? reward.buyback : 0,date:new Date().toISOString(),status:boxRun.decisions[index] === "sell_back" ? "Sold" : "In collection",image:reward.image}));
+    updateDemo(current => {
+      let holdings = [...current.holdings];
+      for (const [index,reward] of boxRun.rewards.entries()) {
+        const sell = boxRun.decisions[index] === 'sell_back';
+        if (!sell) {
+          const existing = holdings.find(holding => holding.id === reward.id);
+          holdings = existing ? holdings.map(holding => holding.id === reward.id ? {...holding,quantity:holding.quantity+1} : holding) : [{id:reward.id,name:reward.name,image:reward.image,brand:reward.brand,grade:reward.grade,value:reward.value,quantity:1,session:true},...holdings];
+        }
+      }
+      return {...current,balance:current.balance+credited,holdings,activity:[...activity,...current.activity.map(entry => entry.id === boxRun.id ? {...entry,status:"Completed"} : entry)]};
+    });
+    setNotice(`${credited ? `${money(credited)} added to your demo balance. ` : ''}${claimed ? `${claimed} added to your demo vault.` : ''}`);
+    setBoxRun(null);setShowDemoOpening(false);navigate('collection');
   };
 
-  const chooseReward = (choice: "keep" | "sell") => {
-    if (!boxRun?.reward) return;
-    const reward = boxRun.reward;
-    const final = boxRun.opened + 1 >= boxRun.total;
-    updateDemo((current) => {
-      const activity: SessionActivity = {
-        id: crypto.randomUUID(),
-        type: choice,
-        title: reward.name,
-        subtitle: boxRun.item.name,
-        amount: choice === "sell" ? reward.buyback : 0,
-        date: new Date().toISOString(),
-        status: choice === "sell" ? "Sold" : "In collection",
-        image: reward.image,
-      };
-      if (choice === "sell")
-        return {
-          ...current,
-          balance: current.balance + reward.buyback,
-          activity: [activity, ...current.activity],
-        };
-      const existing = current.holdings.find((item) => item.id === reward.id);
-      const holding: Holding = {
-        id: reward.id,
-        name: reward.name,
-        image: reward.image,
-        brand: reward.brand,
-        grade: reward.grade,
-        value: reward.value,
-        quantity: 1,
-        session: true,
-      };
-      return {
-        ...current,
-        holdings: existing
-          ? current.holdings.map((item) =>
-              item.id === reward.id
-                ? { ...item, quantity: item.quantity + 1 }
-                : item,
-            )
-          : [holding, ...current.holdings],
-        activity: [activity, ...current.activity],
-      };
-    });
-    setBoxRun({
-      ...boxRun,
-      opened: boxRun.opened + 1,
-      stage: final ? "complete" : "sealed",
-      reward: null,
-      kept: boxRun.kept + (choice === "keep" ? 1 : 0),
-      sold: boxRun.sold + (choice === "sell" ? 1 : 0),
-      credit: boxRun.credit + (choice === "sell" ? reward.buyback : 0),
-    });
-  };
 
-  const completeWelcome = (name: string) => {
-    window.sessionStorage.setItem(PROFILE_KEY, name);
-    setProfileName(name);
-    updateDemo((current) => ({ ...current, balance: SESSION_START_BALANCE }));
-  };
 
   const completeRedemption = (
     selections: ShipmentSelection[],
@@ -817,15 +645,16 @@ export function Storefront({
   };
 
   const resetWelcome = () => {
-    window.sessionStorage.removeItem(PROFILE_KEY);
-    window.sessionStorage.removeItem(STORAGE_KEY);
+    removeDemoStorage(PROFILE_KEY);
+    removeDemoStorage(STORAGE_KEY);
     previousBalance.current = SESSION_START_BALANCE;
     setBalanceSignal(null);
     setDemo(EMPTY_DEMO);
-    setProfileName("");
+    setProfileName("Collector");
     setSelected(null);
     setPurchase(null);
     setBoxRun(null);
+    setShowDemoOpening(false);
     setRedemptionOpen(false);
     setRedemptionHoldingId("");
     setCollectionSection("owned");
@@ -844,6 +673,7 @@ export function Storefront({
         onNavigate={navigate}
         onReset={resetWelcome}
       />
+      <div className="dyli-demo-banner" role="status"><span><strong>Demo mode</strong> Virtual funds. No real purchases or shipments.</span>{!storefrontConfig.demo.enabled && <a href="/">Exit demo</a>}</div>
       {notice ? (
         <div className="app-notice">
           <Info />
@@ -979,6 +809,8 @@ export function Storefront({
           payment={payment}
           balance={demo.balance}
           stage={checkoutStage}
+          preferences={openingSettings.preferences}
+          onPreferences={openingSettings.update}
           onQuantity={setQuantity}
           onPayment={setPayment}
           onClose={() => checkoutStage !== "processing" && setPurchase(null)}
@@ -989,18 +821,8 @@ export function Storefront({
           }}
         />
       ) : null}
-      {boxRun ? (
-        <BoxReveal
-          run={boxRun}
-          onReveal={reveal}
-          onChoose={chooseReward}
-          onClose={() => setBoxRun(null)}
-          onCollection={() => {
-            setBoxRun(null);
-            navigate("collection");
-          }}
-        />
-      ) : null}
+      {boxRun && !showDemoOpening && <div className="dyli-demo-resume"><span>You have a demo opening to finish.</span><button className="secondary-button" onClick={() => setShowDemoOpening(true)}>Continue opening</button></div>}
+      {boxRun && showDemoOpening ? <LiveReveal demo item={boxRun.item} play={{id:boxRun.id,quantity:boxRun.total,rewards:boxRun.revealed ? boxRun.rewards.map((reward,index) => ({index,token_id:reward.id,product_id:0,product:{name:reward.name,image:reward.image,brand:reward.brand,grade:reward.grade,fmv_usd:reward.value},rarity:reward.tier,buyback_amount:reward.buyback,disposition:null})) : []}} decisions={boxRun.decisions} busy="" error="" preferences={boxRun.preferences} onOpen={() => setBoxRun(current => current ? {...current,revealed:true}:null)} onChoose={(index,choice) => setBoxRun(current => {if(!current)return current;const decisions=[...current.decisions];decisions[index]=choice;return {...current,decisions};})} onSettle={settleDemoPulls} onClose={() => setShowDemoOpening(false)} /> : null}
       {redemptionOpen ? (
         <RedemptionModal
           holdings={holdings}
@@ -1029,8 +851,6 @@ export function Storefront({
       ) : null}
       {!profileReady ? (
         <div className="welcome-layer" />
-      ) : !profileName ? (
-        <WelcomeModal onComplete={completeWelcome} />
       ) : null}
     </div>
   );
@@ -1145,7 +965,7 @@ function Header({
             <ChevronDown />
           </summary>
           <div>
-            <button onClick={onReset}>Sign out</button>
+            <button onClick={onReset}>Reset demo</button>
           </div>
         </details>
       </div>
@@ -1176,60 +996,7 @@ function BottomNav({
   );
 }
 
-function WelcomeModal({ onComplete }: { onComplete: (name: string) => void }) {
-  const [entry, setEntry] = useState("");
-  const [name, setName] = useState("");
-  const submitName = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const nextName = entry.trim();
-    if (nextName) setName(nextName);
-  };
-  return (
-    <div className="welcome-layer">
-      <section
-        className="welcome-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Welcome to ${storefrontConfig.brand.name}`}
-      >
-        {name ? (
-          <div className="welcome-credit">
-            <p className="welcome-name">Welcome, {name}</p>
-            <strong>{money(SESSION_START_BALANCE)}</strong>
-            <h1>Here’s some cash to start your collection.</h1>
-            <button onClick={() => onComplete(name)}>
-              Start collecting
-              <ArrowRight />
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={submitName}>
-            <Logo brand={storefrontConfig.brand.name} />
-            <div>
-              <h1>What’s your name?</h1>
-              <p>Let’s start your collection.</p>
-            </div>
-            <label>
-              <span>Name</span>
-              <input
-                autoFocus
-                autoComplete="given-name"
-                value={entry}
-                onChange={(event) => setEntry(event.target.value)}
-                placeholder="Enter your name"
-                maxLength={16}
-              />
-            </label>
-            <button disabled={!entry.trim()} type="submit">
-              Continue
-              <ArrowRight />
-            </button>
-          </form>
-        )}
-      </section>
-    </div>
-  );
-}
+
 
 function HomeView({
   holdings,
@@ -1800,18 +1567,9 @@ function HoldingDetail({
   onList: () => void;
   onShip: () => void;
 }) {
-  useModal(onClose);
+  
   return (
-    <div
-      className="modal-layer"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <section
-        className="holding-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={holding.name}
-      >
+    <LiveModal title="Demo collectible" className="holding-modal dyli-demo-modal" header={null} onClose={onClose}>
         <header>
           <button aria-label="Close collectible" onClick={onClose}>
             <X />
@@ -1875,8 +1633,7 @@ function HoldingDetail({
           <button onClick={onList}>List</button>
           <button onClick={onShip}>Ship</button>
         </footer>
-      </section>
-    </div>
+      </LiveModal>
   );
 }
 
@@ -1905,7 +1662,7 @@ function CollectibleDetail({
   onList: (holding: Holding) => void;
   onShip: (holding: Holding) => void;
 }) {
-  useModal(onClose);
+  
   const [detail, setDetail] = useState<BoxData | null>(null);
   useEffect(() => {
     if (!isBox(item)) return;
@@ -1925,15 +1682,7 @@ function CollectibleDetail({
     records(box.odds_buckets || record(item.raw).odds_buckets),
   );
   return (
-    <div
-      className="modal-layer"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <section
-        className={`detail-modal ${isBox(item) ? "box-detail" : ""}`}
-        role="dialog"
-        aria-modal="true"
-      >
+    <LiveModal title="Demo collectible" className="detail-modal dyli-demo-modal" header={null} onClose={onClose}>
         <header>
           <button aria-label="Close details" onClick={onClose}>
             <ArrowLeft />
@@ -2109,8 +1858,7 @@ function CollectibleDetail({
             )}
           </div>
         </footer>
-      </section>
-    </div>
+      </LiveModal>
   );
 }
 
@@ -2123,7 +1871,7 @@ function MarketOrderModal({
   onClose: () => void;
   onSubmit: (price: number, quantity: number) => void;
 }) {
-  useModal(onClose);
+  
   const startingPrice =
     intent.side === "offer"
       ? Math.max(0.01, intent.referencePrice * 0.9)
@@ -2137,18 +1885,7 @@ function MarketOrderModal({
     if (valid) onSubmit(numericPrice, quantity);
   };
   return (
-    <div
-      className="modal-layer market-order-layer"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <section
-        className="order-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={
-          intent.side === "listing" ? "List collectible" : "Make offer"
-        }
-      >
+    <LiveModal title="Demo order" className="order-modal dyli-demo-modal" header={null} onClose={onClose}>
         <header>
           <button aria-label="Close order" onClick={onClose}>
             <X />
@@ -2228,8 +1965,7 @@ function MarketOrderModal({
             <ArrowRight />
           </button>
         </form>
-      </section>
-    </div>
+      </LiveModal>
   );
 }
 
@@ -2364,7 +2100,7 @@ function RedemptionModal({
     shippingCost: number,
   ) => void;
 }) {
-  useModal(onClose);
+  
   const [selectedQuantities, setSelectedQuantities] = useState<
     Record<string, number>
   >(initialHoldingId ? { [initialHoldingId]: 1 } : {});
@@ -2447,16 +2183,7 @@ function RedemptionModal({
     onSubmit(selections, rate, address, shippingCost);
   };
   return (
-    <div
-      className="modal-layer"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <section
-        className="redemption-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Ship a collectible"
-      >
+    <LiveModal title="Demo shipping" className="redemption-modal dyli-demo-modal" header={null} onClose={onClose}>
         <header>
           <button
             aria-label="Close shipment"
@@ -2651,8 +2378,7 @@ function RedemptionModal({
             </button>
           </form>
         )}
-      </section>
-    </div>
+      </LiveModal>
   );
 }
 
@@ -2662,6 +2388,8 @@ function Checkout({
   payment,
   balance,
   stage,
+  preferences,
+  onPreferences,
   onQuantity,
   onPayment,
   onClose,
@@ -2673,21 +2401,19 @@ function Checkout({
   payment: PaymentMethod;
   balance: number;
   stage: "checkout" | "processing" | "success";
+  preferences: OpeningPreferences;
+  onPreferences: (value: OpeningPreferences) => void;
   onQuantity: (value: number) => void;
   onPayment: (value: PaymentMethod) => void;
   onClose: () => void;
   onCheckout: () => void;
   onCollection: () => void;
 }) {
-  useModal(onClose);
+  
   const subtotal = (item.price || 0) * quantity;
   const total = subtotal + PLATFORM_FEE;
   return (
-    <div
-      className="modal-layer"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <section className="checkout-modal" role="dialog" aria-modal="true">
+    <LiveModal title="Demo checkout" className="checkout-modal dyli-demo-modal" header={null} onClose={onClose} dismissible={stage !== "processing"}>
         <header>
           <button
             aria-label="Close checkout"
@@ -2696,7 +2422,7 @@ function Checkout({
           >
             <X />
           </button>
-          <span>Checkout</span>
+          <span>Demo checkout</span>
         </header>
         {stage === "processing" ? (
           <div className="store-checkout-processing">
@@ -2756,6 +2482,7 @@ function Checkout({
                 </button>
               </div>
             </div>
+            {isBox(item) && <RevealModeSelector value={preferences} onChange={onPreferences} quantity={quantity} />}
             <div className="payment-options">
               <button
                 className={payment === "card" ? "active" : ""}
@@ -2794,304 +2521,16 @@ function Checkout({
               <strong>{money(total)}</strong>
             </div>
             <button className="pay-button" onClick={onCheckout}>
-              Pay with {payment === "balance" ? "Balance" : "Card"}
+              {isBox(item) ? "Open demo pack" : "Complete demo purchase"}
               <span>{money(total)}</span>
             </button>
           </div>
         )}
-      </section>
-    </div>
+      </LiveModal>
   );
 }
 
-function BoxReveal({
-  run,
-  onReveal,
-  onChoose,
-  onClose,
-  onCollection,
-}: {
-  run: BoxRun;
-  onReveal: () => void;
-  onChoose: (value: "keep" | "sell") => void;
-  onClose: () => void;
-  onCollection: () => void;
-}) {
-  useModal(onClose);
-  const reduceMotion = useReducedMotion();
-  const rip = useRef<PackArtworkHandle>(null);
-  useEffect(() => {
-    if (run.stage !== "complete") return;
-    const timer = window.setTimeout(onCollection, reduceMotion ? 40 : 260);
-    return () => window.clearTimeout(timer);
-  }, [onCollection, reduceMotion, run.stage]);
-  const pullNumber = Math.min(run.opened + 1, run.total);
-  const enter = reduceMotion
-    ? { duration: 0.01 }
-    : { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
-  return (
-    <div className="reveal-screen">
-      <header>
-        <button aria-label="Close pack" onClick={onClose}>
-          <X />
-        </button>
-        <div
-          className={`reveal-progress ${run.total === 1 ? "single-box" : ""}`}
-        >
-          <span className="desktop-count">
-            {run.stage === "complete"
-              ? "Complete"
-              : `Pack ${pullNumber} of ${run.total}`}
-          </span>
-          <span className="mobile-count">
-            {run.stage === "complete" ? "Done" : `${pullNumber} / ${run.total}`}
-          </span>
-          <i
-            aria-hidden="true"
-            style={{ gridTemplateColumns: `repeat(${run.total}, 1fr)` }}
-          >
-            {Array.from({ length: run.total }, (_, index) => (
-              <b
-                className={
-                  index < run.opened
-                    ? "complete"
-                    : index === run.opened
-                      ? "current"
-                      : ""
-                }
-                key={index}
-              />
-            ))}
-          </i>
-        </div>
-        <span>{run.opened} opened</span>
-      </header>
-      <AnimatePresence mode="wait" initial={false}>
-        {run.stage === "sealed" ? (
-          <motion.section
-            className="sealed"
-            key={`sealed-${run.opened}`}
-            initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.96 }}
-            transition={enter}
-          >
-            <PackArtwork ref={rip} item={run.item} mode="rip" onComplete={onReveal} priority />
-            <strong>{run.item.name}</strong>
-            <small>
-              {run.total > 1
-                ? `${run.total - run.opened} packs remaining`
-                : "Ready when you are"}
-            </small>
-            <button onClick={() => rip.current?.open()}>Open pack</button>
-          </motion.section>
-        ) : null}
-        {run.stage === "suspense" ? (
-          <motion.section
-            className="pull-suspense"
-            key={`suspense-${run.opened}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={enter}
-          >
-            <div className="opening-pack">
-              <motion.div
-                animate={
-                  reduceMotion
-                    ? { opacity: [1, 0] }
-                    : {
-                        opacity: [0, 1, 1, 1, 1, 0],
-                        scale: [0.86, 1, 1.03, 1.08, 1.22, 0.7],
-                        rotate: [0, 0, -2.2, 2.2, -1.2, 0],
-                        y: [18, 0, 0, 0, 8, 145],
-                      }
-                }
-                transition={{
-                  duration: reduceMotion ? 0.1 : 2.05,
-                  times: [0, 0.16, 0.42, 0.58, 0.76, 1],
-                  ease: "easeInOut",
-                }}
-              >
-                <ProductImage
-                  src={run.item.image}
-                  alt={run.item.name}
-                  sizes="(max-width: 700px) 72vw, 360px"
-                  priority
-                  boost={false}
-                />
-              </motion.div>
-              <motion.i
-                initial={{ opacity: 0, scale: 0.4 }}
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : { opacity: [0, 0.8, 0], scale: [0.4, 1.8, 2.6] }
-                }
-                transition={{ duration: 0.5, delay: 1.7 }}
-              />
-            </div>
-            <motion.small initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              Pack {pullNumber} of {run.total}
-            </motion.small>
-            <motion.h1
-              initial={{ opacity: 0, y: 7 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduceMotion ? 0 : 0.25 }}
-            >
-              Opening…
-            </motion.h1>
-          </motion.section>
-        ) : null}
-        {run.stage === "rarity" && run.reward ? (
-          <motion.section
-            className="rarity-reveal"
-            key={`rarity-${run.opened}-${run.reward.id}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={enter}
-          >
-            <div className="rarity-dust">
-              {Array.from({ length: 18 }).map((_, index) => (
-                <motion.i
-                  key={index}
-                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                  animate={
-                    reduceMotion
-                      ? { opacity: 0 }
-                      : {
-                          opacity: [0, 0.75, 0],
-                          scale: [0, 1, 0.2],
-                          x: Math.cos(index) * (70 + (index % 5) * 17),
-                          y: Math.sin(index) * (65 + (index % 4) * 21),
-                        }
-                  }
-                  transition={{
-                    duration: 1.35,
-                    delay: (index % 6) * 0.045,
-                    ease: "easeOut",
-                  }}
-                />
-              ))}
-            </div>
-            <motion.small
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 1, 0] }}
-              transition={{
-                duration: reduceMotion ? 0.1 : 1.35,
-                times: [0, 0.2, 0.75, 1],
-              }}
-            >
-              You pulled
-            </motion.small>
-            <motion.h1
-              initial={{
-                opacity: 0,
-                scale: reduceMotion ? 1 : 0.72,
-                filter: reduceMotion ? "none" : "blur(16px)",
-              }}
-              animate={{
-                opacity: [0, 1, 1, 0],
-                scale: [reduceMotion ? 1 : 0.72, 1, 1.03, 1.1],
-                filter: ["blur(16px)", "blur(0px)", "blur(0px)", "blur(10px)"],
-              }}
-              transition={{
-                duration: reduceMotion ? 0.1 : 1.45,
-                times: [0, 0.26, 0.76, 1],
-                ease: "easeOut",
-              }}
-            >
-              {run.reward.tier}
-            </motion.h1>
-            <motion.strong
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 1, 0] }}
-              transition={{
-                duration: reduceMotion ? 0.1 : 1.3,
-                delay: reduceMotion ? 0 : 0.12,
-              }}
-            >
-              {run.reward.odds}% chance
-            </motion.strong>
-          </motion.section>
-        ) : null}
-        {run.stage === "revealed" && run.reward ? (
-          <motion.section
-            className="reward"
-            key={`reward-${run.opened}-${run.reward.id}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: reduceMotion ? 0 : -14 }}
-            transition={enter}
-          >
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: reduceMotion ? 0 : 70,
-                scale: reduceMotion ? 1 : 0.7,
-                filter: reduceMotion ? "none" : "blur(18px) brightness(0)",
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                filter: "blur(0px) brightness(1)",
-              }}
-              transition={{
-                duration: reduceMotion ? 0.01 : 0.9,
-                delay: reduceMotion ? 0 : 0.15,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-            >
-              <ProductImage
-                src={run.reward.image}
-                alt={run.reward.name}
-                sizes="(max-width: 700px) 64vw, 320px"
-                priority
-                boost={needsArtBoost(run.reward.name, run.reward.grade)}
-              />
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, y: 9 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduceMotion ? 0 : 0.65 }}
-            >
-              {run.reward.name}
-            </motion.h1>
-            <motion.strong
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: reduceMotion ? 0 : 0.78 }}
-            >
-              {money(run.reward.value)}
-            </motion.strong>
-            <motion.section
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduceMotion ? 0 : 0.88 }}
-            >
-              <button className="sell-action" onClick={() => onChoose("sell")}>
-                <Banknote />
-                <span>
-                  <small>Sell now · to balance</small>
-                  <strong>{money(run.reward.buyback)}</strong>
-                </span>
-              </button>
-              <button className="vault-action" onClick={() => onChoose("keep")}>
-                <PackageCheck />
-                <span>
-                  <strong>Vault item</strong>
-                  <small>Keep in Collection</small>
-                </span>
-              </button>
-            </motion.section>
-          </motion.section>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
-}
+
 
 function ProductImage({
   src,

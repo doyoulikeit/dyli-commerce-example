@@ -401,9 +401,9 @@ export function LiveCommunity({
           }
           onClose={() => setOpen(false)}
           dismissible={!busy}
-          className="cm-review-modal"
+          className="cm-sheet cm-review-modal"
         >
-          <div className="cm-form">
+          <div className="cm-sheet-body cm-form">
             <h2>
               {product.name
                 ? String(product.name)
@@ -426,11 +426,11 @@ export function LiveCommunity({
                           : "Confirmed"}
                 </h3>
                 <p>
-                  {["list", "offer"].includes(action.kind)
-                    ? "It’s also visible on DYLI."
-                    : action.kind === "trade"
-                      ? "We’ll keep this trade in your sent history while you wait for a reply."
-                      : "Your activity has been recorded."}
+                  {action.kind === "trade"
+                    ? "You can find it in Sent."
+                    : action.kind === "buy" || action.kind === "accept_trade"
+                      ? "Your vault has been updated."
+                      : "You can find the details in your activity."}
                 </p>
                 {refreshError && (
                   <p className="cm-note">
@@ -438,15 +438,6 @@ export function LiveCommunity({
                     to refresh.
                   </p>
                 )}
-                <button
-                  className="lc-primary"
-                  onClick={() => {
-                    setOpen(false);
-                    setAction(null);
-                  }}
-                >
-                  Done
-                </button>
               </div>
             ) : (
               <>
@@ -458,30 +449,35 @@ export function LiveCommunity({
                     />
                   </div>
                 )}
-                {action && !action.kind.includes("trade") && !action.kind.startsWith("cancel") && (
-                  <div className="cm-review-total">
-                    <span>
-                      {action.kind === "accept_offer"
-                        ? "Offer amount"
-                        : action.kind === "buy"
-                          ? "Total"
-                          : "Price per item"}
-                    </span>
-                    <strong>
-                      {usd(
-                        Number(
-                          action.input.expected_amount ||
-                            action.input.unit_amount ||
-                            0,
-                        ) / 1e6,
-                      )}
-                    </strong>
-                    <small>
-                      {Number(action.input.quantity || 1)} item(s) · Base
-                      USDC
-                    </small>
-                  </div>
-                )}
+                {action &&
+                  !action.kind.includes("trade") &&
+                  !action.kind.startsWith("cancel") && (
+                    <div className="cm-review-total">
+                      <span>
+                        {action.kind === "accept_offer"
+                          ? "Offer amount"
+                          : action.kind === "buy"
+                            ? "Total"
+                            : "Price per item"}
+                      </span>
+                      <strong>
+                        {usd(
+                          Number(
+                            action.input.expected_amount ||
+                              action.input.unit_amount ||
+                              0,
+                          ) / 1e6,
+                        )}
+                      </strong>
+                      <small>
+                        {Number(action.input.quantity || 1)}{" "}
+                        {Number(action.input.quantity || 1) === 1
+                          ? "item"
+                          : "items"}{" "}
+                        · Base USDC
+                      </small>
+                    </div>
+                  )}
                 {action && ["trade", "accept_trade"].includes(action.kind) && (
                   <div className="cm-trade-sides">
                     <TradeSide
@@ -529,38 +525,52 @@ export function LiveCommunity({
                       )}
                   </>
                 )}
-                {!busy && (
-                  <div className="cm-actions">
-                    <button
-                      className="lc-primary"
-                      disabled={
-                        restoring ||
-                        !saved ||
-                        (!pending && action?.status === "expired")
-                      }
-                      onClick={continueAction}
-                    >
-                      {pending
-                        ? "Check confirmation"
-                        : action
-                          ? actionLabel(action.kind)
-                          : "Retry review"}
-                    </button>
-                    {!pending && (
-                      <button className="lc-secondary" onClick={reset}>
-                        Dismiss review
-                      </button>
-                    )}
-                  </div>
+                {action?.kind === "accept_offer" && (
+                  <p className="cm-note">
+                    Marketplace fees are deducted from your proceeds.
+                  </p>
                 )}
-                <p className="cm-note">
-                  {action?.kind === "accept_offer"
-                    ? "DYLI’s standard marketplace fee applies. The contract determines your net proceeds."
-                    : "Your wallet will ask you to confirm before anything is sent."}
-                </p>
               </>
             )}
           </div>
+          {complete ? (
+            <footer className="cm-sheet-footer">
+              <button
+                className="lc-primary"
+                onClick={() => {
+                  setOpen(false);
+                  setAction(null);
+                }}
+              >
+                Done
+              </button>
+            </footer>
+          ) : (
+            !busy && (
+              <footer className="cm-sheet-footer cm-actions">
+                <button
+                  className="lc-primary"
+                  disabled={
+                    restoring ||
+                    !saved ||
+                    (!pending && action?.status === "expired")
+                  }
+                  onClick={continueAction}
+                >
+                  {pending
+                    ? "Check confirmation"
+                    : action
+                      ? actionLabel(action.kind)
+                      : "Retry review"}
+                </button>
+                {!pending && (
+                  <button className="lc-secondary" onClick={reset}>
+                    Cancel
+                  </button>
+                )}
+              </footer>
+            )
+          )}
         </LiveModal>
       )}
     </>

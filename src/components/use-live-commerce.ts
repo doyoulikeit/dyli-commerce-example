@@ -237,7 +237,7 @@ export function useLiveCommerce() {
           sponsor: false,
           pack, instruction: tx, externalCustomerId: session.identity.externalCustomerId,
           expiresAt,
-          uiOptions: { showWalletUIs: true },
+          uiOptions: { showWalletUIs: false },
         },
       );
       return result.hash;
@@ -258,7 +258,7 @@ export function useLiveCommerce() {
         authorization.chain_id !== runtime?.chainId || typeof authorization.message !== "string")
       throw Error("Wallet registration did not match this account");
     const { signature } = await signMessage({ message: authorization.message }, {
-      address, uiOptions: { showWalletUIs: true },
+      address, uiOptions: { showWalletUIs: false },
     });
     await retryConfirmation(() => api("/api/wallet/registration", {
       action: "confirm", authorizationId: authorization.id, signature,
@@ -364,6 +364,7 @@ export function useLiveCommerce() {
       idempotencyKey: next.key,
       quoteId: next.quote?.id,
       txHash: candidateHash || next.paymentHash,
+      recoveryKey: crypto.randomUUID(),
     };
     setBusy("Confirming your payment…");
     const payload = await retryConfirmation(() => api<ApiRecord>("/api/checkout", {
@@ -376,7 +377,17 @@ export function useLiveCommerce() {
     }
     if (payload.payment_verified !== true)
       throw new Error("DYLI must enable payment receipt checks before this checkout can continue. Your purchase is saved.");
-    if (candidateHash) save({ ...next, paymentHash: candidateHash });
+    if (payload.quote) {
+      const recoveredQuote = asRecord(payload.quote);
+      if (payload.requires_new_payment !== false || !recoveredQuote.id ||
+        asRecord(recoveredQuote.price_breakdown).total_cents !== asRecord(next.quote?.price_breakdown).total_cents) {
+        throw new Error("Your payment is saved, but checkout could not be recovered. Contact support before paying again.");
+      }
+      // Persist before asking for the new signature, including on reload or
+      // wallet rejection. Never discard the original transfer or purchase key.
+      base.quoteId = recoveredQuote.id;
+      save({ ...next, quote: recoveredQuote, paymentHash: candidateHash || next.paymentHash, paymentAttempted: true });
+    } else if (candidateHash) save({ ...next, paymentHash: candidateHash });
     const message = String(asRecord(payload.authorization).message || "");
     if (!message) throw new Error("Payment authorization is unavailable");
     setBusy("Confirming your purchase…");

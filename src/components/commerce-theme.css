@@ -2730,3 +2730,27 @@ button span {
   .dyli-page-title > div > .dyli-eyebrow { font-size: 10px; }
 }
 @media(max-width:360px) { .dyli-brand-pills { margin-right: -14px; padding-right: 14px; } }
+/* Product metadata stays plain. No decorative eyebrow labels. */
+.dyli-pack-brand { display: block; font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+.dyli-hero-pack-label small { text-transform: none; letter-spacing: normal; font-size: 12px; }
+.dyli-demo-link, .dyli-account-exit .lc-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 13px 22px; text-decoration: none; }
+.dyli-demo-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 18px; padding: 14px max(24px,calc((100vw - 1320px)/2)); background: var(--blue-soft); color: var(--ink); font-size: 13px; line-height: 1.6; }
+.dyli-demo-banner strong { margin-right: 10px; }
+.dyli-demo-banner a { font-weight: 700; white-space: nowrap; }
+.lc-account-loading { background: var(--page); color: var(--ink); }
+.lc-account-loading .lc-primary { border: 0; border-radius: 999px; min-height: 48px; padding: 13px 24px; background: var(--yellow); color: #191a24; font-weight: 750; }
+.lc-account-loading .lc-account-loading-message { max-width: 440px; }
+.lc-account-loading-message h1 { font: 900 clamp(28px,5vw,38px)/1.2 var(--display); }
+.dyli-account-exit { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
+.dyli-account-exit .lc-secondary { min-height: 46px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; color: var(--ink); }
+.dyli-text-button { background: none; border: 0; color: var(--ink); padding: 13px 20px; min-height: 46px; font-weight: 700; }
+.lc-modal.dyli-demo-modal { background: var(--surface); color: var(--ink); }
+.lc-modal.dyli-demo-modal > header { flex: none; background: var(--surface); border-color: var(--line); }
+.lc-modal.reveal-screen { inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; background: var(--page); color: var(--ink); }
+@media(max-width:760px) {
+ .dyli-demo-banner { padding: 12px 18px; font-size: 12px; }
+ .lc-modal.dyli-demo-modal:not(.detail-modal) { width: 100%; max-width: 100%; max-height: calc(100dvh - max(16px,env(safe-area-inset-top))); margin: auto 0 0; border: 0; border-radius: 24px 24px 0 0; }
+ .lc-modal.dyli-demo-modal > header { position: sticky; top: 0; min-height: 60px; z-index: 3; }
+ .lc-modal.dyli-demo-modal .pay-button { position: sticky; bottom: 0; }
+ .lc-modal.dyli-demo-modal input, .lc-modal.dyli-demo-modal select { font-size: 16px; }
+}

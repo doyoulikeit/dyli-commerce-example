@@ -81,13 +81,10 @@ export function PackDetailContent({
               {restocking ? "Restocking" : "Ready when you are"}
             </span>
             <PackArtwork key={item.id} item={item} detail={box} priority />
-            <span className="dyli-pack-drag-hint">
-              Your next favorite is in here.
-            </span>
           </div>
           <div className="dyli-pack-detail-copy">
-            <span className="dyli-eyebrow">
-              {packBrand(item.brand)} · {String(box.type || "Collectible pack")}
+            <span className="dyli-pack-brand">
+              {packBrand(item.brand)}
             </span>
             <h1>{item.name}</h1>
             <p className="dyli-detail-description">

@@ -326,9 +326,55 @@
 .cm-note {
   font-size: 12px;
 }
-.cm-detail-modal .lc-modal {
-  max-width: 900px;
+.lc-modal.cm-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: min(900px, calc(100dvh - 48px));
+  padding-bottom: 0;
 }
+.lc-modal.cm-sheet > header {
+  flex: none;
+  gap: 16px;
+}
+.lc-modal.cm-sheet > header h2 { font-size: 16px; }
+.lc-modal.cm-sheet > header .lc-icon { flex: none; }
+.cm-sheet-layout {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+}
+.cm-sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  scroll-padding-block: 20px;
+}
+.lc-modal.cm-sheet .cm-sheet-footer {
+  position: static;
+  display: flex;
+  flex: none;
+  gap: 12px;
+  padding: 16px 24px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid #ececf0;
+  background: #fff;
+}
+.cm-sheet-footer > button {
+  flex: 1;
+  justify-content: center;
+  min-height: 48px;
+}
+.cm-sheet-footer button:disabled { cursor: not-allowed; opacity: .5; }
+.cm-form .cm-search {
+  flex-direction: row;
+  flex: none;
+  order: initial;
+}
+.cm-form .cm-search svg { flex: none; }
+.cm-form .cm-search input { font-size: 16px; }
 .cm-detail {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -519,6 +565,9 @@
   color: #8b8e97;
   font-size: 11px;
 }
+.cm-collectors strong { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.cm-collectors .cm-avatar { flex: none; }
+.cm-collectors button > span:last-child { flex: none; }
 .cm-avatar {
   display: grid;
   place-items: center;
@@ -534,7 +583,9 @@
   justify-content: space-between;
   padding-bottom: 20px;
   border-bottom: 1px solid #e8e9ee;
+  gap: 16px;
 }
+.cm-collector-selected strong { min-width: 0; font-size: 14px; }
 .cm-collector-selected button {
   background: none;
   border: 0;
@@ -561,6 +612,7 @@
   gap: 10px;
   max-height: 370px;
   overflow: auto;
+  overscroll-behavior: contain;
   align-content: start;
   padding: 2px;
 }
@@ -742,6 +794,17 @@
   }
 }
 @media (max-width: 800px) {
+  .lc-modal.cm-sheet[open] {
+    width: 100%;
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+    margin: auto 0 0;
+    border: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .lc-modal.cm-sheet > header { padding: 16px 20px; }
+  .lc-modal.cm-sheet > header .lc-icon { width: 44px; height: 44px; }
+  .cm-sheet input, .cm-sheet select { font-size: 16px; }
+  .lc-modal.cm-sheet .cm-sheet-footer { padding-inline: 20px; }
   .lc-modal.cm-detail-modal,
   .lc-modal.cm-trade-modal {
     width: 100%;
@@ -842,22 +905,25 @@
   }
   .cm-trade-sides {
     gap: 12px;
-    grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
-  .cm-trade-sides > svg {
+  .cm-trade-sides > svg, .cm-trade-sides > span {
     width: 16px;
+    justify-self: center;
+    transform: rotate(90deg);
   }
   .cm-trade-item {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 7px;
+    align-items: center;
+    gap: 12px;
   }
   .cm-trade-item .lc-art {
-    width: 80px;
-    height: 96px;
+    width: 54px;
+    height: 66px;
   }
   .cm-trade-item > span {
-    font-size: 11px;
+    font-size: 13px;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .cm-compose-sides {
     grid-template-columns: 1fr;
@@ -868,9 +934,15 @@
     padding-top: 24px;
   }
   .cm-picker {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: 300px;
   }
+  .cm-pick button > span { font-size: 12px; min-height: 34px; }
+  .cm-pick small { font-size: 11px; }
+  .cm-pick label input { min-height: 40px; font-size: 16px; }
+  .cm-collector-selected button { min-height: 44px; flex: none; }
+  .cm-depth > div { flex-wrap: wrap; gap: 10px; }
+  .cm-depth > div > span { min-width: 0; overflow-wrap: anywhere; }
   .cm-trade-card footer {
     gap: 12px;
   }

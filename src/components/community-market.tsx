@@ -28,7 +28,6 @@ export function CommunityMarket({
   api,
   wallet,
   holdings,
-  includeDyli,
   revision,
   login,
   intent,
@@ -100,11 +99,7 @@ export function CommunityMarket({
       <div className="cm-heading">
         <div>
           <h1>Marketplace</h1>
-          <p>
-            {includeDyli
-              ? "Discover listings and offers from collectors across DYLI."
-              : "Collectibles listed by your community."}
-          </p>
+          <p>Discover collectibles from your community.</p>
         </div>
         <button
           className="lc-primary"
@@ -320,9 +315,9 @@ function MarketDetail({
     <LiveModal
       title={isOffer ? "Collector offer" : "Collectible"}
       onClose={onClose}
-      className="cm-detail-modal"
+      className="cm-sheet cm-detail-modal"
     >
-      <div className="cm-detail">
+      <div className="cm-sheet-body cm-detail">
         <div className="cm-detail-art">
           <Art src={assetImage(product)} name={name} />
         </div>
@@ -362,55 +357,9 @@ function MarketDetail({
               />
             </label>
           )}
-          <div className="cm-actions">
-            {owned ? (
-              <button
-                className="lc-secondary"
-                onClick={() =>
-                  act(
-                    {
-                      kind: isOffer ? "cancel_offer" : "cancel_listing",
-                      token_id: token,
-                      order_id: String(item.order_id),
-                    },
-                    name,
-                  )
-                }
-              >
-                Cancel {isOffer ? "offer" : "listing"}
-              </button>
-            ) : !isOffer ? (
-              <button
-                className="lc-primary"
-                onClick={() => act(terms(item, quantity), name)}
-              >
-                Buy {usd(Number(item.price) * quantity)}
-              </button>
-            ) : inVault ? (
-              <button
-                className="lc-primary"
-                onClick={() => act(terms(item), name)}
-              >
-                Accept offer · {usd(Number(item.price))}
-              </button>
-            ) : (
-              <p>Own this collectible to accept the offer.</p>
-            )}
-            {!owned && (
-              <button
-                className="lc-secondary"
-                onClick={() =>
-                  onOffer({
-                    token_id: token,
-                    name,
-                    image_url: assetImage(product),
-                  })
-                }
-              >
-                Make an offer
-              </button>
-            )}
-          </div>
+          {!owned && isOffer && !inVault && (
+            <p>Own this collectible to accept the offer.</p>
+          )}
           <p className="cm-note">
             {isOffer
               ? "Payment transfers when the owner accepts."
@@ -443,6 +392,46 @@ function MarketDetail({
         )}
         {depthError && <p className="cm-note">{depthError}</p>}
       </div>
+      <footer className="cm-sheet-footer cm-actions">
+        {owned ? (
+          <button
+            className="lc-secondary"
+            onClick={() =>
+              act(
+                {
+                  kind: isOffer ? "cancel_offer" : "cancel_listing",
+                  token_id: token,
+                  order_id: String(item.order_id),
+                },
+                name,
+              )
+            }
+          >
+            Cancel {isOffer ? "offer" : "listing"}
+          </button>
+        ) : !isOffer ? (
+          <button
+            className="lc-primary"
+            onClick={() => act(terms(item, quantity), name)}
+          >
+            Buy {usd(Number(item.price) * quantity)}
+          </button>
+        ) : inVault ? (
+          <button className="lc-primary" onClick={() => act(terms(item), name)}>
+            Accept offer · {usd(Number(item.price))}
+          </button>
+        ) : null}
+        {!owned && (
+          <button
+            className="lc-secondary"
+            onClick={() =>
+              onOffer({ token_id: token, name, image_url: assetImage(product) })
+            }
+          >
+            Make an offer
+          </button>
+        )}
+      </footer>
     </LiveModal>
   );
 }
@@ -473,9 +462,10 @@ function MarketComposer({
     <LiveModal
       title={kind === "list" ? "List from your vault" : "Make an offer"}
       onClose={onClose}
+      className="cm-sheet"
     >
       <form
-        className="cm-form"
+        className="cm-sheet-layout"
         onSubmit={(event) => {
           event.preventDefault();
           setError("");
@@ -504,88 +494,92 @@ function MarketComposer({
           );
         }}
       >
-        {selected && (
-          <div className="cm-picked">
-            <Art src={assetImage(selected)} name={String(selected.name)} />
-            <strong>{String(selected.name)}</strong>
+        <div className="cm-sheet-body cm-form">
+          {selected && (
+            <div className="cm-picked">
+              <Art src={assetImage(selected)} name={String(selected.name)} />
+              <strong>{String(selected.name)}</strong>
+            </div>
+          )}
+          {!item && (
+            <label>
+              Collectible
+              <select
+                value={token}
+                onChange={(event) => {
+                  setToken(event.target.value);
+                  setQuantity(1);
+                }}
+              >
+                {holdings.map((value) => (
+                  <option
+                    key={String(value.token_id)}
+                    value={String(value.token_id)}
+                  >
+                    {String(value.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <div className="cm-form-row">
+            <label>
+              {kind === "list" ? "Price per item" : "Your offer"}
+              <div className="cm-money">
+                <span>$</span>
+                <input
+                  required
+                  autoFocus
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                />
+              </div>
+            </label>
+            {kind === "list" && (
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.min(20, Number(selected?.balance || 1))}
+                  value={quantity}
+                  onChange={(event) => setQuantity(Number(event.target.value))}
+                  required
+                />
+              </label>
+            )}
           </div>
-        )}
-        {!item && (
           <label>
-            Collectible
+            Expires in
             <select
-              value={token}
-              onChange={(event) => {
-                setToken(event.target.value);
-                setQuantity(1);
-              }}
+              value={days}
+              onChange={(event) => setDays(Number(event.target.value))}
             >
-              {holdings.map((value) => (
-                <option
-                  key={String(value.token_id)}
-                  value={String(value.token_id)}
-                >
-                  {String(value.name)}
+              {[1, 3, 7, 14, 30].map((day) => (
+                <option key={day} value={day}>
+                  {day} {day === 1 ? "day" : "days"}
                 </option>
               ))}
             </select>
           </label>
-        )}
-        <div className="cm-form-row">
-          <label>
-            {kind === "list" ? "Price per item" : "Your offer"}
-            <div className="cm-money">
-              <span>$</span>
-              <input
-                required
-                autoFocus
-                inputMode="decimal"
-                placeholder="0.00"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-            </div>
-          </label>
-          {kind === "list" && (
-            <label>
-              Quantity
-              <input
-                type="number"
-                min={1}
-                max={Math.min(20, Number(selected?.balance || 1))}
-                value={quantity}
-                onChange={(event) => setQuantity(Number(event.target.value))}
-                required
-              />
-            </label>
+          <p className="cm-note">
+            {kind === "list"
+              ? "Your item stays in your vault until it sells."
+              : "Keep enough balance available until your offer expires or you cancel it."}
+          </p>
+          {error && (
+            <p className="cm-error" role="alert">
+              {error}
+            </p>
           )}
         </div>
-        <label>
-          Expires in
-          <select
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
-          >
-            {[1, 3, 7, 14, 30].map((day) => (
-              <option key={day} value={day}>
-                {day} {day === 1 ? "day" : "days"}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="cm-note">
-          {kind === "list"
-            ? "Your listing will also appear on DYLI. Items stay in your wallet until sold."
-            : "Offers also appear on DYLI. Keep enough USDC in your wallet until the offer expires or you cancel it."}
-        </p>
-        {error && (
-          <p className="cm-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="lc-primary" disabled={!selected}>
-          Review {kind === "list" ? "listing" : "offer"}
-        </button>
+        <footer className="cm-sheet-footer">
+          <button className="lc-primary" disabled={!selected}>
+            Review {kind === "list" ? "listing" : "offer"}
+          </button>
+        </footer>
       </form>
     </LiveModal>
   );

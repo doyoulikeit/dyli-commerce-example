@@ -24,6 +24,8 @@ import {
 import { LiveReveal } from "@/components/live-reveal";
 import { PackBrowser, PackHero } from "@/components/pack-catalog";
 import { CommerceLogo, ThemeSwitch } from "@/components/brand-identity";
+import { AccountGate } from "@/components/account-gate";
+import { useWalletRegistration } from "@/components/use-wallet-registration";
 import { RevealModeSelector } from "@/components/reveal-mode";
 import { useOpeningPreferences } from "@/components/use-opening-preferences";
 import { normalizeOpeningPreferences } from "@/lib/opening-preferences";
@@ -105,6 +107,8 @@ export function LiveStorefront({
   const [recoveryHash, setRecoveryHash] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [communityIntent, setCommunityIntent] = useState<CommunityIntent | null>(null);
+  const { ready: authReady, authenticated, address, needsWalletRegistration, registerWallet } = commerce;
+  useWalletRegistration({ ready: authReady, authenticated, address, needsRegistration: needsWalletRegistration, busy, chainId: runtime?.chainId, embedded: !!runtime && runtime.authMode !== "existing", register: registerWallet });
   const refreshConfirmedAccount = useCallback(async () => {
     await retryConfirmation(() => refreshAccount(true));
   }, [refreshAccount]);
@@ -236,25 +240,7 @@ export function LiveStorefront({
   );
 
   if (waitingForAccount(commerce.ready, commerce.authenticated, commerce.address, session?.identity.walletAddress)) {
-    return (
-      <main className="lc-account-loading" aria-busy={!error}>
-        <div className="brand-lockup" aria-label={brandName}><CommerceLogo name={brandName} /></div>
-        {error ? (
-          <div className="lc-account-loading-message" role="alert">
-            <h1>{commerce.needsWalletRegistration ? "Connect your collection" : "Couldn’t load your account"}</h1>
-            <p>{error}</p>
-            {commerce.needsWalletRegistration ? <>
-              <p>Sign a message to link this wallet to your collection. This does not make a payment.</p>
-              <button className="lc-secondary" disabled={!!busy} onClick={() => void commerce.registerWallet()}>{busy || "Connect wallet"}</button>
-            </> : <button className="lc-secondary" onClick={() => window.location.reload()}>Try again</button>}
-          </div>
-        ) : (
-          <div className="lc-account-loading-message" role="status">
-            <LoaderCircle className="lc-account-loading-spinner" aria-hidden="true" />
-          </div>
-        )}
-      </main>
-    );
+    return <AccountGate name={brandName} error={error} linking={needsWalletRegistration} busy={busy} onConnect={() => void registerWallet()} onRetry={() => window.location.reload()} onSignOut={() => void commerce.signOut()} />;
   }
 
   return (

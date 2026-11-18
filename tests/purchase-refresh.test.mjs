@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
 import ts from 'typescript';
 import * as live from '../src/lib/live-commerce.ts';
 import * as preferences from '../src/lib/opening-preferences.ts';
@@ -13,19 +14,19 @@ const hash = `0x${'b'.repeat(64)}`;
 const item = { id: '12997', surface: 'boxes', purchase: { quoteItem: { type: 'box', box_id: 12997 } } };
 const saved = { version: 1, wallet, key: 'fixture-key', item, quote: { id: 'quote' }, paymentHash: hash, paymentAttempted: true };
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function fixture({ failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction, sessionResponse } = {}) {
+function fixture({ failRefresh = false, failOpening = false, recovery = saved, boxResponse, sendTransaction, signMessage, checkoutResponse, sessionResponse } = {}) {
   const state = [], refs = [], callbacks = [];
   let index = 0, refIndex = 0, callbackIndex = 0, effect;
   const calls = [];
   const storage = new Map([[`dyli-live-purchase-v1:${wallet}`, JSON.stringify(recovery)]]);
   const auth = { ready: true, authenticated: true, wallet: { address: wallet, switchChain: async () => {} }, getAccessToken: async () => 'fixture',
     sendTransaction: sendTransaction || (async () => { throw Error('Recovery must never send another payment'); }),
-    signMessage: async () => { throw Error('An existing order must not be authorized again'); } };
+    signMessage: signMessage || (async () => { throw Error('An existing order must not be authorized again'); }) };
   const exports = {};
   const source = ts.transpileModule(readFileSync(new URL('../src/components/use-live-commerce.ts', import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  vm.runInNewContext(source, { exports, URLSearchParams, setTimeout: callback => queueMicrotask(callback), clearTimeout, window: { location: { search: '' } },
+  vm.runInNewContext(source, { exports, Error, crypto: webcrypto, URLSearchParams, setTimeout: callback => queueMicrotask(callback), clearTimeout, window: { location: { search: '' } },
     navigator: { locks: { request: async (_key, _options, callback) => callback({}) } },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     fetch: async (path, init) => {
@@ -33,7 +34,7 @@ function fixture({ failRefresh = false, failOpening = false, recovery = saved, b
       calls.push({ path, body });
       if (path.startsWith('/api/session')) return sessionResponse ? sessionResponse(path) : failRefresh ? Response.json({ error: 'temporary limit failure' }, { status: 503 })
         : Response.json({ identity: { walletAddress: wallet }, balance: { amount: '65', chain_id: 8453 }, orders: [] });
-      if (path === '/api/checkout') return Response.json({ order: { id: 'paid-order', items: [] } });
+      if (path === '/api/checkout') return Response.json(checkoutResponse ? checkoutResponse(body) : { order: { id: 'paid-order', items: [] } });
       if (path === '/api/pack-plays') return failOpening ? Response.json({ error: 'Opening unavailable; purchase saved' }, { status: 503 })
         : Response.json(boxResponse ? boxResponse(body) : { box_play: { id: 'saved-play', status: 'authorized', opening_reference: 'opening', rewards: [] } });
       throw Error(`Unexpected request ${path}`);
@@ -72,6 +73,45 @@ test('a failed account refresh cannot turn a paid, saved opening into a failed p
   assert.equal(f.calls.filter(call => call.path === '/api/checkout').length, 1);
   assert.equal(f.calls.find(call => call.path === '/api/checkout').body.action, 'authorize');
 });
+
+for (const declineSignature of [false, true]) {
+  test(`expired quote recovery saves the original payment before signing${declineSignature ? ', even when signing is declined' : ' and confirms the replacement quote'}`, async () => {
+    const originalQuote = { id: 'expired-quote', price_breakdown: { total_cents: 3500 } };
+    const replacementQuote = { id: 'recovered-quote', price_breakdown: { total_cents: 3500 } };
+    let signatures = 0;
+    const f = fixture({ recovery: { ...saved, quote: originalQuote },
+      checkoutResponse: body => body.action === 'authorize'
+        ? { quote: replacementQuote, payment_verified: true, requires_new_payment: false, authorization: { message: 'Fresh order intent' } }
+        : { order: { id: 'paid-order', items: [] } },
+      signMessage: async ({ message }) => {
+        signatures++;
+        assert.equal(message, 'Fresh order intent');
+        const persisted = JSON.parse(f.storage.get(`dyli-live-purchase-v1:${wallet}`));
+        assert.equal(persisted.quote.id, replacementQuote.id);
+        assert.equal(persisted.paymentHash, hash);
+        assert.equal(persisted.paymentAttempted, true);
+        assert.equal(persisted.key, saved.key);
+        if (declineSignature) throw Error('Signature declined');
+        return { signature: 'fresh-signature' };
+      },
+    });
+    f.render(); f.mount(); await flush();
+    assert.equal(await f.render().resume(), !declineSignature);
+    assert.equal(signatures, 1);
+    const confirmations = f.calls.filter(call => call.body?.action === 'confirm_balance');
+    assert.equal(confirmations.length, declineSignature ? 0 : 1);
+    if (!declineSignature) {
+      assert.equal(confirmations[0].body.quoteId, replacementQuote.id);
+      assert.equal(confirmations[0].body.txHash, hash);
+      assert.equal(confirmations[0].body.signature, 'fresh-signature');
+      assert.equal(f.render().flow.orderId, 'paid-order');
+    } else {
+      assert.equal(f.render().flow.quote.id, replacementQuote.id);
+      assert.equal(f.render().flow.paymentHash, hash);
+      assert.match(f.render().error, /Signature declined/);
+    }
+  });
+}
 
 const reward = { index: 0, product: { name: 'Saved pull' }, buyback_amount: 36.46 };
 const transaction = { chain: 'base', chain_id: 8453, from: wallet, to: `0x${'c'.repeat(40)}`, value: '0', data: '0x12345678' };

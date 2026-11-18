@@ -104,8 +104,9 @@ export function Providers({ runtime, children }: { runtime: CommerceRuntime; chi
           loginMethods: ["email", "sms"],
           appearance: {
             theme: "light",
-            accentColor: "#15151a",
-            landingHeader: "Your collection, all in one place",
+            accentColor: "#FFD766",
+            logo: "/brand/dyli.svg",
+            landingHeader: "Sign in to collect",
             loginMessage: "Sign in to continue.",
             walletChainType: "ethereum-only",
           },

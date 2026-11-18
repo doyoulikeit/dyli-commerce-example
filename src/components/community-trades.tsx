@@ -11,7 +11,6 @@ export function CommunityTrades({
   api,
   wallet,
   holdings,
-  includeDyli,
   revision,
   login,
   intent,
@@ -72,11 +71,7 @@ export function CommunityTrades({
         <div>
           <span className="cm-eyebrow">Find your next trade</span>
           <h1>Trades</h1>
-          <p>
-            {includeDyli
-              ? "Swap collectibles with your community and collectors on DYLI."
-              : "Swap collectibles with others in your community."}
-          </p>
+          <p>Swap collectibles with your community.</p>
         </div>
         <button
           className="lc-primary"
@@ -184,7 +179,7 @@ export function CommunityTrades({
                       ) : (
                         <p className="cm-note">
                           {trade.has_diamonds
-                            ? "Manage this diamond trade on DYLI."
+                            ? "Trades with diamonds aren’t supported here."
                             : "Ask the sender to recreate this older trade before accepting here."}
                         </p>
                       )
@@ -212,13 +207,6 @@ export function CommunityTrades({
                         Decline
                       </button>
                     )}
-                    <a
-                      href={`https://www.dyli.io/trade`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View on DYLI ↗
-                    </a>
                   </footer>
                 )}
               </article>
@@ -523,10 +511,10 @@ function TradeComposer({
     <LiveModal
       title="Build a trade"
       onClose={onClose}
-      className="cm-trade-modal"
+      className="cm-sheet cm-trade-modal"
     >
       <form
-        className="cm-form"
+        className="cm-sheet-layout"
         onSubmit={(event) => {
           event.preventDefault();
           setError("");
@@ -573,133 +561,136 @@ function TradeComposer({
           }
         }}
       >
-        {!collector ? (
-          <>
-            <label className="cm-search">
-              <Search size={18} />
-              <input
-                autoFocus
-                aria-label="Collector username"
-                placeholder="Search a collector’s username"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setCollectors([]);
-                }}
-              />
-            </label>
-            <p className="cm-note">
-              Search by username, not an email or wallet address.
+        <div className="cm-sheet-body cm-form">
+          {!collector ? (
+            <>
+              <label className="cm-search">
+                <Search size={18} />
+                <input
+                  autoFocus
+                  aria-label="Collector username"
+                  placeholder="Search a collector’s username"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setCollectors([]);
+                  }}
+                />
+              </label>
+              <div className="cm-collectors">
+                {query.length >= 2 &&
+                  collectors.map((value) => (
+                    <button
+                      type="button"
+                      key={String(value.username)}
+                      onClick={() => setCollector(value)}
+                    >
+                      <span className="cm-avatar">
+                        {String(value.username).charAt(0).toUpperCase()}
+                      </span>
+                      <strong>@{String(value.username)}</strong>
+                      <span>View vault →</span>
+                    </button>
+                  ))}
+              </div>
+              {searching ? (
+                <p role="status">Finding collectors…</p>
+              ) : (
+                query.length >= 2 &&
+                !collectors.length && (
+                  <p>No matching collectors in this community.</p>
+                )
+              )}
+            </>
+          ) : (
+            <>
+              <div className="cm-collector-selected">
+                <strong>Trading with @{String(collector.username)}</strong>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCollector(null);
+                    setReceive({});
+                    setTheirItems([]);
+                    setPage(1);
+                  }}
+                >
+                  Change
+                </button>
+              </div>
+              <div className="cm-compose-sides">
+                <section>
+                  <h3>You give</h3>
+                  {holdings.length ? (
+                    picker(holdings, give, setGive)
+                  ) : (
+                    <p className="cm-note">
+                      Your vault is empty. You can offer cash instead.
+                    </p>
+                  )}
+                  <label>
+                    Cash you add
+                    <div className="cm-money">
+                      <span>$</span>
+                      <input
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={giveCash}
+                        onChange={(event) => setGiveCash(event.target.value)}
+                      />
+                    </div>
+                  </label>
+                </section>
+                <section>
+                  <h3>You receive</h3>
+                  {picker(theirItems, receive, setReceive)}
+                  {loading ? (
+                    <p role="status">Loading their vault…</p>
+                  ) : more ? (
+                    <button
+                      type="button"
+                      className="lc-secondary"
+                      onClick={() => setPage((value) => value + 1)}
+                    >
+                      More collectibles
+                    </button>
+                  ) : (
+                    !theirItems.length && (
+                      <p className="cm-note">No available collectibles.</p>
+                    )
+                  )}
+                  <label>
+                    Cash you request
+                    <div className="cm-money">
+                      <span>$</span>
+                      <input
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={receiveCash}
+                        onChange={(event) => setReceiveCash(event.target.value)}
+                      />
+                    </div>
+                  </label>
+                </section>
+              </div>
+              <p className="cm-note">
+                Keep your items and balance available until the trade is
+                accepted or canceled.
+              </p>
+            </>
+          )}
+          {error && (
+            <p role="alert" className="cm-error">
+              {error}
             </p>
-            <div className="cm-collectors">
-              {query.length >= 2 &&
-                collectors.map((value) => (
-                  <button
-                    type="button"
-                    key={String(value.username)}
-                    onClick={() => setCollector(value)}
-                  >
-                    <span className="cm-avatar">
-                      {String(value.username).charAt(0).toUpperCase()}
-                    </span>
-                    <strong>@{String(value.username)}</strong>
-                    <span>View vault →</span>
-                  </button>
-                ))}
-            </div>
-            {searching ? (
-              <p role="status">Finding collectors…</p>
-            ) : (
-              query.length >= 2 &&
-              !collectors.length && (
-                <p>No matching collectors in this community.</p>
-              )
-            )}
-          </>
-        ) : (
-          <>
-            <div className="cm-collector-selected">
-              <strong>Trading with @{String(collector.username)}</strong>
-              <button
-                type="button"
-                onClick={() => {
-                  setCollector(null);
-                  setReceive({});
-                  setTheirItems([]);
-                  setPage(1);
-                }}
-              >
-                Change
-              </button>
-            </div>
-            <div className="cm-compose-sides">
-              <section>
-                <h3>You give</h3>
-                {holdings.length ? (
-                  picker(holdings, give, setGive)
-                ) : (
-                  <p className="cm-note">
-                    Your vault is empty. You can offer cash instead.
-                  </p>
-                )}
-                <label>
-                  Cash you add
-                  <div className="cm-money">
-                    <span>$</span>
-                    <input
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={giveCash}
-                      onChange={(event) => setGiveCash(event.target.value)}
-                    />
-                  </div>
-                </label>
-              </section>
-              <section>
-                <h3>You receive</h3>
-                {picker(theirItems, receive, setReceive)}
-                {loading ? (
-                  <p role="status">Loading their vault…</p>
-                ) : more ? (
-                  <button
-                    type="button"
-                    className="lc-secondary"
-                    onClick={() => setPage((value) => value + 1)}
-                  >
-                    More collectibles
-                  </button>
-                ) : (
-                  !theirItems.length && (
-                    <p className="cm-note">No available collectibles.</p>
-                  )
-                )}
-                <label>
-                  Cash you request
-                  <div className="cm-money">
-                    <span>$</span>
-                    <input
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={receiveCash}
-                      onChange={(event) => setReceiveCash(event.target.value)}
-                    />
-                  </div>
-                </label>
-              </section>
-            </div>
-            <p className="cm-note">
-              Nothing exchanges until the other collector accepts. Keep the
-              items and cash in your wallet while the trade is open.
-            </p>
+          )}
+        </div>
+        {collector && (
+          <footer className="cm-sheet-footer">
             <button className="lc-primary" disabled={loading}>
               Review trade
             </button>
-          </>
-        )}
-        {error && (
-          <p role="alert" className="cm-error">
-            {error}
-          </p>
+          </footer>
         )}
       </form>
     </LiveModal>

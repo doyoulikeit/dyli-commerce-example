@@ -476,7 +476,7 @@ export function LiveRedemption({
           <>
             <h2>Your shipment needs a review.</h2>
             <p>
-              DYLI support needs to finish processing this shipment. Do not send
+              Support needs to finish processing this shipment. Do not send
               another payment.
             </p>
             <p className="lc-muted">Reference: {redemption.id}</p>

@@ -1,4 +1,4 @@
-import { apiErrorResponse, commerce } from "@/lib/dyli";
+import { apiErrorResponse, commerce, DyliApiError } from "@/lib/dyli";
 import { authErrorResponse, AuthError } from "@/lib/privy-server";
 import {
   customerFor,
@@ -128,12 +128,21 @@ export async function POST(request: Request) {
           );
         return Response.json({ order, idempotent: true });
       }
-      return Response.json(
-        await commerce(`/quotes/${quoteId}/payment-authorization`, {
+      try {
+        return Response.json(await commerce(`/quotes/${quoteId}/payment-authorization`, {
           method: "POST",
           body: JSON.stringify(input),
-        }),
-      );
+        }));
+      } catch (error) {
+        if (!(error instanceof DyliApiError) || error.payload.error !== "quote_expired") throw error;
+        // Keep the broadcast receipt. Recovery only creates a fresh quote and
+        // signature message; it must never call the wallet's transfer method.
+        return Response.json(await commerce(`/quotes/${quoteId}/recover-payment`, {
+          method: "POST",
+          headers: { "Idempotency-Key": `recover:${requestKey(body.recoveryKey)}` },
+          body: JSON.stringify(input),
+        }), { headers: { "Cache-Control": "private, no-store" } });
+      }
     }
     return Response.json(
       await commerce("/orders", {
