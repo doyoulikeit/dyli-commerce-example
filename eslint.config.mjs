@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated, content-verified DYLI renderer (includes vendored Three.js).
+    "sdk/pack-renderer.mjs",
   ]),
 ]);
 

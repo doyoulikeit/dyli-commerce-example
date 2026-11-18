@@ -14,7 +14,7 @@ const secrets = [
 const findings = [];
 for (const file of files) {
   if (forbiddenPath.test(file) || /^docs\/internal\//i.test(file)) findings.push(`${file}: excluded path`);
-  if (/\.(png|ico|webp|jpg|jpeg|woff2?)$/i.test(file)) continue;
+  if (/\.(png|ico|webp|jpg|jpeg|woff2?|otf|glb)$/i.test(file)) continue;
   const content = readFileSync(file, 'utf8');
   if (secrets.some(pattern => pattern.test(content))) findings.push(`${file}: possible credential (value hidden)`);
 }

@@ -3,6 +3,7 @@ import "server-only";
 import type { ApiRecord, CatalogItem, CatalogSurface } from "@/lib/types";
 import { createCommerceClient, CommerceError } from "../../sdk/commerce-client.mjs";
 import { publicApiError } from "@/lib/public-error";
+import { packPoster } from "@/lib/pack-artwork";
 import { limitUpstream, rateLimitResponse } from "@/lib/rate-limit";
 
 const COMMERCE_BASE = process.env.DYLI_COMMERCE_BASE_URL || "https://www.dyli.io/api/commerce/v1";
@@ -158,7 +159,7 @@ export function normalizeCatalog(payload: ApiRecord, surface: CatalogSurface): C
       type,
       name: cleanName || "Untitled collectible",
       description: displayDescription,
-      image: firstImage(raw),
+      image: packPoster({ raw, image: firstImage(raw) }),
       brand,
       category: text(raw.category || prize?.category) || null,
       subcategory: text(raw.subcategory || prize?.subcategory) || null,

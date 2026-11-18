@@ -178,8 +178,8 @@
   font-weight: 600;
 }
 .lc-primary {
-  background: var(--ink) !important;
-  color: #fff !important;
+  background: var(--ink);
+  color: #fff;
 }
 .lc-secondary {
   background: #fff;

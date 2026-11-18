@@ -15,15 +15,20 @@ const shippingOnly = process.env.VERIFY_VIEW === "shipping";
 const communityOnly = process.env.VERIFY_VIEW === "community";
 const previewPort = communityOnly ? 3112 : shippingOnly ? 3111 : offersOnly ? 3110 : revealOnly ? 3109 : 3108;
 const isolated = communityOnly || revealOnly || offersOnly || shippingOnly;
+const fixtureDir = process.env.VERIFY_FIXTURE_DIR;
 await build({
   entryPoints: { harness: path.join(root, `tests/browser/${communityOnly ? "community-preview" : shippingOnly ? "shipment-preview" : offersOnly ? "offer-preview" : revealOnly ? "reveal-preview" : "harness"}.jsx`) },
   bundle: true,
   outdir: output,
   format: "esm",
+  splitting: true,
+  chunkNames: "chunks/[name]-[hash]",
+  external: ["/fonts/*"],
   jsx: "automatic",
   tsconfig: path.join(root, "tsconfig.json"),
   alias: {
     "@privy-io/react-auth": path.join(root, "tests/browser/privy.fixture.jsx"),
+    "@/lib/base-wallet": path.join(root, "tests/browser/base-wallet.fixture.ts"),
   },
   define: {
     "process.env": "{}",
@@ -31,7 +36,7 @@ await build({
     "process.env.NEXT_PUBLIC_BOXES_ONLY": '"false"',
     "process.env.NEXT_PUBLIC_DEMO_MODE": '"false"',
     "process.env.NEXT_PUBLIC_SPONSOR_TRANSACTIONS": '"false"',
-    "process.env.NEXT_PUBLIC_STOREFRONT_NAME": '"Vaulted"',
+    "process.env.NEXT_PUBLIC_STOREFRONT_NAME": '"DYLI"',
   },
   plugins: [
     {
@@ -52,6 +57,12 @@ if (process.env.VERIFY_BUILD_ONLY !== "true") http
   .createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
+      if (fixtureDir && (url.pathname === "/fixtures/catalog" || /^\/fixtures\/box\/\d+$/.test(url.pathname))) {
+        const name = url.pathname === "/fixtures/catalog" ? "catalog.json" : `pack-${url.pathname.split("/").pop()}.json`;
+        res.setHeader("Content-Type", "application/json");
+        res.end(await readFile(path.join(fixtureDir, name)));
+        return;
+      }
       if (revealOnly && url.pathname === "/fixtures/reveal") {
         const response = await fetch("https://www.dyli.io/api/public/box-ranges?boxId=12997&includeItems=true&pageSize=2", { signal: AbortSignal.timeout(15000) });
         if (!response.ok) throw Error("Read-only box artwork unavailable");
@@ -83,12 +94,19 @@ if (process.env.VERIFY_BUILD_ONLY !== "true") http
         res.end(JSON.stringify(data));
         return;
       }
-      if (["/harness.js", "/harness.css"].includes(url.pathname)) {
+      if (/^\/(?:harness\.(?:js|css)|chunks\/[\w-]+\.js)$/.test(url.pathname)) {
         res.setHeader(
           "Content-Type",
           url.pathname.endsWith(".css") ? "text/css" : "text/javascript",
         );
         res.end(await readFile(path.join(output, url.pathname.slice(1))));
+        return;
+      }
+      if (/^\/(?:brand|fonts)\/[\w.-]+$/.test(url.pathname) || (process.env.VERIFY_ASSET_ROOT && /^\/commerce-assets\/v1\/[\w/.-]+$/.test(url.pathname) && !url.pathname.includes(".."))) {
+        const assetRoot = url.pathname.startsWith("/commerce-assets/") ? process.env.VERIFY_ASSET_ROOT : path.join(root, "public");
+        const ext = path.extname(url.pathname);
+        res.setHeader("Content-Type", ({ ".svg": "image/svg+xml", ".woff2": "font/woff2", ".otf": "font/otf", ".glb": "model/gltf-binary", ".webp": "image/webp", ".mjs": "text/javascript" })[ext] || "application/octet-stream");
+        res.end(await readFile(path.join(assetRoot, url.pathname.slice(1))));
         return;
       }
       if (url.pathname === "/dyli-logo.svg") {
@@ -98,7 +116,7 @@ if (process.env.VERIFY_BUILD_ONLY !== "true") http
       }
       res.setHeader("Content-Type", "text/html");
       res.end(
-        '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vaulted isolated browser verification</title><link rel="stylesheet" href="/harness.css"><style>body{font-family:Arial,sans-serif}</style></head><body><div id="root"></div><script type="module" src="/harness.js"></script></body></html>',
+        '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>DYLI isolated browser verification</title><link rel="stylesheet" href="/harness.css"><style>body{font-family:Arial,sans-serif}</style></head><body><div id="root"></div><script type="module" src="/harness.js"></script></body></html>',
       );
     } catch (error) {
       res.statusCode = 500;
