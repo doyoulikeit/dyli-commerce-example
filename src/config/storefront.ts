@@ -6,7 +6,7 @@ type SurfaceConfig = { id: CatalogSurface; label: string; enabled: boolean };
 
 export const storefrontConfig = {
   brand: {
-    name: process.env.NEXT_PUBLIC_STOREFRONT_NAME || "DYLI",
+    name: process.env.NEXT_PUBLIC_STOREFRONT_NAME || "Vaulted",
     mark: "V",
     tagline: "Collect what you love.",
   },

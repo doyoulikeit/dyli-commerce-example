@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "@/components/commerce-styles.css";
 
-const siteName = process.env.NEXT_PUBLIC_STOREFRONT_NAME || "DYLI";
+const siteName = process.env.NEXT_PUBLIC_STOREFRONT_NAME || "Vaulted";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??

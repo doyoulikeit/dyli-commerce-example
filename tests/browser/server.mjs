@@ -38,7 +38,7 @@ await build({
     "process.env.NEXT_PUBLIC_BOXES_ONLY": '"false"',
     "process.env.NEXT_PUBLIC_DEMO_MODE": '"false"',
     "process.env.NEXT_PUBLIC_SPONSOR_TRANSACTIONS": '"false"',
-    "process.env.NEXT_PUBLIC_STOREFRONT_NAME": '"DYLI"',
+    "process.env.NEXT_PUBLIC_STOREFRONT_NAME": '"Vaulted"',
   },
   plugins: [
     {

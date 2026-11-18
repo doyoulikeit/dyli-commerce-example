@@ -12,7 +12,7 @@ function subscribeTheme(notify: () => void) {
 }
 
 export function CommerceLogo({
-  name = "DYLI",
+  name = "Vaulted",
   compact = false,
 }: {
   name?: string;

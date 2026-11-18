@@ -422,7 +422,7 @@ export function PackGallery({
           </>
         )}
       </div>
-      <div className="dyli-gallery-info" aria-live="polite">
+      <div className="dyli-gallery-info">
         <span className="dyli-pack-brand">{packBrand(item.brand)}</span>
         <h2>{item.name}</h2>
         <PackStats item={item} compact />
@@ -476,7 +476,11 @@ export function PackGallery({
             <Flame size={20} />
           </button>
         </div>
-        <span className="dyli-gallery-position">
+        <span
+          className="dyli-gallery-position"
+          role="status"
+          aria-label={`${item.name}, pack ${index + 1} of ${items.length}`}
+        >
           {index + 1} / {items.length}
         </span>
       </div>

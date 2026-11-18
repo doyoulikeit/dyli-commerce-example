@@ -29,7 +29,6 @@
   --hero: #eaf5fd;
   --shadow: 0 12px 38px #17334809;
   --display: FatFrank, "DM Sans", sans-serif;
-  color-scheme: light;
 }
 :root[data-theme="dark"] {
   --ink: #f2f5f8;
@@ -45,7 +44,6 @@
   --red: #ff9ca5;
   --hero: #20394e;
   --shadow: 0 12px 38px #0002;
-  color-scheme: dark;
 }
 html,
 body {
@@ -3420,12 +3418,6 @@ button:disabled,
     width: 100%;
   }
 }
-@media (max-width: 360px) {
-  .lc-header .dyli-commerce-logo > span,
-  .store-header .dyli-commerce-logo > span {
-    display: none;
-  }
-}
 
 .lc-modal .redeem-select strong {
   white-space: normal;
@@ -3567,5 +3559,68 @@ button:disabled,
   .lc-app,
   .store-app {
     padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+}
+
+html {
+  scrollbar-color: var(--line) var(--surface);
+}
+
+/* Keep the app name and account controls visible on small phones. */
+@media (max-width: 600px) {
+  .lc-app .lc-header,
+  .store-app .store-header {
+    gap: 8px;
+  }
+  .brand-button {
+    padding: 0;
+  }
+  .dyli-commerce-logo {
+    gap: 8px;
+  }
+  .lc-app .lc-account,
+  .store-header .header-account {
+    gap: 6px;
+    flex: none;
+  }
+  .store-header .balance-chip,
+  .lc-app .lc-balance {
+    padding: 9px 10px;
+    white-space: nowrap;
+  }
+  .store-header .balance-chip > svg,
+  .lc-app .lc-balance > svg {
+    display: none;
+  }
+  .store-header .balance-chip b {
+    min-width: 0;
+  }
+}
+@media (max-width: 360px) {
+  .lc-app .lc-header,
+  .store-app .store-header {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+  .dyli-commerce-logo {
+    gap: 6px;
+  }
+  .dyli-commerce-logo > img {
+    width: 30px;
+    height: 30px;
+  }
+  .dyli-commerce-logo strong,
+  .lc-header .brand-lockup .dyli-commerce-logo strong {
+    font-size: 22px;
+    max-width: 90px;
+  }
+  .lc-app .lc-account,
+  .store-header .header-account {
+    gap: 4px;
+  }
+  .lc-header .dyli-header-demo,
+  .lc-header .dyli-sign-in {
+    font-size: 12px;
+    padding-inline: 8px;
   }
 }

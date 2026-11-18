@@ -1,6 +1,6 @@
-# DYLI Commerce example
+# Vaulted — DYLI Commerce example
 
-Run your own collectibles storefront with DYLI's live inventory, checkout, marketplace and trading.
+Vaulted is the example storefront powered by DYLI's live inventory, checkout, marketplace and trading. Set `NEXT_PUBLIC_STOREFRONT_NAME` to use your own app name.
 
 **[Choose login and wallets](docs/WALLETS.md) | [Setup and run](docs/PARTNER-QUICKSTART.md)** · [Commerce overview](https://www.dyli.io/docs/api/commerce)
 
