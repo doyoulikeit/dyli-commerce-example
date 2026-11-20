@@ -16,6 +16,18 @@ Normal card checkout is embedded in the starter. DYLI creates the Stripe session
 
 `npm run dev` starts the app. `npm run build`, `npm run lint` and `npm test` check the starter without authorizing live payments. Production launch also needs an approved end-to-end payment test; a passing build is not payment certification.
 
+## Pack delivery and Sell confirmation
+
+New Commerce apps secure every item in the customer's account before revealing rewards. The starter handles delivery, all-Keep completion and returned Sell approvals. Use this API contract when adapting the opening UI:
+
+- Poll `/results` using `retry_after_ms`. Show rewards only when `ready: true` confirms delivery.
+- Call `/review` when the final choice screen opens and preserve its five-minute deadline across refreshes. Save draft choices with `/selection`.
+- Submit the complete choices to `/decision`. All Keep returns `completed` with no transaction; skip wallet submission and `/finalize`.
+- For any Sell, send the returned `approval_transaction` first if present, then `box_play.transaction`. The managed sender batches the item approval and sale. Confirm the sale hash with `/finalize` and wait for receipt-verified completion before showing proceeds.
+- If the customer leaves before confirming a sale, the items stay in their collection, including those marked Sell. A saved choice or expired countdown never proves a payout.
+
+Keep the returned IDs, instructions and transaction hashes for recovery. Full contract: [secured pack openings](https://www.dyli.io/docs/api/commerce-reference#claim-before-reveal-openings).
+
 ## Small integration boundary
 
 - `src/lib/dyli.ts`: server-only DYLI fetch client. The API key never reaches the browser; DYLI resolves its app binding. Redirects are rejected; requests time out.

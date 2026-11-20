@@ -34,6 +34,18 @@ The homepage opens on DYLI’s native pack gallery with direct quantity, Rip and
 
 The API now supplies optional public `artwork` metadata for the model, textures and poster. Reuse the renderer and React wrapper in your own app: [pack UI and asset guide](docs/PACK-EXPERIENCE.md).
 
+## Pack delivery and Sell confirmation
+
+New Commerce apps secure every item in the customer's account before revealing rewards. The starter handles delivery, all-Keep completion and returned Sell approvals. Use this API contract when adapting the opening UI:
+
+- Poll `/results` using `retry_after_ms`. Show rewards only when `ready: true` confirms delivery.
+- Call `/review` when the final choice screen opens and preserve its five-minute deadline across refreshes. Save draft choices with `/selection`.
+- Submit the complete choices to `/decision`. All Keep returns `completed` with no transaction; skip wallet submission and `/finalize`.
+- For any Sell, send the returned `approval_transaction` first if present, then `box_play.transaction`. The managed sender batches the item approval and sale. Confirm the sale hash with `/finalize` and wait for receipt-verified completion before showing proceeds.
+- If the customer leaves before confirming a sale, the items stay in their collection, including those marked Sell. A saved choice or expired countdown never proves a payout.
+
+Keep the returned IDs, instructions and transaction hashes for recovery. Full contract: [secured pack openings](https://www.dyli.io/docs/api/commerce-reference#claim-before-reveal-openings).
+
 ## Quick setup
 
 Use Node 24+. Register a **Commerce** key at [dyli.io/requestapi](https://www.dyli.io/requestapi) with a DYLI Pro developer account.
